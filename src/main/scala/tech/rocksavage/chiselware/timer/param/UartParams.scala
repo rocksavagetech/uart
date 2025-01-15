@@ -1,7 +1,7 @@
 // (c) 2024 Rocksavage Technology, Inc.
 // This code is licensed under the Apache Software License 2.0 (see LICENSE.MD)
 
-package tech.rocksavage.chiselware.timer.param
+package tech.rocksavage.chiselware.uart.param
 
 /** Default parameter settings for the Timer
   *
@@ -21,17 +21,12 @@ package tech.rocksavage.chiselware.timer.param
   *   [[http://www.rocksavage.tech]] for more information
   */
 
-case class TimerParams(
+case class UartParams(
     // Parameters for addressing
     dataWidth: Int = 32,
-    addressWidth: Int = 32,
-
-    // Parameters for the counter
-    countWidth: Int = 32,
-
+    addressWidth: Int = 32
 ) {
 
   require(dataWidth >= 1, "Data Width must be greater than or equal 1")
   require(addressWidth >= 1, "Address Width must be greater than or equal 1")
-  require(countWidth >= 1, "Count Width must be greater than or equal 1")
 }
