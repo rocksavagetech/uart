@@ -1,0 +1,105 @@
+\section{Synthesis}
+
+\subsection{Area}
+The Timer module has been synthesized in various configurations, and the following results should be representative of what a user should expect in their own technology.
+
+\renewcommand*{\arraystretch}{1.4}
+\begin{longtable}[H]{
+    | p{0.20\textwidth}
+    | p{0.15\textwidth}
+    | p{0.15\textwidth}
+    | p{0.15\textwidth}
+    | p{0.15\textwidth} |
+  }
+  \hline
+  \textbf{Config Name}   &
+  \textbf{dataWidth}     &
+  \textbf{addressWidth}  &
+  \textbf{countWidth}    &
+  \textbf{Gates}           \\ \hline \hline
+
+  8\_8\_8 &
+  8 &
+  8 &
+  8 &
+  946.1153 \\ \hline
+
+  16\_16\_16 &
+  16 &
+  16 &
+  16 &
+  1822.0552 \\ \hline
+
+  32\_32\_32 &
+  32 &
+  32 &
+  32 &
+  3600.2507 \\ \hline
+
+  64\_64\_64 &
+  64 &
+  64 &
+  64 &
+  7051.3784 \\ \hline
+
+  \caption{Synthesis results}\label{table:area}
+\end{longtable}
+
+\subsection{SDC File}
+An \texttt{.sdc} file is generated to provide synthesis and static timing analysis tools guidance for synthesis.
+
+The \texttt{Timer.sdc} file is emitted and found in the \texttt{./syn} directory.
+
+\subsection{Timing}
+The following timing was extracted using the generated \texttt{.sdc} files.
+
+\renewcommand*{\arraystretch}{1.4}
+\begin{longtable}[H]{
+    | p{0.20\textwidth}
+    | p{0.08\textwidth}
+    | p{0.12\textwidth}
+    | p{0.13\textwidth}
+    | p{0.15\textwidth}
+    | p{0.15\textwidth} |
+  }
+  \hline
+  \textbf{Config Name}   &
+  \textbf{Period}        &
+  \textbf{Duty Cycle}    &
+  \textbf{Input Delay}   &
+  \textbf{Output Delay}  &
+  \textbf{Slack}           \\ \hline \hline
+
+  8\_8\_8 &
+  5ns &
+  50\% &
+  20\% &
+  20\% &
+  2.56 (MET) \\ \hline
+
+  16\_16\_16 &
+  5ns &
+  50\% &
+  20\% &
+  20\% &
+  2.36 (MET) \\ \hline
+
+  32\_32\_32 &
+  5ns &
+  50\% &
+  20\% &
+  20\% &
+  2.35 (MET) \\ \hline
+
+  64\_64\_64 &
+  5ns &
+  50\% &
+  20\% &
+  20\% &
+  1.44 (MET) \\ \hline
+
+  \caption{Static Timing Analysis results}\label{table:timing}
+\end{longtable}
+
+\subsection{Multicycle Paths}
+None.

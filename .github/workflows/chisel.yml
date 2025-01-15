@@ -1,0 +1,37 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Chisel CI
+
+on:
+  push:
+    branches: ["main", "nick"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  generate_verilog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Run Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
+
+      - name: Test
+        run: nix develop --command sbt test
+
+      - name: Run
+        run: nix develop --command sbt "runMain tech.rocksavage.Main verilog --mode print --module tech.rocksavage.chiselware.timer.Timer"
+

@@ -1,0 +1,50 @@
+\section{Parameter Descriptions}
+
+The parameters for \textbf{Timer} are shown below in Table~\ref{table:params}.
+
+\renewcommand*{\arraystretch}{1.4}
+\begin{longtable}[H]{
+    | p{0.25\textwidth}
+    | p{0.10\textwidth}
+    | p{0.05\textwidth}
+    | p{0.05\textwidth}
+    | p{0.47\textwidth} |
+  }
+  \hline
+  \textbf{Name} &
+  \textbf{Type} &
+  \textbf{Min}  &
+  \textbf{Max}  &
+  \textbf{Description}            \\ \hline \hline
+
+  dataWidth     &
+  Int           &
+  8             &
+  $\ge$ 8       &
+  The width of the data bus in bits      \\ \hline
+
+  addressWidth  &
+  Int           &
+  8             &
+  $\ge$ 8       &
+  The width of the address bus in bits   \\ \hline
+
+  countWidth    &
+  Int           &
+  8             &
+  $\ge$ 8       &
+  The width of the counter in bits       \\ \hline
+
+  \caption{Parameter Descriptions}\label{table:params}
+\end{longtable}
+
+The Timer is instantiated into a design as follows:
+
+\begin{lstlisting}[language=Scala]
+  // Instantiate Timer with default parameters
+  val myTimer = new Timer(TimerParams(
+    dataWidth = 32,
+    addressWidth = 32,
+    countWidth = 64
+  ))
+\end{lstlisting}

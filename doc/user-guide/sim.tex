@@ -1,0 +1,24 @@
+\section{Simulation}
+
+\subsection{Tests}
+The test bench for the Timer module includes directed tests that verify the functionality of the counter, PWM generation, and interrupt signaling. The tests cover the following scenarios:
+
+\begin{itemize}
+  \item{Basic counter operation with and without a prescaler.}
+  \item{PWM generation with varying duty cycles.}
+  \item{Interrupt generation when the counter reaches its maximum value.}
+\end{itemize}
+
+\subsection{Code Coverage}
+All inputs and outputs are checked to ensure they toggle at least once during simulation. An error will be thrown if any port fails to toggle.
+
+\subsection{Running Simulation}
+Simulations can be run directly from the command prompt as follows:
+
+\begin{verbatim}
+  $ sbt "test"
+\end{verbatim}
+
+or from make as follows:
+
+\texttt{\$ make test}
