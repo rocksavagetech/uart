@@ -4,7 +4,6 @@ package tech.rocksavage.chiselware.uart.bundle
 
 import chisel3._
 import chisel3.util._
-import tech.rocksavage.chiselware.uart.error.UartRxError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 // from the perspective of the UART which is receiving data
