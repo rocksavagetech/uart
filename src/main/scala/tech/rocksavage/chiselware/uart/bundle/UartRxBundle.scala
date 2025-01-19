@@ -4,11 +4,17 @@ package tech.rocksavage.chiselware.uart.bundle
 
 import chisel3._
 import chisel3.util._
+import tech.rocksavage.chiselware.uart.error.UartRxError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 // from the perspective of the UART which is receiving data
 class UartRxBundle(params: UartParams) extends Bundle {
-  val rx = new UartBundle(params)
+  val rx    = Input(Bool())
+  val data  = Output(UInt(params.dataWidth.W))
+  val valid = Output(Bool())
+  val ready = Input(Bool())
+  
+  val error = Output(UartRxError())
 
   // configuration inputs
 

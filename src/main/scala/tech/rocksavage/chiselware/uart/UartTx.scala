@@ -9,7 +9,6 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 
 class UartTx(params: UartParams) extends Module {
   val io = IO(new UartTxBundle(params))
-
   // Internal Registers
   val stateReg     = RegInit(UartState.Idle)
   val bitCounter   = RegInit(0.U(log2Ceil(params.dataWidth).W))
@@ -32,16 +31,16 @@ class UartTx(params: UartParams) extends Module {
   // FSM for UART Transmission
   switch(stateReg) {
     is(UartState.Idle) {
-      when(io.tx.ready && io.tx.valid) {
+      when(io.ready && io.valid) {
         stateReg     := UartState.Start
         bitCounter   := 0.U
         clockCounter := 0.U
-        shiftReg     := io.tx.data
+        shiftReg     := io.data
       }
     }
     is(UartState.Start) {
       when(clockCounter === clocksPerBitReg) {
-        stateReg := UartState.Data
+        stateReg     := UartState.Data
         clockCounter := 0.U
       }.otherwise {
         clockCounter := clockCounter + 1.U
@@ -71,11 +70,14 @@ class UartTx(params: UartParams) extends Module {
   }
 
   // Output Logic
-  io.tx.rxtx := MuxLookup(stateReg.asUInt, true.B)(Seq(
-    UartState.Start.asUInt -> false.B,
-    UartState.Data.asUInt  -> shiftReg(0),
-    UartState.Stop.asUInt  -> true.B
-  ))
-  io.tx.valid := stateReg === UartState.Idle
-  io.tx.error := errorReg
+  io.tx := MuxLookup(stateReg.asUInt, true.B)(
+    Seq(
+      UartState.Start.asUInt -> false.B,
+      UartState.Data.asUInt  -> shiftReg(0),
+      UartState.Stop.asUInt  -> true.B
+    )
+  )
+  io.valid := stateReg === UartState.Idle
+  io.error := errorReg
+  io.ready := stateReg === UartState.Idle // Add this line to initialize io.ready
 }

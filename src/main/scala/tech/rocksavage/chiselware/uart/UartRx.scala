@@ -10,45 +10,40 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 
 class UartRx(params: UartParams) extends Module {
   val io = IO(new UartRxBundle(params))
-
   // Internal Registers
   val stateReg     = RegInit(UartState.Idle)
   val bitCounter   = RegInit(0.U(log2Ceil(params.dataWidth).W))
   val clockCounter = RegInit(0.U(log2Ceil(params.maxClocksPerBit).W))
   val dbUpdate     = WireInit(stateReg === UartState.Idle)
-
   // Input Control State Registers /
   val clocksPerBitReg  = RegInit(0.U(log2Ceil(params.maxClocksPerBit).W))
   val numOutputBitsReg = RegInit(0.U(log2Ceil(params.maxOutputBits).W))
   val useParityReg     = RegInit(false.B)
-
   // Input Sync
   val rxSyncRegs = RegInit(0.U(params.syncDepth.W))
   val rxSync     = rxSyncRegs(params.syncDepth - 1)
-
   // Shift register for storing received data
   val shiftReg = RegInit(0.U(params.dataWidth.W))
-
   // Output registers
   val dataReg  = RegInit(0.U(params.dataWidth.W))
   val validReg = RegInit(false.B)
   val errorReg = RegInit(UartRxError.None)
-
   // Output
-  io.rx.data  := dataReg
-  io.rx.valid := validReg
+  io.data  := dataReg
+  io.valid := validReg
+  io.error := errorReg // Ensure io.error is always assigned
 
   // FSM
   switch(stateReg) {
     is(UartState.Idle) {
-      when(io.rx.rxtx === false.B) {
+      when(io.rx === false.B) {
         stateReg     := UartState.Start
         bitCounter   := 0.U
         clockCounter := 0.U
       }
     }
     is(UartState.Start) {
-      when(io.rx.rxtx === true.B) {
+      when(io.rx === true.B) {
         stateReg := UartState.Idle
         errorReg := UartRxError.StartBitError
       }.otherwise {
@@ -74,7 +69,6 @@ class UartRx(params: UartParams) extends Module {
       }.otherwise {
         stateReg := UartState.Idle
         dataReg  := shiftReg
-
         validReg := true.B
       }
     }
@@ -88,7 +82,7 @@ class UartRx(params: UartParams) extends Module {
   }
 
   // update the sync registers
-  rxSyncRegs := Cat(rxSyncRegs(params.syncDepth - 2, 0), io.rx.rxtx)
+  rxSyncRegs := Cat(rxSyncRegs(params.syncDepth - 2, 0), io.rx)
 
   // Update the internal registers
   when(dbUpdate) {
@@ -100,5 +94,4 @@ class UartRx(params: UartParams) extends Module {
     numOutputBitsReg := numOutputBitsReg
     useParityReg     := useParityReg
   })
-
 }
