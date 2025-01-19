@@ -4,24 +4,28 @@ package tech.rocksavage.chiselware.uart.bundle
 
 import chisel3._
 import chisel3.util._
+import tech.rocksavage.chiselware.uart.error.UartRxError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 // from the perspective of the UART which is receiving data
 class UartRxBundle(params: UartParams) extends Bundle {
-    val rx = Input(Bool())
-    val data = Input(UInt(params.dataWidth.W))
-    val valid = Output(Bool())
-    val ready = Input(Bool())
+  val rx    = Input(Bool())
+  val data  = Input(UInt(params.dataWidth.W))
+  val valid = Output(Bool())
+  val ready = Input(Bool())
+  val error = Output(UartRxError())
 
-    val outputBits = Output(UInt(params.maxOutputBits.W))
-    val outputValid = Output(Bool())
+  val outputBits  = Output(UInt(params.maxOutputBits.W))
+  val outputValid = Output(Bool())
 
   // configuration inputs
 
   // clock = 25 MHz
   // baud = 115200
   // 25000000 / 115200 = 217 Clocks Per Bit.
-    val clocksPerBitDb = Input(UInt(log2Ceil(params.maxClocksPerBit).W))
-    val numOutputBitsDb = Input(UInt(log2Ceil(params.maxOutputBits).W))
-    val useParityDb = Input(Bool())
+  val clocksPerBitDb  = Input(UInt(log2Ceil(params.maxClocksPerBit).W))
+  val numOutputBitsDb = Input(UInt(log2Ceil(params.maxOutputBits).W))
+  val useParityDb     = Input(Bool())
+  val syncDepthDb     = Input(UInt(log2Ceil(params.maxSyncDepth).W))
+
 }

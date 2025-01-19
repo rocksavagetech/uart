@@ -25,9 +25,9 @@ case class UartParams(
     // Parameters for addressing
     dataWidth: Int = 32,
     addressWidth: Int = 32,
-
     maxClocksPerBit: Int = 100000,
-    maxOutputBits: Int = 8
+    maxOutputBits: Int = 8,
+    syncDepth: Int = 2
 ) {
 
   require(dataWidth >= 1, "Data Width must be greater than or equal 1")
