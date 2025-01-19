@@ -61,17 +61,23 @@ class UartRx(params: UartParams) extends Module {
   val validReg = RegInit(false.B)
   val errorReg = RegInit(UartRxError.None)
 
+  // Output
+  io.rx.data := dataReg
+  io.rx.valid := validReg
+
+
+
   // FSM
   switch(stateReg) {
     is(UartState.Idle) {
-      when(io.rx === false.B) {
+      when(io.rx.rxtx === false.B) {
         stateReg     := UartState.Start
         bitCounter   := 0.U
         clockCounter := 0.U
       }
     }
     is(UartState.Start) {
-      when(io.rx === true.B) {
+      when(io.rx.rxtx === true.B) {
         stateReg := UartState.Idle
         errorReg := UartRxError.StartBitError
       }.otherwise {
@@ -111,7 +117,7 @@ class UartRx(params: UartParams) extends Module {
   }
 
   // update the sync registers
-  rxSyncRegs := Cat(rxSyncRegs(params.syncDepth - 2, 0), io.rx)
+  rxSyncRegs := Cat(rxSyncRegs(params.syncDepth - 2, 0), io.rx.rxtx)
 
   // Update the internal registers
   when(dbUpdate) {

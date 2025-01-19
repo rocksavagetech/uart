@@ -9,14 +9,7 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 
 // from the perspective of the UART which is receiving data
 class UartRxBundle(params: UartParams) extends Bundle {
-  val rx    = Input(Bool())
-  val data  = Input(UInt(params.dataWidth.W))
-  val valid = Output(Bool())
-  val ready = Input(Bool())
-  val error = Output(UartRxError())
-
-  val outputBits  = Output(UInt(params.maxOutputBits.W))
-  val outputValid = Output(Bool())
+  val rx = new UartBundle(params)
 
   // configuration inputs
 
@@ -26,6 +19,6 @@ class UartRxBundle(params: UartParams) extends Bundle {
   val clocksPerBitDb  = Input(UInt(log2Ceil(params.maxClocksPerBit).W))
   val numOutputBitsDb = Input(UInt(log2Ceil(params.maxOutputBits).W))
   val useParityDb     = Input(Bool())
-  val syncDepthDb     = Input(UInt(log2Ceil(params.maxSyncDepth).W))
+  val syncDepthDb     = Input(UInt(log2Ceil(params.syncDepth).W))
 
 }
