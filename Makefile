@@ -36,7 +36,7 @@ clean:
 # Generate verilog from the Chisel code
 verilog:
 	@echo Generating Verilog...
-	@$(SBT) "runMain tech.rocksavage.Main verilog --mode print --module tech.rocksavage.chiselware.timer.Timer --config-class tech.rocksavage.chiselware.timer.TimerConfig"
+	@$(SBT) "runMain tech.rocksavage.Main verilog --mode print --module tech.rocksavage.chiselware.uart.Uart --config-class tech.rocksavage.chiselware.uart.UartConfig"
 
 # Run the tests
 test:
@@ -46,8 +46,8 @@ test:
 # Synthesize the design
 synth:
 	@echo Synthesizing...
-	@$(SBT) "runMain tech.rocksavage.Main synth --module tech.rocksavage.chiselware.timer.Timer --techlib synth/stdcells.lib --config-class tech.rocksavage.chiselware.timer.TimerConfig"
+	@$(SBT) "runMain tech.rocksavage.Main synth --module tech.rocksavage.chiselware.uart.Uart --config-class tech.rocksavage.chiselware.uart.UartConfig --techlib synth/stdcells.lib"
 
 sta:
 	@echo Running Timing Analysis...
-	@$(SBT) "runMain tech.rocksavage.Main sta --module tech.rocksavage.chiselware.timer.Timer --techlib synth/stdcells.lib --config-class tech.rocksavage.chiselware.timer.TimerConfig --clock-period 5.0"
+	@$(SBT) "runMain tech.rocksavage.Main sta --module tech.rocksavage.chiselware.uart.Uart --config-class tech.rocksavage.chiselware.uart.UartConfig --techlib synth/stdcells.lib --clock-period 5.0"
