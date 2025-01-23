@@ -3,6 +3,9 @@ MAKEFLAGS += --silent
 # Define SBT variable
 SBT = sbt
 
+# Add phony targets
+.PHONY: clean docs update verilog synth sta test
+
 # Default target
 default: verilog
 
@@ -41,7 +44,7 @@ verilog:
 # Run the tests
 test:
 	@echo Running tests...
-	@$(SBT) test
+	@$(SBT) -DuseVerilator="true" test
 
 # Synthesize the design
 synth:
