@@ -8,19 +8,19 @@ import tech.rocksavage.chiselware.uart.bundle.UartRxBundle
 import tech.rocksavage.chiselware.uart.error.UartRxError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
-class UartRx(params: UartParams) extends Module {
+class UartRx(params: UartParams, formal: Boolean = true) extends Module {
   val io = IO(new UartRxBundle(params))
   // Internal Registers
   val stateReg     = RegInit(UartState.Idle)
-  val bitCounter   = RegInit(0.U(log2Ceil(params.dataWidth).W))
-  val clockCounter = RegInit(0.U(log2Ceil(params.maxClocksPerBit).W))
+  val bitCounter   = RegInit(0.U((log2Ceil(params.dataWidth) + 1).W))
+  val clockCounter = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
   val dbUpdate     = WireInit(stateReg === UartState.Idle)
   // Input Control State Registers /
-  val clocksPerBitReg  = RegInit(0.U(log2Ceil(params.maxClocksPerBit).W))
-  val numOutputBitsReg = RegInit(0.U(log2Ceil(params.maxOutputBits).W))
+  val clocksPerBitReg  = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
+  val numOutputBitsReg = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
   val useParityReg     = RegInit(false.B)
   // Input Sync
-  val rxSyncRegs = RegInit(0.U(params.syncDepth.W))
+  val rxSyncRegs = RegInit(VecInit(Seq.fill(params.syncDepth)(true.B)).asUInt)
   val rxSync     = rxSyncRegs(params.syncDepth - 1)
   // Shift register for storing received data
   val shiftReg = RegInit(0.U(params.dataWidth.W))

@@ -96,7 +96,6 @@ class Uart(val params: UartParams) extends Module {
   uartInner.io.rx.clocksPerBitDb  := rxMaxClocksPerBit
   uartInner.io.rx.numOutputBitsDb := rxDataBits
   uartInner.io.rx.useParityDb     := rxParityEnable
-  uartInner.io.rx.syncDepthDb     := params.syncDepth.U
 
   // Connect the TX configuration registers to UartInner
   uartInner.io.tx.clocksPerBitDb  := txMaxClocksPerBit

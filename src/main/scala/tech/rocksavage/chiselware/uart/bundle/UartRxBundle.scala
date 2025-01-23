@@ -13,7 +13,7 @@ class UartRxBundle(params: UartParams) extends Bundle {
   val data  = Output(UInt(params.dataWidth.W))
   val valid = Output(Bool())
   val ready = Input(Bool())
-  
+
   val error = Output(UartRxError())
 
   // configuration inputs
@@ -21,9 +21,8 @@ class UartRxBundle(params: UartParams) extends Bundle {
   // clock = 25 MHz
   // baud = 115200
   // 25000000 / 115200 = 217 Clocks Per Bit.
-  val clocksPerBitDb  = Input(UInt(log2Ceil(params.maxClocksPerBit).W))
-  val numOutputBitsDb = Input(UInt(log2Ceil(params.maxOutputBits).W))
+  val clocksPerBitDb  = Input(UInt((log2Ceil(params.maxClocksPerBit) + 1).W))
+  val numOutputBitsDb = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
   val useParityDb     = Input(Bool())
-  val syncDepthDb     = Input(UInt(log2Ceil(params.syncDepth).W))
 
 }

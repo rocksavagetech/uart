@@ -7,7 +7,7 @@ import tech.rocksavage.chiselware.uart.bundle.UartTxBundle
 import tech.rocksavage.chiselware.uart.error.UartTxError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
-class UartTx(params: UartParams) extends Module {
+class UartTx(params: UartParams, formal: Boolean = true) extends Module {
   val io = IO(new UartTxBundle(params))
   // Internal Registers
   val stateReg     = RegInit(UartState.Idle)
