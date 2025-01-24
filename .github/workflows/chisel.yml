@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  generate_verilog:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,7 +31,3 @@ jobs:
 
       - name: Test
         run: nix develop --command sbt test
-
-      - name: Run
-        run: nix develop --command sbt "runMain tech.rocksavage.Main verilog --mode print --module tech.rocksavage.chiselware.timer.Timer"
-
