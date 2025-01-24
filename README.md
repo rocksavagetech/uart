@@ -1,4 +1,15 @@
-# Timer Module
+# Uart Module
+
+## Setup
+
+### Git 
+
+```bash
+git clone [url].git
+git submodule update --init --recursive
+touch .git-blame-ignore-revs
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+``` 
 
 ## Overview
 
