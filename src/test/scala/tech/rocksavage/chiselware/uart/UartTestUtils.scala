@@ -8,9 +8,10 @@ import chiseltest._
 
 object UartUtils {
   def transactionChar(dut: UartRx, char: Char, clocksPerBit: Int): Unit = {
-    val binString = char.toBinaryString.reverse.padTo(8, '0')
+//    val binString = char.toBinaryString.padTo(8, '0').reverse
+    val binString = char.toBinaryString.reverse.padTo(8, '0').reverse
     val bits = binString.map(_ == '1')
-    println(s"Transmitting character: $char, with bits: ${binString.reverse}")
+    println(s"Transmitting character: $char, with bits: ${binString}")
     transaction(dut, bits, clocksPerBit, 8)
   }
 
