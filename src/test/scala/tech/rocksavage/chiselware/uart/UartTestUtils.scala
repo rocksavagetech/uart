@@ -7,7 +7,35 @@ import chisel3._
 import chiseltest._
 
 object UartUtils {
+  def transactionChar(dut: UartRx, char: Char, clocksPerBit: Int): Unit = {
+    val binString = char.toBinaryString.reverse.padTo(8, '0')
+    val bits = binString.map(_ == '1')
+    println(s"Transmitting character: $char, with bits: ${binString.reverse}")
+    transaction(dut, bits, clocksPerBit, 8)
+  }
+
+  def transaction(dut: UartRx,
+                  bits: Seq[Boolean],
+                  clocksPerBit: Int,
+                  numBits: Int): Unit = {
+
+    // Transmit the start bit
+    println("--- Transmitting start bit")
+    transmitBit(dut, false, clocksPerBit)
+    // Transmit numBits bits
+    println("--- Transmitting data bits")
+    for (i <- 0 until numBits) {
+      transmitBit(dut, bits(i), clocksPerBit)
+    }
+    // Transmit the stop bit
+    println("--- Transmitting stop bit")
+    UartUtils.transmitBit(dut, true, clocksPerBit)
+  }
+
   def transmitBit(dut: UartRx, bit: Boolean, clocksPerBit: Int): Unit = {
+    if (bit) println("--- --- 1")
+    else
+      println("--- --- 0")
     dut.io.rx.poke(bit.B)
 
     dut.clock.setTimeout(clocksPerBit + 1)

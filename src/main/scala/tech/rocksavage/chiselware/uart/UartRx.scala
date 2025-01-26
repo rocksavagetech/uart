@@ -11,39 +11,39 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 class UartRx(params: UartParams, formal: Boolean = true) extends Module {
   val io = IO(new UartRxBundle(params))
   // Internal Registers
-  val stateReg     = RegInit(UartState.Idle)
-  val bitCounter   = RegInit(0.U((log2Ceil(params.dataWidth) + 1).W))
+  val stateReg = RegInit(UartState.Idle)
+  val bitCounter = RegInit(0.U((log2Ceil(params.dataWidth) + 1).W))
   val clockCounter = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
-  val dbUpdate     = WireInit(stateReg === UartState.Idle)
+  val dbUpdate = WireInit(stateReg === UartState.Idle)
   // Input Control State Registers /
-  val clocksPerBitReg  = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
+  val clocksPerBitReg = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
   val numOutputBitsReg = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
-  val useParityReg     = RegInit(false.B)
+  val useParityReg = RegInit(false.B)
   // Input Sync
   val rxSyncRegs = RegInit(VecInit(Seq.fill(params.syncDepth)(true.B)).asUInt)
-  val rxSync     = rxSyncRegs(params.syncDepth - 1)
+  val rxSync = rxSyncRegs(params.syncDepth - 1)
   // Shift register for storing received data
-  val shiftReg = RegInit(0.U(params.dataWidth.W))
+  val shiftReg = RegInit(0.U(params.maxOutputBits.W))
   // Output registers
-  val dataReg  = RegInit(0.U(params.dataWidth.W))
+  val dataReg = RegInit(0.U(params.maxOutputBits.W))
   val validReg = RegInit(false.B)
   val errorReg = RegInit(UartRxError.None)
   // Output
-  io.data  := dataReg
+  io.data := dataReg
   io.valid := validReg
   io.error := errorReg // Ensure io.error is always assigned
 
   // FSM
   switch(stateReg) {
     is(UartState.Idle) {
-      when(io.rx === false.B) {
-        stateReg     := UartState.Start
-        bitCounter   := 0.U
+      when(rxSync === false.B) {
+        stateReg := UartState.Start
+        bitCounter := 0.U
         clockCounter := 0.U
       }
     }
     is(UartState.Start) {
-      when(io.rx === true.B) {
+      when(rxSync === true.B) {
         stateReg := UartState.Idle
         errorReg := UartRxError.StartBitError
       }.otherwise {
@@ -52,33 +52,36 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     }
     is(UartState.Data) {
       when(clockCounter === clocksPerBitReg) {
-        when(bitCounter === (numOutputBitsReg - 1.U)) {
+        when(bitCounter === (numOutputBitsReg)) {
+          shiftReg := 0.U
+          dataReg := shiftReg
           stateReg := UartState.Stop
-        }.otherwise {
-          bitCounter   := bitCounter + 1.U
+          validReg := true.B
           clockCounter := 0.U
+        }.otherwise {
+          shiftReg := Cat(shiftReg(params.maxOutputBits - 2, 0), rxSync)
+          bitCounter := bitCounter + 1.U
+          clockCounter := 0.U
+        }
+      }.otherwise {
+        shiftReg := shiftReg
+        clockCounter := clockCounter + 1.U
+      }
+    }
+    is(UartState.Stop) {
+      when(clockCounter === clocksPerBitReg) {
+        when(rxSync === true.B) {
+          stateReg := UartState.Idle
+          shiftReg := 0.U
+          dataReg := dataReg
+        }.otherwise {
+          stateReg := UartState.Idle
+          errorReg := UartRxError.StopBitError
         }
       }.otherwise {
         clockCounter := clockCounter + 1.U
       }
     }
-    is(UartState.Stop) {
-      when(rxSync === true.B) {
-        stateReg := UartState.Idle
-        errorReg := UartRxError.StopBitError
-      }.otherwise {
-        stateReg := UartState.Idle
-        dataReg  := shiftReg
-        validReg := true.B
-      }
-    }
-  }
-
-  // Update the shift register
-  when(stateReg === UartState.Data) {
-    shiftReg := Cat(shiftReg(params.dataWidth - 2, 0), rxSync)
-  }.otherwise {
-    shiftReg := shiftReg
   }
 
   // update the sync registers
@@ -86,12 +89,12 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
   // Update the internal registers
   when(dbUpdate) {
-    clocksPerBitReg  := io.clocksPerBitDb
+    clocksPerBitReg := io.clocksPerBitDb
     numOutputBitsReg := io.numOutputBitsDb
-    useParityReg     := io.useParityDb
+    useParityReg := io.useParityDb
   }.otherwise({
-    clocksPerBitReg  := clocksPerBitReg
+    clocksPerBitReg := clocksPerBitReg
     numOutputBitsReg := numOutputBitsReg
-    useParityReg     := useParityReg
+    useParityReg := useParityReg
   })
 }

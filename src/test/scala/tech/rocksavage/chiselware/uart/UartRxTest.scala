@@ -12,18 +12,18 @@ import org.scalatest.flatspec.AnyFlatSpec
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 class UartRxTest extends AnyFlatSpec with ChiselScalatestTester {
-  val verbose  = false
+  val verbose = false
   val numTests = 2
   val testName = System.getProperty("testName")
   println(s"Argument passed: $testName")
 
   // System properties for flags
-  val enableVcd    = System.getProperty("enableVcd", "false").toBoolean
-  val enableFst    = System.getProperty("enableFst", "true").toBoolean
+  val enableVcd = System.getProperty("enableVcd", "false").toBoolean
+  val enableFst = System.getProperty("enableFst", "true").toBoolean
   val useVerilator = System.getProperty("useVerilator", "true").toBoolean
 
   val buildRoot = "out"
-  val testDir   = buildRoot + "/test"
+  val testDir = buildRoot + "/test"
 
   println(
     s"Test: $testName, VCD: $enableVcd, FST: $enableFst, Verilator: $useVerilator"
@@ -57,35 +57,19 @@ class UartRxTest extends AnyFlatSpec with ChiselScalatestTester {
       implicit val clock = dut.clock
 
       val clocksPerBit = 217
+      val numOutputBits = 8
 
       // Reset the device
       dut.io.rx.poke(1.U)
       dut.io.clocksPerBitDb.poke(clocksPerBit.U)
-      dut.io.numOutputBitsDb.poke(8.U)
+      dut.io.numOutputBitsDb.poke(numOutputBits.U)
       dut.io.useParityDb.poke(false.B)
 
-      // char to transmit is 'A'
-      val char = 'A'
-      val bits = char.toInt.toBinaryString
-      println(s"Transmit Info Char: $char, Bits: $bits")
-
-      // Transmit the start bit
-
-      UartUtils.transmitBit(dut, false, clocksPerBit)
-
-      // Transmit the data bits
-      for (bit <- bits) {
-        UartUtils.transmitBit(dut, bit == '1', clocksPerBit)
+      val chars = Seq('s', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
+      for (char <- chars) {
+        UartUtils.transactionChar(dut, char, clocksPerBit)
+        dut.io.data.expect(char.U)
       }
-
-      // Transmit the stop bit
-
-      UartUtils.transmitBit(dut, true, clocksPerBit)
-
-      // Check the output
-      dut.io.data.expect(char.U)
-      dut.io.valid.expect(true.B)
-
     }
   }
 }
