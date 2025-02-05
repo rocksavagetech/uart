@@ -1,87 +1,110 @@
 // (c) 2024 Rocksavage Technology, Inc.
 // This code is licensed under the Apache Software License 2.0 (see LICENSE.MD)
+
 package tech.rocksavage.chiselware.uart
 
 import chisel3._
-import chisel3.util.log2Ceil
+import chisel3.util._
 import tech.rocksavage.chiselware.addrdecode.{AddrDecode, AddrDecodeError}
 import tech.rocksavage.chiselware.addressable.RegisterMap
 import tech.rocksavage.chiselware.apb.{ApbBundle, ApbParams}
-import tech.rocksavage.chiselware.uart.error.{UartRxError, UartTxError}
 import tech.rocksavage.chiselware.uart.param.UartParams
 
-class Uart(val params: UartParams) extends Module {
-    val dataWidth    = params.dataWidth
-    val addressWidth = params.addressWidth
+/** A UartWrapper module that provides an APB interface to program the UART
+  * control signals.
+  *
+  * External signals:
+  *   - rx: incoming serial data (from an external PHY or wire)
+  *   - tx: outgoing serial data (to an external PHY or wire)
+  *
+  * Control signals (programmed via the APB interface):
+  *   - load: tells the transmitter to start a new transmission
+  *   - dataIn: parallel data to be transmitted
+  *   - clocksPerBitDb: number of clock cycles per bit period
+  *   - numOutputBitsDb: number of data bits to transmit
+  *   - useParityDb: flag to indicate whether to use parity during transmission
+  */
+class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
+    // Specify data and address widths from the uartParams
+    val dataWidth    = uartParams.dataWidth
+    val addressWidth = uartParams.addressWidth
 
-    // Input/Output bundle for the UART module
+    // Define the top-level IO bundle. This wrapper brings in the APB interface,
+    // an external serial rx input, and a serial tx output.
     val io = IO(new Bundle {
+        // APB interface for control register access
         val apb = new ApbBundle(ApbParams(dataWidth, addressWidth))
-        // Uart RX Signals
-        val rx      = Input(Bool())
-        val rxData  = Output(UInt(params.dataWidth.W))
-        val rxValid = Output(Bool())
-        val rxReady = Input(Bool())
-        val rxError = Output(UartRxError())
-        // Uart TX Signals
-        val tx      = Output(Bool())
-        val txData  = Input(UInt(params.dataWidth.W))
-        val txValid = Output(Bool()) // Changed from Input to Output
-        val txReady = Output(Bool())
-        val txError = Output(UartTxError())
+        // External UART signals
+        val rx = Input(Bool())
+        val tx = Output(Bool())
     })
 
-    // Create a RegisterMap to manage the addressable registers
+    // Create a register map to hold the UART control registers.
+    // These registers program the internal UART control signals.
     val registerMap = new RegisterMap(dataWidth, addressWidth)
 
-    // Define independent registers for RX configuration
-    val rxMaxClocksPerBit: UInt = RegInit(
-      0.U(log2Ceil(params.maxClocksPerBit).W)
+    // Control register for initiating a new transmission.
+    val load = RegInit(false.B)
+    registerMap.createAddressableRegister(
+      load,
+      "load",
+      verbose = uartParams.verbose
+    )
+
+    // Parallel data input for the UART transmitter.
+    val dataIn = RegInit(0.U(uartParams.maxOutputBits.W))
+    registerMap.createAddressableRegister(
+      dataIn,
+      "dataIn",
+      verbose = uartParams.verbose
+    )
+
+    // Register to hold the clocks per bit configuration.
+    val clocksPerBitDb = RegInit(
+      0.U((log2Ceil(uartParams.maxClocksPerBit) + 1).W)
     )
     registerMap.createAddressableRegister(
-      rxMaxClocksPerBit,
-      "rxMaxClocksPerBit"
+      clocksPerBitDb,
+      "clocksPerBitDb",
+      verbose = uartParams.verbose
     )
 
-    val rxDataBits: UInt = RegInit(0.U(log2Ceil(params.maxOutputBits).W))
-    registerMap.createAddressableRegister(rxDataBits, "rxDataBits")
-
-    val rxParityEnable: Bool = RegInit(false.B)
-    registerMap.createAddressableRegister(rxParityEnable, "rxParityEnable")
-
-    val rxStopBits: UInt = RegInit(0.U(2.W))
-    registerMap.createAddressableRegister(rxStopBits, "rxStopBits")
-
-    // Define independent registers for TX configuration
-    val txMaxClocksPerBit: UInt = RegInit(
-      0.U(log2Ceil(params.maxClocksPerBit).W)
+    // Register to hold the number of output bits to be transmitted.
+    val numOutputBitsDb = RegInit(
+      0.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
     )
     registerMap.createAddressableRegister(
-      txMaxClocksPerBit,
-      "txMaxClocksPerBit"
+      numOutputBitsDb,
+      "numOutputBitsDb",
+      verbose = uartParams.verbose
     )
 
-    val txDataBits: UInt = RegInit(0.U(log2Ceil(params.maxOutputBits).W))
-    registerMap.createAddressableRegister(txDataBits, "txDataBits")
+    // Register to hold the parity enable flag.
+    val useParityDb = RegInit(false.B)
+    registerMap.createAddressableRegister(
+      useParityDb,
+      "useParityDb",
+      verbose = uartParams.verbose
+    )
 
-    val txParityEnable: Bool = RegInit(false.B)
-    registerMap.createAddressableRegister(txParityEnable, "txParityEnable")
+    // --------------------------------------------------------------------------
+    // APB Interface: Use AddrDecode and RegisterMap to implement
+    // read/write access to control registers.
+    // --------------------------------------------------------------------------
 
-    val txStopBits: UInt = RegInit(0.U(2.W))
-    registerMap.createAddressableRegister(txStopBits, "txStopBits")
-
-    // Generate AddrDecode
+    // Get the address decoding parameters from the register map.
     val addrDecodeParams = registerMap.getAddrDecodeParams
     val addrDecode       = Module(new AddrDecode(addrDecodeParams))
     addrDecode.io.addr     := io.apb.PADDR
     addrDecode.io.en       := true.B
     addrDecode.io.selInput := true.B
 
-    io.apb.PREADY := (io.apb.PENABLE && io.apb.PSEL)
+    // Drive basic APB handshake signals.
+    io.apb.PREADY := io.apb.PENABLE && io.apb.PSEL
     io.apb.PSLVERR := addrDecode.io.errorCode === AddrDecodeError.AddressOutOfRange
-    io.apb.PRDATA := 0.U
+    io.apb.PRDATA := 0.U // Default data output
 
-    // Control Register Read/Write
+    // Register read/write operations via APB.
     when(io.apb.PSEL && io.apb.PENABLE) {
         when(io.apb.PWRITE) {
             for (reg <- registerMap.getRegisters) {
@@ -98,29 +121,23 @@ class Uart(val params: UartParams) extends Module {
         }
     }
 
-    // Instantiate the UartInner module
-    val uartInner = Module(new UartInner(params))
+    // --------------------------------------------------------------------------
+    // Instantiate the merged UART module.
+    // The merged UART (instantiated from a previously defined Uart module)
+    // encapsulates both the RX and TX functionality.
+    // --------------------------------------------------------------------------
+    val uartInner = Module(new UartInner(uartParams, formal))
 
-    // Connect the RX configuration registers to UartInner
-    uartInner.io.rx.clocksPerBitDb  := rxMaxClocksPerBit
-    uartInner.io.rx.numOutputBitsDb := rxDataBits
-    uartInner.io.rx.useParityDb     := rxParityEnable
+    // External connections:
+    //  - 'rx' is the external serial input.
+    //  - 'tx' is the external serial output.
+    uartInner.io.rx := io.rx
+    io.tx           := uartInner.io.tx
 
-    // Connect the TX configuration registers to UartInner
-    uartInner.io.tx.clocksPerBitDb  := txMaxClocksPerBit
-    uartInner.io.tx.numOutputBitsDb := txDataBits
-    uartInner.io.tx.useParityDb     := txParityEnable
-
-    // Connect the UART Rx/Tx signals to the top-level IO
-    uartInner.io.rx.rx    := io.rx
-    io.rxData             := uartInner.io.rx.data
-    io.rxValid            := uartInner.io.rx.valid
-    uartInner.io.rx.ready := io.rxReady
-    io.rxError            := uartInner.io.rx.error
-
-    io.tx                := uartInner.io.tx.tx
-    uartInner.io.tx.data := io.txData
-    io.txValid           := uartInner.io.tx.valid
-    io.txReady           := uartInner.io.tx.ready
-    io.txError           := uartInner.io.tx.error
+    // Control signals: drive the internal UART control inputs from the APB mapped registers.
+    uartInner.io.load            := load
+    uartInner.io.dataIn          := dataIn
+    uartInner.io.clocksPerBitDb  := clocksPerBitDb
+    uartInner.io.numOutputBitsDb := numOutputBitsDb
+    uartInner.io.useParityDb     := useParityDb
 }
