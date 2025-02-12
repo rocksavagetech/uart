@@ -59,6 +59,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     /** Parity usage register */
     val useParityReg = RegInit(false.B)
+    val parityOddReg = RegInit(false.B)
 
     val clocksPerBitDbReg = RegInit(
       0.U((log2Ceil(params.maxClocksPerBit) + 1).W)
@@ -69,6 +70,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     )
 
     val useParityDbReg = RegInit(false.B)
+    val parityOddDbReg = RegInit(false.B)
 
     /** Next Clocks per bit register */
     val clocksPerBitNext = WireInit(
@@ -82,14 +84,17 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     /** Next Parity usage register */
     val useParityNext = WireInit(false.B)
+    val parityOddNext = WireInit(false.B)
 
     clocksPerBitReg  := clocksPerBitNext
     numOutputBitsReg := numOutputBitsNext
     useParityReg     := useParityNext
+    parityOddReg     := parityOddNext
 
     clocksPerBitDbReg  := io.rxConfig.clocksPerBitDb
     numOutputBitsDbReg := io.rxConfig.numOutputBitsDb
     useParityDbReg     := io.rxConfig.useParityDb
+    parityOddDbReg     := io.rxConfig.parityOddDb
 
     // ###################
     // RX Input Synchronization
@@ -204,6 +209,12 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       useParityDbReg
     )
 
+    parityOddNext := calculateParityOddNext(
+      stateReg,
+      parityOddReg,
+      parityOddDbReg
+    )
+
     rxSyncNext := calculateRxSyncNext(
       rxSyncRegs,
       io.rx
@@ -273,7 +284,11 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
             is(UartState.Data) {
                 when(clockCounterReg === clocksPerBitReg) {
                     when(bitCounterReg === (numOutputBitsReg)) {
-                        stateNext := UartState.Stop
+                        when(useParityReg === true.B) {
+                            stateNext := UartState.Parity
+                        }.otherwise {
+                            stateNext := UartState.Stop
+                        }
                     }.otherwise {
                         stateNext := UartState.Data
                     }
@@ -321,6 +336,13 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
                     }
                 }
             }
+            is(UartState.Parity) {
+                when(clockCounterReg === clocksPerBitReg) {
+                    when(bitCounterReg =/= (numOutputBitsReg)) {
+                        bitCounterNext := bitCounterReg + 1.U
+                    }
+                }
+            }
         }
         bitCounterNext
     }
@@ -348,7 +370,15 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
                     clockCounterNext := 0.U
                 }
             }
+            // or parity
             is(UartState.Data) {
+                when(clockCounterReg === clocksPerBitReg) {
+                    clockCounterNext := 0.U
+                }.otherwise {
+                    clockCounterNext := clockCounterReg + 1.U
+                }
+            }
+            is(UartState.Parity) {
                 when(clockCounterReg === clocksPerBitReg) {
                     clockCounterNext := 0.U
                 }.otherwise {
@@ -448,6 +478,26 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
             }
         }
         useParityNext
+    }
+
+    /** Computes the next parityOdd value.
+      *
+      * @return
+      *   The next parityOdd value.
+      */
+    def calculateParityOddNext(
+        value: UartState.Type,
+        bool: Bool,
+        bool1: Bool
+    ): Bool = {
+        val parityOddNext = WireInit(false.B)
+        parityOddNext := bool
+        switch(value) {
+            is(UartState.Idle) {
+                parityOddNext := bool1
+            }
+        }
+        parityOddNext
     }
 
     /** Computes the next dataShift value.
@@ -569,6 +619,16 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
                 when(clockCounterReg === clocksPerBitReg) {
                     when(rxSync =/= true.B) {
                         errorNext := UartRxError.StopBitError
+                    }
+                }
+            }
+            is(UartState.Parity) {
+                when(clockCounterReg === clocksPerBitReg) {
+                    val numOnes = PopCount(dataShiftReg)
+                    when(useParityReg === true.B) {
+                        when((numOnes % 2.U) =/= parityOddReg) {
+                            errorNext := UartRxError.ParityError
+                        }
                     }
                 }
             }

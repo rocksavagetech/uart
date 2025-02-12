@@ -13,6 +13,6 @@ class UartRxControlBundle(params: UartParams) extends Bundle {
     val clocksPerBitDb  = Input(UInt((log2Ceil(params.maxClocksPerBit) + 1).W))
     val numOutputBitsDb = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
     val useParityDb     = Input(Bool())
-    val parityEvenDb    = Input(Bool())
+    val parityOddDb     = Input(Bool())
 
 }
