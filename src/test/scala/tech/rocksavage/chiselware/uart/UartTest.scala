@@ -11,7 +11,7 @@ import firrtl2.annotations.Annotation
 import org.scalatest.flatspec.AnyFlatSpec
 import tech.rocksavage.chiselware.uart.param.UartParams
 
-class UartTxTest extends AnyFlatSpec with ChiselScalatestTester {
+class UartTest extends AnyFlatSpec with ChiselScalatestTester {
     val verbose  = false
     val numTests = 2
     val testName = System.getProperty("testName")
@@ -52,7 +52,29 @@ class UartTxTest extends AnyFlatSpec with ChiselScalatestTester {
       syncDepth = 2
     )
 
-    "UartTx" should "transmit data correctly" in {
+    "UartRx" should "pass a basic test" in {
+        test(new UartRx(uartParams)).withAnnotations(backendAnnotations) {
+            dut =>
+                implicit val clock = dut.clock
+
+                val clocksPerBit  = 217
+                val numOutputBits = 8
+
+                // Reset the device
+                dut.io.rx.poke(1.U)
+                dut.io.rxConfig.clocksPerBitDb.poke(clocksPerBit.U)
+                dut.io.rxConfig.numOutputBitsDb.poke(numOutputBits.U)
+                dut.io.rxConfig.useParityDb.poke(false.B)
+
+                val chars = Seq('s', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
+                for (char <- chars) {
+                    UartTestUtils.transactionChar(dut, char, clocksPerBit)
+                    dut.io.data.expect(char.U)
+                }
+        }
+    }
+
+    "UartTx" should "pass a basic test" in {
         test(new UartTx(uartParams)).withAnnotations(backendAnnotations) {
             dut =>
                 implicit val clock = dut.clock
@@ -118,5 +140,4 @@ class UartTxTest extends AnyFlatSpec with ChiselScalatestTester {
                 expectConstantTx(true, 10)
         }
     }
-
 }

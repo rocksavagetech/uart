@@ -6,7 +6,7 @@ package tech.rocksavage.chiselware.uart
 import chisel3._
 import chiseltest._
 
-object UartUtils {
+object UartTestUtils {
     def transactionChar(dut: UartRx, char: Char, clocksPerBit: Int): Unit = {
 //    val binString = char.toBinaryString.padTo(8, '0').reverse
         val binString = char.toBinaryString.reverse.padTo(8, '0').reverse
@@ -32,7 +32,7 @@ object UartUtils {
         }
         // Transmit the stop bit
         println("--- Transmitting stop bit")
-        UartUtils.transmitBit(dut, true, clocksPerBit)
+        UartTestUtils.transmitBit(dut, true, clocksPerBit)
     }
 
     def transmitBit(dut: UartRx, bit: Boolean, clocksPerBit: Int): Unit = {
