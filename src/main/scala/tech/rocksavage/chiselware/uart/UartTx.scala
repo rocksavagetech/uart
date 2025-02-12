@@ -51,13 +51,15 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
   )
   val useParityDbReg = RegInit(false.B)
 
-  val clocksPerBitNext = WireInit(
-    0.U((log2Ceil(params.maxClocksPerBit) + 1).W)
-  )
-  val numOutputBitsNext = WireInit(
-    0.U((log2Ceil(params.maxOutputBits) + 1).W)
-  )
-  val useParityNext = WireInit(false.B)
+    val clocksPerBitNext = WireInit(
+      0.U((log2Ceil(params.maxClocksPerBit) + 1).W)
+    )
+    val numOutputBitsNext = WireInit(
+      0.U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+    val useParityNext = WireInit(false.B)
+    val dataNext      = WireInit(0.U(params.maxOutputBits.W))
+    val loadNext      = WireInit(false.B)
 
   clocksPerBitReg := clocksPerBitNext
   numOutputBitsReg := numOutputBitsNext
@@ -66,14 +68,19 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
   numOutputBitsDbReg := io.numOutputBitsDb
   useParityDbReg := io.useParityDb
 
-  // ###################
-  // Shift Register for Storing Data to Transmit
-  // ###################
-  // In the idle state, when a new transmission is requested (via io.load),
-  // the transmit data is loaded into this register.
-  val dataShiftReg = RegInit(0.U(params.maxOutputBits.W))
-  val dataShiftNext = WireInit(0.U(params.maxOutputBits.W))
-  dataShiftReg := dataShiftNext
+    // ---
+
+    dataNext := io.data
+    loadNext := io.load
+
+    // ###################
+    // Shift Register for Storing Data to Transmit
+    // ###################
+    // In the idle state, when a new transmission is requested (via io.load),
+    // the transmit data is loaded into this register.
+    val dataShiftReg  = RegInit(0.U(params.maxOutputBits.W))
+    val dataShiftNext = WireInit(0.U(params.maxOutputBits.W))
+    dataShiftReg := dataShiftNext
 
   // ###################
   // Output Register
@@ -86,61 +93,63 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 //  io.tx := txReg
   io.tx := txNext
 
-  // ###################
-  // Finite State Machine (FSM)
-  // ###################
-  // When drive a transmission, the following sequence occurs:
-  //  - Idle: Waiting for a new transmission. When io.load is high, the module loads
-  //          data from io.data into the shift register and captures configuration parameters.
-  //  - Start: Generates the start bit (logic 0) for one bit period.
-  //  - Data:  Shifts out each data bit (LSB first) according to the clocksPerBit timing.
-  //  - Stop:  Generates the stop bit (logic 1) for one bit period, then returns to Idle.
-  stateNext := calculateStateNext(
-    stateReg,
-    io.load,
-    clockCounterReg,
-    clocksPerBitReg,
-    bitCounterReg,
-    numOutputBitsReg
-  )
-  bitCounterNext := calculateBitCounterNext(
-    stateReg,
-    clockCounterReg,
-    clocksPerBitReg,
-    bitCounterReg,
-    numOutputBitsReg
-  )
-  clockCounterNext := calculateClockCounterNext(
-    stateReg,
-    clockCounterReg,
-    clocksPerBitReg
-  )
-  clocksPerBitNext := calculateClocksPerBitNext(
-    stateReg,
-    clocksPerBitReg,
-    clocksPerBitDbReg,
-    io.load
-  )
-  numOutputBitsNext := calculateNumOutputBitsNext(
-    stateReg,
-    numOutputBitsReg,
-    numOutputBitsDbReg,
-    io.load
-  )
-  useParityNext := calculateUseParityNext(
-    stateReg,
-    useParityReg,
-    useParityDbReg,
-    io.load
-  )
-  dataShiftNext := calculateDataShiftNext(
-    stateReg,
-    clockCounterReg,
-    clocksPerBitReg,
-    dataShiftReg,
-    io.data,
-    io.load
-  )
+    // ###################
+    // Finite State Machine (FSM)
+    // ###################
+    // When drive a transmission, the following sequence occurs:
+    //  - Idle: Waiting for a new transmission. When io.load is high, the module loads
+    //          data from io.data into the shift register and captures configuration parameters.
+    //  - Start: Generates the start bit (logic 0) for one bit period.
+    //  - Data:  Shifts out each data bit (LSB first) according to the clocksPerBit timing.
+    //  - Stop:  Generates the stop bit (logic 1) for one bit period, then returns to Idle.
+    stateNext := calculateStateNext(
+      stateReg,
+      loadNext,
+      clockCounterReg,
+      clocksPerBitReg,
+      bitCounterReg,
+      numOutputBitsReg
+    )
+    bitCounterNext := calculateBitCounterNext(
+      stateReg,
+      clockCounterReg,
+      clocksPerBitReg,
+      bitCounterReg,
+      numOutputBitsReg
+    )
+    clockCounterNext := calculateClockCounterNext(
+      stateReg,
+      clockCounterReg,
+      clocksPerBitReg
+    )
+    clocksPerBitNext := calculateClocksPerBitNext(
+      stateReg,
+      clocksPerBitReg,
+      clocksPerBitDbReg,
+      loadNext
+    )
+    numOutputBitsNext := calculateNumOutputBitsNext(
+      stateReg,
+      numOutputBitsReg,
+      numOutputBitsDbReg,
+      loadNext
+    )
+    useParityNext := calculateUseParityNext(
+      stateReg,
+      useParityReg,
+      useParityDbReg,
+      loadNext
+    )
+    dataShiftNext := calculateDataShiftNext(
+      stateReg,
+      clockCounterReg,
+      clocksPerBitReg,
+      bitCounterReg,
+      numOutputBitsReg,
+      dataShiftReg,
+      dataNext,
+      loadNext
+    )
 
   // ###################
   // Functions for FSM and Data Handling
