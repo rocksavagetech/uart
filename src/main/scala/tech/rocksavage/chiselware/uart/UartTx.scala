@@ -64,19 +64,19 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     clocksPerBitReg    := clocksPerBitNext
     numOutputBitsReg   := numOutputBitsNext
     useParityReg       := useParityNext
-    clocksPerBitDbReg  := io.clocksPerBitDb
-    numOutputBitsDbReg := io.numOutputBitsDb
-    useParityDbReg     := io.useParityDb
+    clocksPerBitDbReg  := io.txConfig.clocksPerBitDb
+    numOutputBitsDbReg := io.txConfig.numOutputBitsDb
+    useParityDbReg     := io.txConfig.useParityDb
 
     // ---
 
-    dataNext := io.data
-    loadNext := io.load
+    dataNext := io.txConfig.data
+    loadNext := io.txConfig.load
 
     // ---
 
-    dataNext := io.data
-    loadNext := io.load
+    dataNext := io.txConfig.data
+    loadNext := io.txConfig.load
 
     // ###################
     // Shift Register for Storing Data to Transmit

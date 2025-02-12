@@ -143,9 +143,17 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     io.tx           := uartInner.io.tx
 
     // Control signals: drive the internal UART control inputs from the APB mapped registers.
-    uartInner.io.load            := load
-    uartInner.io.dataIn          := dataIn
-    uartInner.io.clocksPerBitDb  := clocksPerBitDb
-    uartInner.io.numOutputBitsDb := numOutputBitsDb
-    uartInner.io.useParityDb     := useParityDb
+    // TX control signals
+    uartInner.io.txControlBundle.load            := load
+    uartInner.io.txControlBundle.data            := dataIn
+    uartInner.io.txControlBundle.clocksPerBitDb  := clocksPerBitDb
+    uartInner.io.txControlBundle.numOutputBitsDb := numOutputBitsDb
+    uartInner.io.txControlBundle.useParityDb     := useParityDb
+
+    // ---
+    // RX control signals
+    uartInner.io.rxControlBundle.clocksPerBitDb  := clocksPerBitDb
+    uartInner.io.rxControlBundle.numOutputBitsDb := numOutputBitsDb
+    uartInner.io.rxControlBundle.useParityDb     := useParityDb
+
 }

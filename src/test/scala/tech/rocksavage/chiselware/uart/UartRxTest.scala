@@ -12,64 +12,65 @@ import org.scalatest.flatspec.AnyFlatSpec
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 class UartRxTest extends AnyFlatSpec with ChiselScalatestTester {
-  val verbose = false
-  val numTests = 2
-  val testName = System.getProperty("testName")
-  println(s"Argument passed: $testName")
+    val verbose  = false
+    val numTests = 2
+    val testName = System.getProperty("testName")
+    println(s"Argument passed: $testName")
 
-  // System properties for flags
-  val enableVcd = System.getProperty("enableVcd", "true").toBoolean
-  val enableFst = System.getProperty("enableFst", "false").toBoolean
-  val useVerilator = System.getProperty("useVerilator", "false").toBoolean
+    // System properties for flags
+    val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
+    val enableFst    = System.getProperty("enableFst", "false").toBoolean
+    val useVerilator = System.getProperty("useVerilator", "false").toBoolean
 
-  val buildRoot = "out"
-  val testDir = buildRoot + "/test"
+    val buildRoot = "out"
+    val testDir   = buildRoot + "/test"
 
-  println(
-    s"Test: $testName, VCD: $enableVcd, FST: $enableFst, Verilator: $useVerilator"
-  )
+    println(
+      s"Test: $testName, VCD: $enableVcd, FST: $enableFst, Verilator: $useVerilator"
+    )
 
-  // Constructing the backend annotations based on the flags
-  val backendAnnotations = {
-    var annos: Seq[Annotation] = Seq() // Initialize with correct type
+    // Constructing the backend annotations based on the flags
+    val backendAnnotations = {
+        var annos: Seq[Annotation] = Seq() // Initialize with correct type
 
-    if (enableVcd) annos = annos :+ chiseltest.simulator.WriteVcdAnnotation
-    if (enableFst) annos = annos :+ chiseltest.simulator.WriteFstAnnotation
-    if (useVerilator) {
-      annos = annos :+ chiseltest.simulator.VerilatorBackendAnnotation
-      annos = annos :+ VerilatorCFlags(Seq("--std=c++17"))
+        if (enableVcd) annos = annos :+ chiseltest.simulator.WriteVcdAnnotation
+        if (enableFst) annos = annos :+ chiseltest.simulator.WriteFstAnnotation
+        if (useVerilator) {
+            annos = annos :+ chiseltest.simulator.VerilatorBackendAnnotation
+            annos = annos :+ VerilatorCFlags(Seq("--std=c++17"))
+        }
+        annos = annos :+ TargetDirAnnotation(testDir)
+
+        annos
     }
-    annos = annos :+ TargetDirAnnotation(testDir)
 
-    annos
-  }
+    val uartParams = UartParams(
+      dataWidth = 32,
+      addressWidth = 32,
+      maxClocksPerBit = 217, // Example: 25 MHz clock / 115200 baud rate
+      maxOutputBits = 8,
+      syncDepth = 2
+    )
 
-  val uartParams = UartParams(
-    dataWidth = 32,
-    addressWidth = 32,
-    maxClocksPerBit = 217, // Example: 25 MHz clock / 115200 baud rate
-    maxOutputBits = 8,
-    syncDepth = 2
-  )
+    "UartRx" should "handle reads" in {
+        test(new UartRx(uartParams)).withAnnotations(backendAnnotations) {
+            dut =>
+                implicit val clock = dut.clock
 
-  "UartRx" should "handle reads" in {
-    test(new UartRx(uartParams)).withAnnotations(backendAnnotations) { dut =>
-      implicit val clock = dut.clock
+                val clocksPerBit  = 217
+                val numOutputBits = 8
 
-      val clocksPerBit = 217
-      val numOutputBits = 8
+                // Reset the device
+                dut.io.rx.poke(1.U)
+                dut.io.rxConfig.clocksPerBitDb.poke(clocksPerBit.U)
+                dut.io.rxConfig.numOutputBitsDb.poke(numOutputBits.U)
+                dut.io.rxConfig.useParityDb.poke(false.B)
 
-      // Reset the device
-      dut.io.rx.poke(1.U)
-      dut.io.clocksPerBitDb.poke(clocksPerBit.U)
-      dut.io.numOutputBitsDb.poke(numOutputBits.U)
-      dut.io.useParityDb.poke(false.B)
-
-      val chars = Seq('s', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
-      for (char <- chars) {
-        UartUtils.transactionChar(dut, char, clocksPerBit)
-        dut.io.data.expect(char.U)
-      }
+                val chars = Seq('s', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
+                for (char <- chars) {
+                    UartUtils.transactionChar(dut, char, clocksPerBit)
+                    dut.io.data.expect(char.U)
+                }
+        }
     }
-  }
 }

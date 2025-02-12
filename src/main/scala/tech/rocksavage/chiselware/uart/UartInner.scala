@@ -30,15 +30,8 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     io.valid   := rxModule.io.valid
     io.error   := rxModule.io.error.asUInt // Cast if necessary
 
-    // -------------------------
-    // Connect the transmitter side
-    // -------------------------
-    // Connect configuration and data inputs.
-    txModule.io.load            := io.load
-    txModule.io.data            := io.dataIn
-    txModule.io.clocksPerBitDb  := io.clocksPerBitDb
-    txModule.io.numOutputBitsDb := io.numOutputBitsDb
-    txModule.io.useParityDb     := io.useParityDb
+    txModule.io.txConfig := io.txControlBundle
+    rxModule.io.rxConfig := io.rxControlBundle
 
     // Connect the TX output.
     io.tx := txModule.io.tx

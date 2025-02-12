@@ -87,9 +87,9 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     numOutputBitsReg := numOutputBitsNext
     useParityReg     := useParityNext
 
-    clocksPerBitDbReg  := io.clocksPerBitDb
-    numOutputBitsDbReg := io.numOutputBitsDb
-    useParityDbReg     := io.useParityDb
+    clocksPerBitDbReg  := io.rxConfig.clocksPerBitDb
+    numOutputBitsDbReg := io.rxConfig.numOutputBitsDb
+    useParityDbReg     := io.rxConfig.useParityDb
 
     // ###################
     // RX Input Synchronization
