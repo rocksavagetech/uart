@@ -18,9 +18,9 @@ class UartRxTest extends AnyFlatSpec with ChiselScalatestTester {
   println(s"Argument passed: $testName")
 
   // System properties for flags
-  val enableVcd = System.getProperty("enableVcd", "false").toBoolean
-  val enableFst = System.getProperty("enableFst", "true").toBoolean
-  val useVerilator = System.getProperty("useVerilator", "true").toBoolean
+  val enableVcd = System.getProperty("enableVcd", "true").toBoolean
+  val enableFst = System.getProperty("enableFst", "false").toBoolean
+  val useVerilator = System.getProperty("useVerilator", "false").toBoolean
 
   val buildRoot = "out"
   val testDir = buildRoot + "/test"
