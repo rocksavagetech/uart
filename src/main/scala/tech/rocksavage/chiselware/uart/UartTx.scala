@@ -73,6 +73,11 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     dataNext := io.data
     loadNext := io.load
 
+    // ---
+
+    dataNext := io.data
+    loadNext := io.load
+
     // ###################
     // Shift Register for Storing Data to Transmit
     // ###################
