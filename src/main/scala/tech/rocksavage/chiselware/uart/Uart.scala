@@ -87,6 +87,14 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
+    // Register to hold the even parity flag.
+    val parityEvenDb = RegInit(false.B)
+    registerMap.createAddressableRegister(
+      parityEvenDb,
+      "parityEvenDb",
+      verbose = uartParams.verbose
+    )
+
     // --------------------------------------------------------------------------
     // APB Interface: Use AddrDecode and RegisterMap to implement
     // read/write access to control registers.

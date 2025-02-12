@@ -58,6 +58,8 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       0.U((log2Ceil(params.maxOutputBits) + 1).W)
     )
     val useParityNext = WireInit(false.B)
+    val dataNext      = WireInit(0.U(params.maxOutputBits.W))
+    val loadNext      = WireInit(false.B)
 
     clocksPerBitReg    := clocksPerBitNext
     numOutputBitsReg   := numOutputBitsNext
@@ -65,6 +67,11 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     clocksPerBitDbReg  := io.clocksPerBitDb
     numOutputBitsDbReg := io.numOutputBitsDb
     useParityDbReg     := io.useParityDb
+
+    // ---
+
+    dataNext := io.data
+    loadNext := io.load
 
     // ###################
     // Shift Register for Storing Data to Transmit
@@ -94,7 +101,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     //  - Stop:  Generates the stop bit (logic 1) for one bit period, then returns to Idle.
     stateNext := calculateStateNext(
       stateReg,
-      io.load,
+      loadNext,
       clockCounterReg,
       clocksPerBitReg,
       bitCounterReg,
@@ -116,19 +123,19 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       stateReg,
       clocksPerBitReg,
       clocksPerBitDbReg,
-      io.load
+      loadNext
     )
     numOutputBitsNext := calculateNumOutputBitsNext(
       stateReg,
       numOutputBitsReg,
       numOutputBitsDbReg,
-      io.load
+      loadNext
     )
     useParityNext := calculateUseParityNext(
       stateReg,
       useParityReg,
       useParityDbReg,
-      io.load
+      loadNext
     )
     dataShiftNext := calculateDataShiftNext(
       stateReg,
@@ -137,8 +144,8 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       bitCounterReg,
       numOutputBitsReg,
       dataShiftReg,
-      io.data,
-      io.load
+      dataNext,
+      loadNext
     )
 
     // ###################
