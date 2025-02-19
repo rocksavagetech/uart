@@ -20,28 +20,26 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     // Instantiate the transmitter module
     val txModule = Module(new UartTx(params, formal))
 
-    // Set ready signal
-    rxModule.io.ready := true.B
-
     // Connect the RX side
-    rxModule.io.rx := io.rx
-    io.dataOut := rxModule.io.data
-    io.valid := rxModule.io.valid
-    io.error := rxModule.io.error.asUInt
+    rxModule.io.rx   := io.rx
+    io.dataOut       := rxModule.io.data
+    io.valid         := rxModule.io.valid
+    io.error.rxError := rxModule.io.error
 
     // Connect control signals to RX module
-    rxModule.io.rxConfig.clocksPerBitDb := io.rxControlBundle.clocksPerBitDb
+    rxModule.io.rxConfig.clocksPerBitDb  := io.rxControlBundle.clocksPerBitDb
     rxModule.io.rxConfig.numOutputBitsDb := io.rxControlBundle.numOutputBitsDb
-    rxModule.io.rxConfig.useParityDb := io.rxControlBundle.useParityDb
-    rxModule.io.rxConfig.parityOddDb := io.rxControlBundle.parityOddDb
+    rxModule.io.rxConfig.useParityDb     := io.rxControlBundle.useParityDb
+    rxModule.io.rxConfig.parityOddDb     := io.rxControlBundle.parityOddDb
+    rxModule.io.rxConfig.clearErrorDb    := io.rxControlBundle.clearErrorDb
 
     // Connect control signals to TX module
-    txModule.io.txConfig.load := io.txControlBundle.load
-    txModule.io.txConfig.data := io.txControlBundle.data
-    txModule.io.txConfig.clocksPerBitDb := io.txControlBundle.clocksPerBitDb
+    txModule.io.txConfig.load            := io.txControlBundle.load
+    txModule.io.txConfig.data            := io.txControlBundle.data
+    txModule.io.txConfig.clocksPerBitDb  := io.txControlBundle.clocksPerBitDb
     txModule.io.txConfig.numOutputBitsDb := io.txControlBundle.numOutputBitsDb
-    txModule.io.txConfig.useParityDb := io.txControlBundle.useParityDb
-    txModule.io.txConfig.parityOddDb := io.txControlBundle.parityOddDb
+    txModule.io.txConfig.useParityDb     := io.txControlBundle.useParityDb
+    txModule.io.txConfig.parityOddDb     := io.txControlBundle.parityOddDb
 
     // Connect the TX output
     io.tx := txModule.io.tx
@@ -50,8 +48,10 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     when(rxModule.io.valid) {
         printf(p"[UartInner.scala DEBUG] RX valid, data=${rxModule.io.data}\n")
     }
-    
+
     when(txModule.io.txConfig.load) {
-        printf(p"[UartInner.scala DEBUG] TX loading data=${txModule.io.txConfig.data}\n")
+        printf(
+          p"[UartInner.scala DEBUG] TX loading data=${txModule.io.txConfig.data}\n"
+        )
     }
 }
