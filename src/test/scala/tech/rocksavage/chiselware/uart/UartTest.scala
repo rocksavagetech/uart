@@ -3,7 +3,7 @@ package tech.rocksavage.chiselware.uart
 import chiseltest._
 import chiseltest.simulator.{
     VerilatorBackendAnnotation,
-    VerilatorFlags,
+    VerilatorCFlags,
     WriteFstAnnotation,
     WriteVcdAnnotation
 }
@@ -20,7 +20,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "oddParityReceive"
+        case true  => "fullDuplex"
         case false => testNameArg
     }
 
@@ -33,7 +33,9 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         if (enableFst) annos = annos :+ WriteFstAnnotation
         if (useVerilator) {
             annos = annos :+ VerilatorBackendAnnotation
-            annos = annos :+ VerilatorFlags(Seq("--cc", "--std=c++17"))
+            annos = annos :+ VerilatorCFlags(
+              Seq("--std=c++17", "-O3", "-march=native")
+            )
         }
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
@@ -224,6 +226,17 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             fullDuplexTests.lineIdleTest(dut, uartParams)
+                        }
+                }
+
+            case "fullDuplex" =>
+                it should "handle bidirectional communication" in {
+                    test(new FullDuplexUart(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            fullDuplexTests.bidirectionalCommunicationTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
 

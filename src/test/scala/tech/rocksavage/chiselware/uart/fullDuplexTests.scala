@@ -40,11 +40,11 @@ object fullDuplexTests {
     while (!dataAvailable && cycles < timeoutCycles) {
       val availableRaw = readAPB(apb, rxDataAvailableAddr)
       dataAvailable = (availableRaw != 0)
-      
-      if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam 
+
+      if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam
         println(s"pollForRxData: Cycle $cycles, availableRaw=$availableRaw, dataAvailable=$dataAvailable")
       }
-      
+
       clock.step(1)
       cycles += 1
     }
@@ -67,8 +67,8 @@ object fullDuplexTests {
     implicit val clock: Clock = dut.clock
     clock.setTimeout(0)
 
-    val clocksPerBit = 217 
-    
+    val clocksPerBit = 217
+
     // Configure both UARTs
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
@@ -80,8 +80,8 @@ object fullDuplexTests {
       // Send from UART1 and wait for UART2 to receive
       sendChar(dut.io.uart1Apb, dut.getUart1, dataFromUart1(i), clocksPerBit)
       pollForRxData(dut.io.uart2Apb, dut.getUart2) match {
-        case Some(uart2Received) => 
-          assert(uart2Received == dataFromUart1(i), 
+        case Some(uart2Received) =>
+          assert(uart2Received == dataFromUart1(i),
             f"UART2 received wrong data: got ${uart2Received}%c, expected ${dataFromUart1(i)}%c")
         case None =>
           assert(false, "UART2 did not receive data in time")
@@ -214,7 +214,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
   // Configure UARTs with different baud rates
   val clocksPerBit1 = 217  //  115200 baud
   val clocksPerBit2 = 434  // 57600 baud
-  
+
   println(s"Starting mixed baud rate test")
   println(s"UART1: clocksPerBit = $clocksPerBit1 (115200 baud)")
   println(s"UART2: clocksPerBit = $clocksPerBit2 (57600 baud)")
@@ -231,13 +231,13 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
   val testData = "Tes"
   for (char <- testData) {
     println(s"\nTesting character: '$char'")
-    
+
     // Fast -> Slow (UART1 -> UART2)
     println(s"Sending from UART1 (fast) to UART2 (slow)")
     sendChar(dut.io.uart1Apb, dut.getUart1, char, clocksPerBit1)
     pollForRxData(dut.io.uart2Apb, dut.getUart2) match {
-      case Some(uart2Received) => 
-        assert(uart2Received != char, 
+      case Some(uart2Received) =>
+        assert(uart2Received != char,
           f"UART2 unexpectedly received correct data despite baud rate mismatch")
       case None =>
         assert(false, "UART2 did not receive data in time")
@@ -251,7 +251,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     pollForRxData(dut.io.uart1Apb, dut.getUart1) match {
       case Some(uart1Received) =>
         println(s"UART1 received data: ${uart1Received.toInt}")
-        assert(uart1Received != char, 
+        assert(uart1Received != char,
           f"UART1 unexpectedly received correct data despite baud rate mismatch")
       case None =>
         assert(false, "UART1 did not receive data in time")
@@ -269,7 +269,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     clock.setTimeout(0)
 
     val clocksPerBit = 27 // For 921600 baud with 25MHz clock
-    
+
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
 
@@ -283,12 +283,12 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
       clock.step(1)
       writeAPB(dut.io.uart1Apb, dut.getUart1.registerMap.getAddressOfRegister("load").get.U, false.B)
       clock.step(clocksPerBit * 12)
-      
+
       // Read received character
       receivedData.append(readChar(dut.io.uart2Apb, dut.getUart2))
     }
 
-    assert(receivedData.toString == testData, 
+    assert(receivedData.toString == testData,
       s"Data mismatch at high speed: got ${receivedData.toString}, expected $testData")
   }
 
@@ -300,7 +300,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     clock.setTimeout(0)
 
     val clocksPerBit = 217
-    
+
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
 
@@ -313,7 +313,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
       receivedData.append(readChar(dut.io.uart2Apb, dut.getUart2))
     }
 
-    assert(receivedData.toString == testData, 
+    assert(receivedData.toString == testData,
       "Data mismatch in long transmission")
   }
 
@@ -325,7 +325,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     clock.setTimeout(0)
 
     val clocksPerBit = 217
-    
+
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
 
@@ -350,7 +350,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     // 5. Induce parity error
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit, useParity = true, parityOdd = true)
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit, useParity = true, parityOdd = true)
-    
+
     sendChar(dut.io.uart1Apb, dut.getUart1, testChar, clocksPerBit)
     status = readAPB(dut.io.uart2Apb, dut.getUart2.registerMap.getAddressOfRegister("error").get.U)
     assert((status & 0x03) == 0x03, "Parity error not detected")
@@ -358,7 +358,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     // 6. Verify recovery after multiple errors
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit) // Disable parity
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
-    
+
     val recoveryData = "Recovery"
     for (char <- recoveryData) {
       sendChar(dut.io.uart1Apb, dut.getUart1, char, clocksPerBit)
@@ -375,12 +375,12 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     clock.setTimeout(0)
 
     val clocksPerBit = 217
-    
+
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
 
     val testChar = 'N'
-    
+
     // Function to inject noise
     def injectNoise(duration: Int): Unit = {
       for (_ <- 0 until duration) {
@@ -436,10 +436,10 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
       val testChar = 'R'
       sendChar(dut.io.uart1Apb, dut.getUart1, testChar, clocksPerBit)
       val received = readChar(dut.io.uart2Apb, dut.getUart2)
-      
-      assert(received == testChar, 
+
+      assert(received == testChar,
         s"Character mismatch at baud rate $baudRate: got $received, expected $testChar")
-      
+
       clock.step(clocksPerBit * 2) // Wait between baud rate changes
     }
   }
@@ -452,7 +452,7 @@ def mixedBaudRateTest(dut: FullDuplexUart, params: UartParams): Unit = {
     clock.setTimeout(0)
 
     val clocksPerBit = 217
-    
+
     setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
     setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
 
