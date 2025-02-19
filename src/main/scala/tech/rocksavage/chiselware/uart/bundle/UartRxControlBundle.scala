@@ -14,5 +14,6 @@ class UartRxControlBundle(params: UartParams) extends Bundle {
     val numOutputBitsDb = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
     val useParityDb     = Input(Bool())
     val parityOddDb     = Input(Bool())
+    val clearErrorDb    = Input(Bool())
 
 }
