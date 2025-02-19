@@ -11,15 +11,10 @@ class UartRxBundle(params: UartParams) extends Bundle {
     val rx    = Input(Bool())
     val data  = Output(UInt(params.maxOutputBits.W))
     val valid = Output(Bool())
-    val ready = Input(Bool())
 
     val error = Output(UartRxError())
 
     // configuration inputs
-
-    // clock = 25 MHz
-    // baud = 115200
-    // 25000000 / 115200 = 217 Clocks Per Bit.
     val rxConfig = new UartRxControlBundle(params)
 
 }
