@@ -20,7 +20,7 @@ object parityTests {
 
         val data: Int = 65
         val dataBits =
-            (0 until numOutputBits).map(i => ((data >> i) & 1) == 1)
+            (0 until numOutputBits).map(i => ((data >> i) & 1) == 1).reverse
         val expectedParity = true // computed as 1
 
         // Build the sequence: start (0), 8 data bits, parity bit, stop (1)

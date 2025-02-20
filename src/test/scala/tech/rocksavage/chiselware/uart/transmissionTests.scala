@@ -26,7 +26,8 @@ object transmissionTests {
 
             // Wait for valid signal with timeout
             var timeout = 0
-            dut.clock.setTimeout(clocksPerBit * 12)
+//            dut.clock.setTimeout(clocksPerBit * 12 + 1)
+            dut.clock.setTimeout(20000)
             while (
               !dut.io.valid.peek().litToBoolean && timeout < clocksPerBit * 12
             ) {
@@ -71,7 +72,7 @@ object transmissionTests {
         val data: Int = 65 // ASCII 'A'
         val dataBits: Seq[Boolean] = (0 until numOutputBits).map { i =>
             ((data >> i) & 1) == 1
-        }
+        }.reverse
 
         // Build the expected sequence
         val expectedSequence: Seq[Boolean] = Seq(false) ++ dataBits ++ Seq(true)

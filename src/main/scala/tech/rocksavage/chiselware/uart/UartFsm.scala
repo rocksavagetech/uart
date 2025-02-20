@@ -17,11 +17,12 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
         val useParityReg = Input(Bool())
 
         // ############# output signals
-        val state        = Output(UartState())
-        val sampleStart  = Output(Bool())
-        val sampleData   = Output(Bool())
-        val sampleParity = Output(Bool())
-        val complete     = Output(Bool())
+        val state         = Output(UartState())
+        val sampleStart   = Output(Bool())
+        val sampleData    = Output(Bool())
+        val sampleParity  = Output(Bool())
+        val complete      = Output(Bool())
+        val shiftRegister = Output(Bool())
     })
 
     val activeReg = RegInit(false.B)
@@ -55,7 +56,8 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
         (clockCounterReg === ((io.clocksPerBitReg - 1.U) >> 1.U))
     val incrementCounterNext = clockCounterReg === (io.clocksPerBitReg - 1.U)
 
-    bitCounterReg := Mux(
+    val bitCounterNext = WireDefault(bitCounterReg)
+    bitCounterNext := Mux(
       !completeReg,
       incrementCounter(
         bitCounterReg,
@@ -83,8 +85,10 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
       clocksPerBitReg = io.clocksPerBitReg,
       numOutputBitsReg = io.numOutputBitsReg,
       useParityReg = io.useParityReg,
-      sampleNext = sampleNext
+      incrementCounterReg = incrementCounterNext
     )
+
+    bitCounterReg := bitCounterNext
 
     sampleReg           := sampleNext
     incrementCounterReg := incrementCounterNext
@@ -96,6 +100,7 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
     io.sampleData   := (stateReg === UartState.Data) && sampleNext
     io.sampleParity := (stateReg === UartState.Parity) && sampleNext
     io.complete     := completeNext
+    io.shiftRegister := incrementCounterNext && (stateReg === UartState.Data) && bitCounterNext =/= 0.U
 
     def incrementCounter(counter: UInt, max: UInt, condition: Bool): UInt = {
         val next = WireDefault(counter)
@@ -117,7 +122,7 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
         clocksPerBitReg: UInt,
         numOutputBitsReg: UInt,
         useParityReg: Bool,
-        sampleNext: Bool
+        incrementCounterReg: Bool
     ): UartState.Type = {
         val stateNext = WireDefault(stateReg)
 
@@ -128,12 +133,12 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
                 }
             }
             is(UartState.Start) {
-                when(sampleNext) {
+                when(incrementCounterReg) {
                     stateNext := UartState.Data
                 }
             }
             is(UartState.Data) {
-                when(sampleNext) {
+                when(incrementCounterReg) {
                     when(bitCounterReg === numOutputBitsReg - 1.U) {
                         when(useParityReg) {
                             stateNext := UartState.Parity
@@ -144,12 +149,12 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
                 }
             }
             is(UartState.Parity) {
-                when(sampleNext) {
+                when(incrementCounterReg) {
                     stateNext := UartState.Stop
                 }
             }
             is(UartState.Stop) {
-                when(sampleNext) {
+                when(incrementCounterReg) {
                     stateNext := UartState.Idle
                 }
             }
