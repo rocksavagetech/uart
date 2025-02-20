@@ -98,9 +98,11 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     val uartFsm = Module(new UartFsm(params, formal))
 
-    val stateWire    = uartFsm.io.state
-    val sampleWire   = uartFsm.io.sample
-    val completeWire = uartFsm.io.complete
+    val stateWire        = uartFsm.io.state
+    val sampleStartWire  = uartFsm.io.sampleStart
+    val sampleDataWire   = uartFsm.io.sampleData
+    val sampleParityWire = uartFsm.io.sampleParity
+    val completeWire     = uartFsm.io.complete
 
     val startTransaction =
         (rxSync === false.B) && (stateWire === UartState.Idle)
@@ -203,7 +205,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     dataShiftNext := calculateDataShiftNext(
       rxSync,
       dataShiftReg,
-      sampleWire,
+      sampleDataWire,
       completeWire
     )
 
@@ -339,9 +341,10 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
             }
             is(UartState.Parity) {
                 when(completeWire) {
-                    val numOnes = PopCount(dataShiftReg)
+                    val expectedParity =
+                        UartParity.parityChisel(dataShiftReg, parityOddReg)
                     when(useParityReg === true.B) {
-                        when((numOnes % 2.U) =/= parityOddReg) {
+                        when(rxSync =/= expectedParity) {
                             errorNext := UartRxError.ParityError
                         }
                     }

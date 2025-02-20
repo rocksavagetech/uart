@@ -7,76 +7,198 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 
 class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
     val io = IO(new Bundle {
-        val startTransaction = Input(Bool())
 
+        // ############# input signals
+        val startTransaction = Input(Bool())
         val clocksPerBitReg =
             Input(UInt((log2Ceil(params.maxClocksPerBit) + 1).W))
         val numOutputBitsReg =
             Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
         val useParityReg = Input(Bool())
 
-        val state    = Output(UartState())
-        val sample   = Output(Bool())
-        val complete = Output(Bool())
+        // ############# output signals
+        val state        = Output(UartState())
+        val sampleStart  = Output(Bool())
+        val sampleData   = Output(Bool())
+        val sampleParity = Output(Bool())
+        val complete     = Output(Bool())
     })
 
-    // internal signals
+    val activeReg = RegInit(false.B)
+
+    val stateReg            = RegInit(UartState.Idle)
+    val sampleReg           = RegInit(false.B)
+    val incrementCounterReg = RegInit(false.B)
+    val completeReg         = RegInit(false.B)
+
     val clockCounterReg = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
     val bitCounterReg   = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
 
-    // output signals
-    val stateReg  = RegInit(UartState.Idle)
-    val stateNext = WireInit(stateReg)
+    // internal signals
+    activeReg := computeActiveNext(
+      activeReg,
+      io.startTransaction,
+      io.complete
+    )
 
-    val sampleNext = WireDefault(false.B)
+    clockCounterReg := Mux(
+      !completeReg,
+      incrementCounter(
+        clockCounterReg,
+        io.clocksPerBitReg - 1.U,
+        condition = stateReg =/= UartState.Idle
+      ),
+      0.U
+    )
 
-    val complete = WireDefault(false.B)
+    val sampleNext =
+        (clockCounterReg === ((io.clocksPerBitReg - 1.U) >> 1.U))
+    val incrementCounterNext = clockCounterReg === (io.clocksPerBitReg - 1.U)
 
-    stateReg := stateNext
+    bitCounterReg := Mux(
+      !completeReg,
+      incrementCounter(
+        bitCounterReg,
+        io.numOutputBitsReg - 1.U,
+        condition = incrementCounterNext && (stateReg === UartState.Data)
+      ),
+      0.U
+    )
 
-    io.state    := stateReg
-    io.sample   := sampleNext
-    io.complete := complete
+    val completeNext = computeCompleteNext(
+      stateReg = stateReg,
+      sampleNext = sampleNext,
+      bitCounterReg = bitCounterReg,
+      numOutputBitsReg = io.numOutputBitsReg,
+      useParityReg = io.useParityReg,
+      clocksPerBitReg = io.clocksPerBitReg,
+      clockCounterReg = clockCounterReg
+    )
 
-    // FSM
-    switch(stateReg) {
-        is(UartState.Idle) {
-            when(io.startTransaction) {
-                stateNext := UartState.Start
+    val stateNext = computeStateNext(
+      stateReg = stateReg,
+      startTransaction = io.startTransaction,
+      clockCounterReg = clockCounterReg,
+      bitCounterReg = bitCounterReg,
+      clocksPerBitReg = io.clocksPerBitReg,
+      numOutputBitsReg = io.numOutputBitsReg,
+      useParityReg = io.useParityReg,
+      sampleNext = sampleNext
+    )
+
+    sampleReg           := sampleNext
+    incrementCounterReg := incrementCounterNext
+    completeReg         := completeNext
+    stateReg            := stateNext
+
+    io.state        := stateReg
+    io.sampleStart  := (stateReg === UartState.Start) && sampleNext
+    io.sampleData   := (stateReg === UartState.Data) && sampleNext
+    io.sampleParity := (stateReg === UartState.Parity) && sampleNext
+    io.complete     := completeNext
+
+    def incrementCounter(counter: UInt, max: UInt, condition: Bool): UInt = {
+        val next = WireDefault(counter)
+        when(condition) {
+            when(counter === max) {
+                next := 0.U
+            }.otherwise {
+                next := counter + 1.U
             }
         }
-        is(UartState.Start) {
-            when(clockCounterReg === io.clocksPerBitReg) {
-                stateNext := UartState.Data
+        next
+    }
+
+    def computeStateNext(
+        stateReg: UartState.Type,
+        startTransaction: Bool,
+        clockCounterReg: UInt,
+        bitCounterReg: UInt,
+        clocksPerBitReg: UInt,
+        numOutputBitsReg: UInt,
+        useParityReg: Bool,
+        sampleNext: Bool
+    ): UartState.Type = {
+        val stateNext = WireDefault(stateReg)
+
+        switch(stateReg) {
+            is(UartState.Idle) {
+                when(startTransaction) {
+                    stateNext := UartState.Start
+                }
             }
-        }
-        is(UartState.Data) {
-            when(clockCounterReg === io.clocksPerBitReg - 1.U) {
-
-                sampleNext := true.B
-
-                when(bitCounterReg === io.numOutputBitsReg - 1.U) {
-                    when(io.useParityReg) {
-                        stateNext := UartState.Parity
-                    }.otherwise {
-                        complete  := true.B
-                        stateNext := UartState.Stop
-                    }
-                }.otherwise {
+            is(UartState.Start) {
+                when(sampleNext) {
                     stateNext := UartState.Data
                 }
             }
-        }
-        is(UartState.Parity) {
-            when(clockCounterReg === io.clocksPerBitReg) {
-                complete  := true.B
-                stateNext := UartState.Stop
+            is(UartState.Data) {
+                when(sampleNext) {
+                    when(bitCounterReg === numOutputBitsReg - 1.U) {
+                        when(useParityReg) {
+                            stateNext := UartState.Parity
+                        }.otherwise {
+                            stateNext := UartState.Stop
+                        }
+                    }
+                }
+            }
+            is(UartState.Parity) {
+                when(sampleNext) {
+                    stateNext := UartState.Stop
+                }
+            }
+            is(UartState.Stop) {
+                when(sampleNext) {
+                    stateNext := UartState.Idle
+                }
             }
         }
-        is(UartState.Stop) {
-            when(clockCounterReg === io.clocksPerBitReg) {
-                stateNext := UartState.Idle
+        stateNext
+    }
+
+    def computeCompleteNext(
+        stateReg: UartState.Type,
+        sampleNext: Bool,
+        bitCounterReg: UInt,
+        numOutputBitsReg: UInt,
+        useParityReg: Bool,
+        clocksPerBitReg: UInt,
+        clockCounterReg: UInt
+    ): Bool = {
+        val completeNext = WireDefault(false.B)
+
+        switch(stateReg) {
+            is(UartState.Data) {
+                when(clockCounterReg === (clocksPerBitReg - 1.U)) {
+                    when(bitCounterReg === numOutputBitsReg - 1.U) {
+                        when(!useParityReg) {
+                            completeNext := true.B
+                        }
+                    }
+                }
+            }
+            is(UartState.Parity) {
+                when(clockCounterReg === (clocksPerBitReg - 1.U)) {
+                    completeNext := true.B
+                }
             }
         }
+        completeNext
+    }
+
+    def computeActiveNext(
+        activeReg: Bool,
+        startTransaction: Bool,
+        completeWire: Bool
+    ): Bool = {
+        val activeNext = WireDefault(activeReg)
+        when(completeWire) {
+            activeNext := false.B
+        }
+        when(startTransaction) {
+            activeNext := true.B
+        }
+        activeNext
     }
 }

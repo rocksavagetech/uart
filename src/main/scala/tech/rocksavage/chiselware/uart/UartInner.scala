@@ -45,9 +45,9 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     io.tx := txModule.io.tx
 
     // Debug signals
-    when(rxModule.io.valid) {
-        printf(p"[UartInner.scala DEBUG] RX valid, data=${rxModule.io.data}\n")
-    }
+//    when(rxModule.io.valid) {
+//        printf(p"[UartInner.scala DEBUG] RX valid, data=${rxModule.io.data}\n")
+//    }
 
     when(txModule.io.txConfig.load) {
         printf(

@@ -20,7 +20,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "fullDuplex"
+        case true  => "oddParityReceive"
         case false => testNameArg
     }
 

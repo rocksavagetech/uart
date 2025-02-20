@@ -60,9 +60,11 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     val uartFsm = Module(new UartFsm(params, formal))
 
-    val stateWire    = uartFsm.io.state
-    val sampleWire   = uartFsm.io.sample
-    val completeWire = uartFsm.io.complete
+    val stateWire        = uartFsm.io.state
+    val sampleStartWire  = uartFsm.io.sampleStart
+    val sampleDataWire   = uartFsm.io.sampleData
+    val sampleParityWire = uartFsm.io.sampleParity
+    val completeWire     = uartFsm.io.complete
 
     val startTransaction = (stateWire === UartState.Idle) && loadNext
 
@@ -130,7 +132,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       dataShiftReg,
       dataNext,
       startTransaction,
-      sampleWire
+      sampleDataWire
     )
 
     // -------------------------
@@ -174,8 +176,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
                 txOut := dataShiftReg(0)
             }
             is(UartState.Parity) {
-                val dataParity = txData.xorR
-                txOut := Mux(parityOddReg, ~dataParity, dataParity)
+                txOut := UartParity.parityChisel(txData, parityOddReg)
             }
             is(UartState.Stop) {
                 txOut := true.B
