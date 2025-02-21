@@ -69,6 +69,40 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         info("--------------------------------")
 
         name match {
+
+            // Add Random Test Cases
+            case "randomBaudRate" =>
+                it should "handle random valid baud rates" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomBaudRateTest(dut, uartParams)
+                        }
+                }
+
+            case "randomDataPattern" =>
+                it should "handle random data patterns" in {
+                    test(new FullDuplexUart(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomDataPatternTest(dut, uartParams)
+                        }
+                }
+
+            case "randomNoise" =>
+                it should "handle random noise patterns" in {
+                    test(new FullDuplexUart(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomNoiseTest(dut, uartParams)
+                        }
+                }
+
+            case "randomParity" =>
+                it should "handle random parity configurations" in {
+                    test(new FullDuplexUart(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomParityTest(dut, uartParams)
+                        }
+                }
+
             // Baud Rate Tests
             case "baudRateAccuracy" =>
                 it should "maintain accurate baud rate timing" in {
@@ -249,9 +283,40 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     def runAllTests(params: UartParams): Unit = {
         baudRateTestsFull(params)
         parityTestsFull(params)
-        // errorTestsFull(params)
+        errorTestsFull(params)
         transmissionTestsFull(params)
         fullDuplexTestsFull(params)
+        randomTestsFull(params)
+    }
+
+    def randomTestsFull(params: UartParams): Unit = {
+        it should "handle random valid baud rates" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomBaudRateTest(dut, params)
+                }
+        }
+
+        it should "handle random data patterns" in {
+            test(new FullDuplexUart(params))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomDataPatternTest(dut, params)
+                }
+        }
+
+        it should "handle random noise patterns" in {
+            test(new FullDuplexUart(params))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomNoiseTest(dut, params)
+                }
+        }
+
+        it should "handle random parity configurations" in {
+            test(new FullDuplexUart(params))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomParityTest(dut, params)
+                }
+        }
     }
 
     def baudRateTestsFull(params: UartParams): Unit = {
