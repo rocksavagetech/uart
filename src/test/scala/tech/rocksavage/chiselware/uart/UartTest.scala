@@ -12,6 +12,7 @@ import firrtl2.options.TargetDirAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.tests._
 
 class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val numTests    = 2
@@ -72,19 +73,11 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         name match {
 
             // Add Random Test Cases
-            case "randomBaudRate" =>
+            case "random" =>
                 it should "handle random valid baud rates" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            randomTests.randomBaudRateTest(dut, uartParams)
-                        }
-                }
-
-            case "randomDataPattern" =>
-                it should "handle random data patterns" in {
-                    test(new FullDuplexUart(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            randomTests.randomDataPatternTest(dut, uartParams)
+                            randomTests.randomTest(dut, uartParams)
                         }
                 }
 
@@ -101,23 +94,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             randomTests.randomParityTest(dut, uartParams)
-                        }
-                }
-
-            // Baud Rate Tests
-            case "baudRateAccuracy" =>
-                it should "maintain accurate baud rate timing" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            baudRateTests.baudRateAccuracyTest(dut, uartParams)
-                        }
-                }
-
-            case "baudRateStability" =>
-                it should "maintain stable baud rate over multiple transmissions" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            baudRateTests.baudRateStabilityTest(dut, uartParams)
                         }
                 }
 
@@ -282,7 +258,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     }
 
     def runAllTests(params: UartParams): Unit = {
-        baudRateTestsFull(params)
         parityTestsFull(params)
         errorTestsFull(params)
         transmissionTestsFull(params)
@@ -294,14 +269,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         it should "handle random valid baud rates" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
-                    randomTests.randomBaudRateTest(dut, params)
-                }
-        }
-
-        it should "handle random data patterns" in {
-            test(new FullDuplexUart(params))
-                .withAnnotations(backendAnnotations) { dut =>
-                    randomTests.randomDataPatternTest(dut, params)
+                    randomTests.randomTest(dut, params)
                 }
         }
 
@@ -317,22 +285,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 .withAnnotations(backendAnnotations) { dut =>
                     randomTests.randomParityTest(dut, params)
                 }
-        }
-    }
-
-    def baudRateTestsFull(params: UartParams): Unit = {
-        it should "maintain accurate baud rate timing" in {
-            test(new Uart(params, false)).withAnnotations(backendAnnotations) {
-                dut =>
-                    baudRateTests.baudRateAccuracyTest(dut, params)
-            }
-        }
-
-        it should "maintain stable baud rate over multiple transmissions" in {
-            test(new Uart(params, false)).withAnnotations(backendAnnotations) {
-                dut =>
-                    baudRateTests.baudRateStabilityTest(dut, params)
-            }
         }
     }
 

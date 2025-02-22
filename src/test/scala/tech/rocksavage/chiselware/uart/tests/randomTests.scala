@@ -1,285 +1,70 @@
-package tech.rocksavage.chiselware.uart
+package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.UartTestUtils.setBaudRate
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.testutils.UartTestUtils
+import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart, UartRuntimeConfig}
 
 import scala.util.Random
 
 object randomTests {
 
+    def iexp(base: Int, exp: Int): Int = {
+        if (exp == 0) 1
+        else base * iexp(base, exp - 1)
+    }
+
     /** Random Baud Rate Test Tests random valid baud rate configurations
       */
-    def randomBaudRateTest(dut: Uart, params: UartParams): Unit = {
+    def randomTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
-        clk.setTimeout(10000)
         dut.io.rx.poke(1.U)
 
-        val clockFrequency = 25_000_000
+        /** 2 exp 13, 2 exp 14, ... */
+        val validClockFrequencies = Seq(
+          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+        ).map(iexp(2, _))
         val validBaudRates = Seq(
-          115200, 57600, 28800, 14400, 7200
+          9600, 19_200, 38_400, 57_600, 115_200, 230_400, 460_800, 921_600
         )
+        val validDataBits = Seq(5, 6, 7, 8)
 
         for (_ <- 1 to 10) { // Test 10 random configurations
             val baudRate = validBaudRates(
               Random.nextInt(validBaudRates.length)
             )
-            val clocksPerBit = clockFrequency / baudRate
+            val clockFrequency = validClockFrequencies(
+              Random.nextInt(validClockFrequencies.length)
+            )
+            val numOutputBits = validDataBits(
+              Random.nextInt(validDataBits.length)
+            )
+
+            // truncate data to the number of bits
+            val data = Random.nextInt(iexp(2, numOutputBits))
+
+            val useParity = Random.nextBoolean()
+            val parityOdd = Random.nextBoolean() && useParity
+
             println(
-              s"Testing random baud rate with clocksPerBit = $clocksPerBit"
+              s"Testing random baud rate with configuration: \nbaud rate = $baudRate, \nclock frequency = $clockFrequency, \ndata bits = $numOutputBits, \ndata = $data"
             )
 
-            // Provide the baud rate
-            setBaudRate(dut, baudRate, clockFrequency)
-
-            // Configure UART
-            writeAPB(
-              dut.io.apb,
-              dut.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
-              8.U
-            )
-            clk.step(clocksPerBit * 2)
-
-            // Verify configuration was set correctly
-
-            // Send random character and track transmission timing
-            val testChar = Random.nextInt(128).toChar
-            println(s"Sending character: $testChar")
-
-            // Record initial state
-            val initialTx = dut.io.tx.peekBoolean()
-            assert(
-              initialTx,
-              "TX line should be high (idle) before transmission"
+            val config: UartRuntimeConfig = UartRuntimeConfig(
+              baudRate = baudRate,
+              clockFrequency = clockFrequency,
+              numOutputBits = numOutputBits,
+              data = data,
+              useParity = useParity,
+              parityOdd = parityOdd
             )
 
-            // Start transmission
-            writeAPB(
-              dut.io.apb,
-              dut.registerMap.getAddressOfRegister("dataIn").get.U,
-              testChar.toInt.U
-            )
-            writeAPB(
-              dut.io.apb,
-              dut.registerMap.getAddressOfRegister("load").get.U,
-              true.B
-            )
-            clk.step(1)
-            writeAPB(
-              dut.io.apb,
-              dut.registerMap.getAddressOfRegister("load").get.U,
-              false.B
-            )
-
-            // Verify start bit
-            clk.step(1)
-            val startBit = dut.io.tx.peekBoolean()
-            assert(!startBit, "Start bit should be low")
-
-            // Track bit transitions
-            var lastTx      = startBit
-            var transitions = 0
-            var bitCount    = 0
-            var cycleCount  = 0
-
-            // Monitor full transmission
-            while (cycleCount < clocksPerBit * 12) {
-                val currentTx = dut.io.tx.peekBoolean()
-                if (currentTx != lastTx) {
-                    transitions += 1
-                    assert(
-                      cycleCount % clocksPerBit <= 2,
-                      s"Transition occurred at unexpected time: cycle $cycleCount"
-                    )
-                }
-                lastTx = currentTx
-                cycleCount += 1
-                clk.step(1)
-            }
-
-            // Verify final state
-            val finalTx = dut.io.tx.peekBoolean()
-            assert(
-              finalTx,
-              "TX line should return to high (idle) after transmission"
-            )
-
-            // Verify minimum transitions (start bit + data bits + stop bit)
-            assert(
-              transitions >= 2,
-              "Too few transitions detected in transmission"
-            )
-
-            // Verify transmission timing
-            assert(
-              cycleCount >= clocksPerBit * 10,
-              "Transmission completed too quickly for configured baud rate"
-            )
+            // does all assertions that the behavior is correct
+            UartTestUtils.transmit(dut, config)
         }
-    }
-
-    def randomDataPatternTest(dut: FullDuplexUart, params: UartParams): Unit = {
-        implicit val clk: Clock = dut.clock
-        clk.setTimeout(10000)
-
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
-
-        val clocksPerBit  = clockFrequency / baudRate
-        val numOutputBits = 8
-
-        // Provide the baud rate
-
-        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
-
-        // Generate test patterns
-        val patterns = Seq(
-          Random.nextInt(256), // Random byte
-          0x00,                // All zeros
-          0xff,                // All ones
-          0x55,                // Alternating
-          0xaa,                // Alternating inverse
-          0x01,                // Single bit
-          0x80                 // Single bit at MSB
-        )
-
-        for (pattern <- patterns) {
-            println(s"\nTesting pattern: 0x${pattern.toHexString}")
-
-            // Verify initial state
-            assert(
-              dut.io.uart1_tx.peekBoolean(),
-              "UART1 TX should be idle high"
-            )
-            assert(
-              dut.io.uart2_tx.peekBoolean(),
-              "UART2 TX should be idle high"
-            )
-
-            // Track transitions
-            var actualTransitions   = 0
-            var lastTx              = true // TX starts high (idle)
-            var samplingStarted     = false
-            var cycleCount          = 0
-            var lastTransitionCycle = 0
-
-            // Send from UART1 to UART2
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("dataIn").get.U,
-              pattern.U
-            )
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
-              true.B
-            )
-            clk.step(1)
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
-              false.B
-            )
-
-            // Monitor the transmission for transitions
-            for (_ <- 0 until clocksPerBit * 12) {
-                val currentTx = dut.io.uart1_tx.peekBoolean()
-
-                // Start counting when we see the first transition (start bit)
-                if (!samplingStarted && lastTx && !currentTx) {
-                    samplingStarted = true
-                    println("Detected start of transmission")
-                }
-
-                if (samplingStarted && currentTx != lastTx) {
-                    actualTransitions += 1
-                    val cycles = cycleCount - lastTransitionCycle
-                    println(
-                      s"Detected transition ${actualTransitions} at cycle ${cycleCount}: ${lastTx} -> ${currentTx} (${cycles} cycles since last)"
-                    )
-                    lastTransitionCycle = cycleCount
-                }
-
-                lastTx = currentTx
-                cycleCount += 1
-                clk.step(1)
-            }
-
-            val expectedTransitions = computeExpectedTransitions(pattern)
-            println(
-              s"\nTransmission summary for pattern 0x${pattern.toHexString}:"
-            )
-            println(s"- Expected transitions: $expectedTransitions")
-            println(s"- Actual transitions: $actualTransitions")
-            println(s"- Total cycles: $cycleCount")
-
-            // More flexible assertion - we might see extra transitions due to noise or timing
-            assert(
-              actualTransitions >= expectedTransitions,
-              s"Not enough transitions: expected at least $expectedTransitions, got $actualTransitions"
-            )
-
-            // Wait and verify data received correctly
-            waitForDataAndVerify(dut.io.uart2Apb, dut.getUart2, pattern)
-
-            // Verify return to idle
-            assert(
-              dut.io.uart1_tx.peekBoolean(),
-              "UART1 TX should return to idle high"
-            )
-            assert(
-              dut.io.uart2_tx.peekBoolean(),
-              "UART2 TX should return to idle high"
-            )
-
-            clk.step(clocksPerBit * 2) // Wait between patterns
-        }
-    }
-
-    private def computeExpectedTransitions(pattern: Int): Int = {
-        println(
-          s"\nAnalyzing pattern 0x${pattern.toHexString} (${pattern.toBinaryString.reverse.padTo(8, '0').reverse})"
-        )
-
-        // Convert to LSB-first bit array
-        val reversedPattern = reverseByte(pattern & 0xff)
-        val bits = (0 until 8).map(i => ((reversedPattern >> i) & 1) == 1)
-        println(
-          s"Data bits (LSB first): ${bits.map(if (_) '1' else '0').mkString}"
-        )
-
-        var transitions = 0
-        var lastBit     = true // Start from idle (high)
-
-        // Count start bit transition (always happens)
-        transitions += 1
-        println("Transition 1: idle(1) -> start(0)")
-        lastBit = false // Now at start bit (low)
-
-        // Count transitions between data bits
-        for ((bit, idx) <- bits.zipWithIndex) {
-            if (bit != lastBit) {
-                transitions += 1
-                println(
-                  s"Transition ${transitions}: bit${idx}(${if (lastBit) '1'
-                      else '0'}) -> bit${idx}(${if (bit) '1' else '0'})"
-                )
-            }
-            lastBit = bit
-        }
-
-        // Count transition to stop bit if last data bit was low
-        if (!lastBit) {
-            transitions += 1
-            println(s"Transition ${transitions}: last_bit(0) -> stop(1)")
-        }
-
-        println(s"Total expected transitions: $transitions")
-        transitions
     }
 
     /** Random Data Pattern Test Tests random data patterns including edge cases

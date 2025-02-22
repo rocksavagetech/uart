@@ -1,13 +1,13 @@
 // transmissionTests.scala
-package tech.rocksavage.chiselware.uart
+package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
 import chiseltest._
-import tech.rocksavage.chiselware.uart.UartTestUtils.{
-    setBaudRateRx,
-    setBaudRateTx
-}
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.testutils.UartRxTestUtils
+import tech.rocksavage.chiselware.uart.testutils.UartRxTestUtils.setBaudRateRx
+import tech.rocksavage.chiselware.uart.testutils.UartTxTestUtils.setBaudRateTx
+import tech.rocksavage.chiselware.uart.{UartRx, UartTx}
 
 object transmissionTests {
     def basicRxTest(dut: UartRx, params: UartParams): Unit = {
@@ -32,7 +32,7 @@ object transmissionTests {
         val chars = Seq('s', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
         for (char <- chars) {
             println(s"Testing character: $char")
-            UartTestUtils.transactionChar(dut, char, clocksPerBit)
+            UartRxTestUtils.transactionCharRx(dut, char, clocksPerBit)
 
             // Wait for valid signal with timeout
             var timeout = 0

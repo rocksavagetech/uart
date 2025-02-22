@@ -1,11 +1,12 @@
 // errorTests.scala
-package tech.rocksavage.chiselware.uart
+package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.UartTestUtils.setBaudRate
+import tech.rocksavage.chiselware.uart.Uart
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.setBaudRate
 
 object errorTests {
 

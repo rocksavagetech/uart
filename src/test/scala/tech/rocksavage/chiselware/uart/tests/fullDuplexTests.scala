@@ -1,10 +1,11 @@
-package tech.rocksavage.chiselware.uart
+package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
 
 object fullDuplexTests {
 
