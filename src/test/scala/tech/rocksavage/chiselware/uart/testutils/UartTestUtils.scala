@@ -127,7 +127,6 @@ object UartTestUtils {
         }
 
         // Verify start bit
-        clock.step(1)
         dut.io.tx.expect(
           false.B,
           "TX line should go low to start transmission"
