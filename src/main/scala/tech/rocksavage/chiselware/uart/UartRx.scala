@@ -113,6 +113,11 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     // Baud Rate Calculation
     // ###################
 
+    when(updateBaudDb) {
+        baudReg      := io.rxConfig.baud
+        clockFreqReg := io.rxConfig.clockFreq
+    }
+
     val baudGen = Module(new UartBaudRateGenerator(params))
     baudGen.io.clkFreq     := io.rxConfig.clockFreq
     baudGen.io.desiredBaud := io.rxConfig.baud

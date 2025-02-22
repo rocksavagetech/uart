@@ -32,6 +32,12 @@ object randomTests {
         )
         val validDataBits = Seq(5, 6, 7, 8)
 
+//        val seed = Random.nextLong()
+        
+        val seed = -706700778016793525L
+        println(s"Random test seed: $seed")
+        Random.setSeed(seed)
+
         for (_ <- 1 to 10) { // Test 10 random configurations
             val baudRate = validBaudRates(
               Random.nextInt(validBaudRates.length)
@@ -49,10 +55,6 @@ object randomTests {
             val useParity = Random.nextBoolean()
             val parityOdd = Random.nextBoolean() && useParity
 
-            println(
-              s"Testing random baud rate with configuration: \nbaud rate = $baudRate, \nclock frequency = $clockFrequency, \ndata bits = $numOutputBits, \ndata = $data"
-            )
-
             val config: UartRuntimeConfig = UartRuntimeConfig(
               baudRate = baudRate,
               clockFrequency = clockFrequency,
@@ -60,6 +62,10 @@ object randomTests {
               data = data,
               useParity = useParity,
               parityOdd = parityOdd
+            )
+
+            println(
+              s"Testing random baud rate with configuration: \n$config"
             )
 
             // does all assertions that the behavior is correct

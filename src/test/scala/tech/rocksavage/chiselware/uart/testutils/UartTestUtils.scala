@@ -5,7 +5,11 @@ package tech.rocksavage.chiselware.uart.testutils
 
 import chisel3._
 import chiseltest._
-import tech.rocksavage.chiselware.apb.ApbTestUtils.{readAPB, writeAPB}
+import tech.rocksavage.chiselware.apb.ApbTestUtils.{
+    readAPB,
+    writeAPB,
+    writeApbNoDelay
+}
 import tech.rocksavage.chiselware.uart.{Uart, UartRuntimeConfig}
 
 import scala.math.BigInt.int2bigInt
@@ -44,6 +48,32 @@ object UartTestUtils {
           config.useParity.B
         )
 
+        val foundNumOutputBits = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("numOutputBitsDb").get.U
+        )
+        val foundUseParity = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("useParityDb").get.U
+        )
+        val foundParityOdd = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("parityOddDb").get.U
+        )
+
+        assert(
+          foundNumOutputBits == numOutputBits,
+          "numOutputBitsDb register not set correctly"
+        )
+        assert(
+          (foundUseParity == 1) == config.useParity,
+          "useParityDb register not set correctly"
+        )
+        assert(
+          (foundParityOdd == 1) == config.useParity,
+          "parityOddDb register not set correctly"
+        )
+
         println(s"Sending data: $data")
 
         // assert that the data is within the range of 0 to 255
@@ -78,13 +108,13 @@ object UartTestUtils {
           dut.registerMap.getAddressOfRegister("dataIn").get.U,
           data.U
         )
-        writeAPB(
+        writeApbNoDelay(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("load").get.U,
           true.B
         )
         clock.step(1)
-        writeAPB(
+        writeApbNoDelay(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("load").get.U,
           false.B
@@ -92,8 +122,8 @@ object UartTestUtils {
 
         def expectConstantTx(expected: Boolean, cycles: Int): Unit = {
             dut.io.tx.expect(expected.B)
-            dut.clock.setTimeout(cycles + 2)
-            dut.clock.step(cycles + 1)
+            dut.clock.setTimeout(cycles + 1)
+            dut.clock.step(cycles)
         }
 
         // Verify start bit
@@ -103,6 +133,7 @@ object UartTestUtils {
           "TX line should go low to start transmission"
         )
 
+        println(s"Expected sequence: $expectedSequence")
         // Check each bit with a timeout
         for ((expectedBit, index) <- expectedSequence.zipWithIndex) {
             println(s"Checking bit $index: expected $expectedBit")
@@ -132,7 +163,20 @@ object UartTestUtils {
         writeAPB(dut.io.apb, baudRateAddr.U, baudRate.U)
         writeAPB(dut.io.apb, clockFreqAddr.U, clockFrequency.U)
         writeAPB(dut.io.apb, updateBaudAddr.U, 1.U)
-        dut.clock.step(36)
+
+        val clocksPerBitExpected = clockFrequency / baudRate
+
+        var breakLoop = false
+        while (!breakLoop) {
+            val clocksPerBitActual = readAPB(
+              dut.io.apb,
+              clocksPerBitRxAddr.U
+            )
+            if (clocksPerBitActual == clocksPerBitExpected) {
+                breakLoop = true
+            }
+            clock.step(1)
+        }
 
         val clocksPerBitRx = readAPB(
           dut.io.apb,

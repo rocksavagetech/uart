@@ -29,4 +29,7 @@ case class UartRuntimeConfig(
           s"Data must be less than 2^${numOutputBits} (must be representable with the number of output bits)"
         )
     }
+
+    override def toString =
+        s"UartRuntimeConfig(useAsserts=$useAsserts, baudRate=$baudRate, clockFrequency=$clockFrequency, numOutputBits=$numOutputBits, useParity=$useParity, parityOdd=$parityOdd, data=$data)"
 }

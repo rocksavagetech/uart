@@ -51,7 +51,8 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
       incrementCounter(
         clockCounterReg,
         io.clocksPerBitReg - 1.U,
-        condition = stateReg =/= UartState.Idle
+        condition =
+            stateReg === UartState.Start || stateReg === UartState.Data || stateReg === UartState.Parity || stateReg === UartState.Stop
       ),
       0.U
     )

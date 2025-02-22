@@ -15,6 +15,9 @@ class Divider extends Module {
         val valid       = Output(Bool())     // High => 'result' is valid
     })
 
+    val prevStart   = RegNext(io.start)
+    val justStarted = io.start && !prevStart
+
     // Internal registers
     val quotient  = RegInit(0.U(32.W))
     val remainder = RegInit(0.U(32.W))
@@ -24,7 +27,7 @@ class Divider extends Module {
     // Default outputs
     io.result    := quotient
     io.remainder := remainder
-    io.valid     := !busy
+    io.valid     := !busy && !justStarted
 
     // Start condition
     when(io.start && !busy) {

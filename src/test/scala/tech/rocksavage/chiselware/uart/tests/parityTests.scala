@@ -1,12 +1,9 @@
-package tech.rocksavage.chiselware.uart
+package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
 import chiseltest._
-import tech.rocksavage.chiselware.uart.UartTestUtils.{
-    setBaudRateRx,
-    setBaudRateTx
-}
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.{UartParity, UartRx, UartTx}
 
 object parityTests {
     def rxOddParityTest(dut: UartRx, params: UartParams): Unit = {
@@ -23,7 +20,6 @@ object parityTests {
         dut.io.rx.poke(1.U)
 
         // Provide the baud rate
-        setBaudRateRx(dut, baudRate, clockFrequency)
 
         dut.io.rxConfig.numOutputBitsDb.poke(numOutputBits.U)
         dut.io.rxConfig.useParityDb.poke(true.B)
@@ -59,8 +55,6 @@ object parityTests {
 
         val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
-
-        setBaudRateTx(dut, baudRate, clockFrequency)
 
         dut.io.txConfig.numOutputBitsDb.poke(numOutputBits.U)
         dut.io.txConfig.useParityDb.poke(true.B)

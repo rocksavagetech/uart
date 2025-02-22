@@ -1,10 +1,10 @@
 // baudRateTests.scala
-package tech.rocksavage.chiselware.uart
+package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.UartTestUtils.setBaudRate
+import tech.rocksavage.chiselware.uart.Uart
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 object baudRateTests {
@@ -20,7 +20,7 @@ object baudRateTests {
         val numOutputBits = 8
         println(s"Testing with clocksPerBit = $clocksPerBit")
 
-        setBaudRate(dut, baudRate, clockFrequency)
+//        setBaudRate(dut, baudRate, clockFrequency)
 
         // Configure UART with known good values
         writeAPB(
@@ -93,7 +93,6 @@ object baudRateTests {
 
         val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
-        setBaudRate(dut, baudRate, clockFrequency)
 
         println(s"Starting stability test with clocksPerBit = $clocksPerBit")
 
