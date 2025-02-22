@@ -46,13 +46,15 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
       io.complete
     )
 
+    val activeCondition =
+        stateReg === UartState.Start || stateReg === UartState.Data || stateReg === UartState.Parity || stateReg === UartState.Stop
+
     clockCounterReg := Mux(
-      !completeReg,
+      activeCondition,
       incrementCounter(
         clockCounterReg,
         io.clocksPerBitReg - 1.U,
-        condition =
-            stateReg === UartState.Start || stateReg === UartState.Data || stateReg === UartState.Parity || stateReg === UartState.Stop
+        condition = activeCondition
       ),
       0.U
     )
