@@ -39,35 +39,28 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     // Input Control State Registers
     // ###################
 
+    val baudReg      = RegInit(0.U((log2Ceil(params.maxBaudRate) + 1).W))
+    val clockFreqReg = RegInit(0.U((log2Ceil(params.maxClockFrequency) + 1).W))
+
     /** Clocks per bit register */
-    val clocksPerBitReg = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
+    val clocksPerBitReg = RegInit(
+      0.U((log2Ceil(params.maxClockFrequency) + 1).W)
+    )
 
     /** Number of output bits register */
     val numOutputBitsReg = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
 
     /** Parity usage register */
-    val useParityReg = RegInit(false.B)
-    val parityOddReg = RegInit(false.B)
-
+    val useParityReg  = RegInit(false.B)
+    val parityOddReg  = RegInit(false.B)
     val clearErrorReg = RegInit(false.B)
-
-    val clocksPerBitDbReg = RegInit(
-      0.U((log2Ceil(params.maxClocksPerBit) + 1).W)
-    )
 
     val numOutputBitsDbReg = RegInit(
       0.U((log2Ceil(params.maxOutputBits) + 1).W)
     )
-
-    val useParityDbReg = RegInit(false.B)
-    val parityOddDbReg = RegInit(false.B)
-
+    val useParityDbReg  = RegInit(false.B)
+    val parityOddDbReg  = RegInit(false.B)
     val clearErrorDbReg = RegInit(false.B)
-
-    /** Next Clocks per bit register */
-    val clocksPerBitNext = WireInit(
-      0.U((log2Ceil(params.maxClocksPerBit) + 1).W)
-    )
 
     /** Next Number of output bits register */
     val numOutputBitsNext = WireInit(
@@ -80,17 +73,20 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     val clearErrorNext = WireInit(false.B)
 
-    clocksPerBitReg  := clocksPerBitNext
     numOutputBitsReg := numOutputBitsNext
     useParityReg     := useParityNext
     parityOddReg     := parityOddNext
     clearErrorReg    := clearErrorNext
 
-    clocksPerBitDbReg  := io.rxConfig.clocksPerBitDb
     numOutputBitsDbReg := io.rxConfig.numOutputBitsDb
     useParityDbReg     := io.rxConfig.useParityDb
     parityOddDbReg     := io.rxConfig.parityOddDb
     clearErrorDbReg    := io.rxConfig.clearErrorDb
+
+    val updateBaudDb = RegInit(false.B)
+    when(io.rxConfig.updateBaud) {
+        updateBaudDb := true.B
+    }
 
     // ###################
     // State FSM
@@ -111,6 +107,24 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     uartFsm.io.clocksPerBitReg  := clocksPerBitReg
     uartFsm.io.numOutputBitsReg := numOutputBitsReg
     uartFsm.io.useParityReg     := useParityReg
+    uartFsm.io.updateBaud       := io.rxConfig.updateBaud
+
+    // ###################
+    // Baud Rate Calculation
+    // ###################
+
+    val baudGen = Module(new UartBaudRateGenerator(params))
+    baudGen.io.clkFreq     := io.rxConfig.clockFreq
+    baudGen.io.desiredBaud := io.rxConfig.baud
+    baudGen.io.update      := stateWire === UartState.BaudUpdating
+
+    // The effective clocks-per-bit for the UART will come from the baud generator.
+    val effectiveClocksPerBit = baudGen.io.clocksPerBit
+
+    // Once the baud rate is valid, the state can go back to idle.
+    uartFsm.io.baudValid := baudGen.io.valid
+
+    clocksPerBitReg := effectiveClocksPerBit
 
     // ###################
     // Shift Register for Storing Received Data
@@ -163,36 +177,32 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     /** Assign output error signal */
     io.error := errorReg // Ensure io.error is always assigned
 
+    io.clocksPerBit := clocksPerBitReg
+
     // ###################
     // Finite State Machine (FSM)
     // ###################
 
-    clocksPerBitNext := Mux(
-      stateWire === UartState.Idle,
-      clocksPerBitDbReg,
-      clocksPerBitReg
-    )
-
     numOutputBitsNext := Mux(
-      stateWire === UartState.Idle,
+      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
       numOutputBitsDbReg,
       numOutputBitsReg
     )
 
     useParityNext := Mux(
-      stateWire === UartState.Idle,
+      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
       useParityDbReg,
       useParityReg
     )
 
     parityOddNext := Mux(
-      stateWire === UartState.Idle,
+      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
       parityOddDbReg,
       parityOddReg
     )
 
     clearErrorNext := Mux(
-      stateWire === UartState.Idle,
+      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
       clearErrorDbReg,
       clearErrorReg
     )

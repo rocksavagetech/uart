@@ -2,17 +2,29 @@ package tech.rocksavage.chiselware.uart
 
 import chisel3._
 import chiseltest._
+import tech.rocksavage.chiselware.uart.UartTestUtils.{
+    setBaudRateRx,
+    setBaudRateTx
+}
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 object parityTests {
     def rxOddParityTest(dut: UartRx, params: UartParams): Unit = {
         implicit val clock = dut.clock
         dut.clock.setTimeout(2000)
-        val clocksPerBit  = 217
+
+        val clockFrequency = 25_000_000
+        val baudRate       = 115_200
+
+        val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
 
-        // Configure for odd parity
-        dut.io.rxConfig.clocksPerBitDb.poke(clocksPerBit.U)
+        // Reset the device
+        dut.io.rx.poke(1.U)
+
+        // Provide the baud rate
+        setBaudRateRx(dut, baudRate, clockFrequency)
+
         dut.io.rxConfig.numOutputBitsDb.poke(numOutputBits.U)
         dut.io.rxConfig.useParityDb.poke(true.B)
         dut.io.rxConfig.parityOddDb.poke(true.B)
@@ -41,11 +53,15 @@ object parityTests {
     def txOddParityTest(dut: UartTx, params: UartParams): Unit = {
         implicit val clock = dut.clock
         dut.clock.setTimeout(2000)
-        val clocksPerBit  = 217
+
+        val clockFrequency = 25_000_000
+        val baudRate       = 115_200
+
+        val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
 
-        // Configure TX for odd parity
-        dut.io.txConfig.clocksPerBitDb.poke(clocksPerBit.U)
+        setBaudRateTx(dut, baudRate, clockFrequency)
+
         dut.io.txConfig.numOutputBitsDb.poke(numOutputBits.U)
         dut.io.txConfig.useParityDb.poke(true.B)
         dut.io.txConfig.parityOddDb.poke(true.B)

@@ -3,18 +3,28 @@ package tech.rocksavage.chiselware.uart
 
 import chisel3._
 import chiseltest._
+import tech.rocksavage.chiselware.uart.UartTestUtils.{
+    setBaudRateRx,
+    setBaudRateTx
+}
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 object transmissionTests {
     def basicRxTest(dut: UartRx, params: UartParams): Unit = {
         implicit val clock = dut.clock
 
-        val clocksPerBit  = 217
+        val clockFrequency = 25_000_000
+        val baudRate       = 115_200
+
+        val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
 
         // Reset the device
         dut.io.rx.poke(1.U)
-        dut.io.rxConfig.clocksPerBitDb.poke(clocksPerBit.U)
+
+        // Provide the baud rate
+        setBaudRateRx(dut, baudRate, clockFrequency)
+
         dut.io.rxConfig.numOutputBitsDb.poke(numOutputBits.U)
         dut.io.rxConfig.useParityDb.poke(false.B)
         dut.io.rxConfig.parityOddDb.poke(false.B) // Explicitly set parity mode
@@ -49,11 +59,15 @@ object transmissionTests {
     def basicTxTest(dut: UartTx, params: UartParams): Unit = {
         implicit val clock = dut.clock
 
-        val clocksPerBit  = 217
+        val clockFrequency = 25_000_000
+        val baudRate       = 115_200
+
+        val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
 
-        // Drive the configuration inputs
-        dut.io.txConfig.clocksPerBitDb.poke(clocksPerBit.U)
+        // Provide the baud rate
+        setBaudRateTx(dut, baudRate, clockFrequency)
+
         dut.io.txConfig.numOutputBitsDb.poke(numOutputBits.U)
         dut.io.txConfig.useParityDb.poke(false.B)
         dut.io.txConfig.parityOddDb.poke(false.B) // Explicitly set parity mode

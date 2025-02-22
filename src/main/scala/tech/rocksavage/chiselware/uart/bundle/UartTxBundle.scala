@@ -2,6 +2,7 @@
 package tech.rocksavage.chiselware.uart.bundle
 
 import chisel3._
+import chisel3.util.log2Ceil
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 /** Bundle defining the I/O for a UART transmitter.
@@ -10,7 +11,8 @@ import tech.rocksavage.chiselware.uart.param.UartParams
   *   Configuration parameters for the UART.
   */
 class UartTxBundle(params: UartParams) extends Bundle {
-    val txConfig = new UartTxControlBundle(params)
+    val txConfig     = new UartTxControlBundle(params)
+    val clocksPerBit = Output(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
 
     // The UART serial output.
     val tx = Output(Bool())

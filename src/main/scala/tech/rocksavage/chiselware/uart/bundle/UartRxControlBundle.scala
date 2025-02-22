@@ -10,7 +10,9 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 class UartRxControlBundle(params: UartParams) extends Bundle {
 
     // configuration inputs
-    val clocksPerBitDb  = Input(UInt((log2Ceil(params.maxClocksPerBit) + 1).W))
+    val baud       = Input(UInt((log2Ceil(params.maxBaudRate) + 1).W))
+    val clockFreq  = Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+    val updateBaud = Input(Bool())
     val numOutputBitsDb = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
     val useParityDb     = Input(Bool())
     val parityOddDb     = Input(Bool())

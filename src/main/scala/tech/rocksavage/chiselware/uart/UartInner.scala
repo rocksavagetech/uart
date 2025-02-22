@@ -1,7 +1,7 @@
 package tech.rocksavage.chiselware.uart
 
 import chisel3._
-import tech.rocksavage.chiselware.uart.bundle.UartBundle
+import tech.rocksavage.chiselware.uart.bundle.UartInnerBundle
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 /** A merged UART module that includes both the receiver and transmitter.
@@ -13,7 +13,7 @@ import tech.rocksavage.chiselware.uart.param.UartParams
   */
 class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     // Use the combined bundle for I/O
-    val io = IO(new UartBundle(params))
+    val io = IO(new UartInnerBundle(params))
 
     // Instantiate the receiver module
     val rxModule = Module(new UartRx(params, formal))
@@ -26,28 +26,15 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     io.valid         := rxModule.io.valid
     io.error.rxError := rxModule.io.error
 
-    // Connect control signals to RX module
-    rxModule.io.rxConfig.clocksPerBitDb  := io.rxControlBundle.clocksPerBitDb
-    rxModule.io.rxConfig.numOutputBitsDb := io.rxControlBundle.numOutputBitsDb
-    rxModule.io.rxConfig.useParityDb     := io.rxControlBundle.useParityDb
-    rxModule.io.rxConfig.parityOddDb     := io.rxControlBundle.parityOddDb
-    rxModule.io.rxConfig.clearErrorDb    := io.rxControlBundle.clearErrorDb
+    io.clocksPerBitRx := rxModule.io.clocksPerBit
+    io.clocksPerBitTx := txModule.io.clocksPerBit
 
-    // Connect control signals to TX module
-    txModule.io.txConfig.load            := io.txControlBundle.load
-    txModule.io.txConfig.data            := io.txControlBundle.data
-    txModule.io.txConfig.clocksPerBitDb  := io.txControlBundle.clocksPerBitDb
-    txModule.io.txConfig.numOutputBitsDb := io.txControlBundle.numOutputBitsDb
-    txModule.io.txConfig.useParityDb     := io.txControlBundle.useParityDb
-    txModule.io.txConfig.parityOddDb     := io.txControlBundle.parityOddDb
+    // Connect control signals
+    rxModule.io.rxConfig <> io.rxControlBundle
+    txModule.io.txConfig <> io.txControlBundle
 
     // Connect the TX output
     io.tx := txModule.io.tx
-
-    // Debug signals
-//    when(rxModule.io.valid) {
-//        printf(p"[UartInner.scala DEBUG] RX valid, data=${rxModule.io.data}\n")
-//    }
 
     when(txModule.io.txConfig.load) {
         printf(

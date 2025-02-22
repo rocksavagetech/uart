@@ -14,9 +14,11 @@ class UartTxControlBundle(params: UartParams) extends Bundle {
     // Parallel data to be transmitted.
     val data = Input(UInt(params.maxOutputBits.W))
     // configuration inputs
-    val clocksPerBitDb  = Input(UInt((log2Ceil(params.maxClocksPerBit) + 1).W))
     val numOutputBitsDb = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
     val useParityDb     = Input(Bool())
     val parityOddDb     = Input(Bool())
+    val baud            = Input(UInt((log2Ceil(params.maxBaudRate) + 1).W))
+    val clockFreq  = Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+    val updateBaud = Input(Bool())
 
 }

@@ -3,6 +3,7 @@
 package tech.rocksavage.chiselware.uart.bundle
 
 import chisel3._
+import chisel3.util.log2Ceil
 import tech.rocksavage.chiselware.uart.error.UartRxError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
@@ -15,6 +16,7 @@ class UartRxBundle(params: UartParams) extends Bundle {
     val error = Output(UartRxError())
 
     // configuration inputs
-    val rxConfig = new UartRxControlBundle(params)
+    val rxConfig     = new UartRxControlBundle(params)
+    val clocksPerBit = Output(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
 
 }

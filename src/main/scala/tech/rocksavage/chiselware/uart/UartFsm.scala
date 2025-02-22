@@ -11,10 +11,12 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
         // ############# input signals
         val startTransaction = Input(Bool())
         val clocksPerBitReg =
-            Input(UInt((log2Ceil(params.maxClocksPerBit) + 1).W))
+            Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
         val numOutputBitsReg =
             Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
         val useParityReg = Input(Bool())
+        val updateBaud   = Input(Bool())
+        val baudValid    = Input(Bool())
 
         // ############# output signals
         val state         = Output(UartState())
@@ -32,8 +34,10 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
     val incrementCounterReg = RegInit(false.B)
     val completeReg         = RegInit(false.B)
 
-    val clockCounterReg = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
-    val bitCounterReg   = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
+    val clockCounterReg = RegInit(
+      0.U((log2Ceil(params.maxClockFrequency) + 1).W)
+    )
+    val bitCounterReg = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
 
     // internal signals
     activeReg := computeActiveNext(
@@ -128,8 +132,15 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
 
         switch(stateReg) {
             is(UartState.Idle) {
-                when(startTransaction) {
+                when(io.updateBaud) {
+                    stateNext := UartState.BaudUpdating
+                }.elsewhen(startTransaction) {
                     stateNext := UartState.Start
+                }
+            }
+            is(UartState.BaudUpdating) {
+                when(io.baudValid) {
+                    stateNext := UartState.Idle
                 }
             }
             is(UartState.Start) {

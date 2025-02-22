@@ -13,29 +13,26 @@ import tech.rocksavage.chiselware.uart.param.UartParams
   *   A boolean value to enable formal verification.
   */
 class UartTx(params: UartParams, formal: Boolean = true) extends Module {
+
     val io = IO(new UartTxBundle(params))
 
     // ###################
     // Input Control State Registers
     // ###################
     // These registers hold the configuration settings loaded at the start of a transmission.
-    val clocksPerBitReg = RegInit(0.U((log2Ceil(params.maxClocksPerBit) + 1).W))
+    val clocksPerBitReg = RegInit(
+      0.U((log2Ceil(params.maxClockFrequency) + 1).W)
+    )
     val numOutputBitsReg = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
     val useParityReg     = RegInit(false.B)
-    // New registers for parity (nomenclature as in UartRx.scala)
-    val parityOddReg = RegInit(false.B)
-    val clocksPerBitDbReg = RegInit(
-      0.U((log2Ceil(params.maxClocksPerBit) + 1).W)
-    )
+    val parityOddReg     = RegInit(false.B)
+
     val numOutputBitsDbReg = RegInit(
       0.U((log2Ceil(params.maxOutputBits) + 1).W)
     )
     val useParityDbReg = RegInit(false.B)
     val parityOddDbReg = RegInit(false.B) // New parity configuration register
 
-    val clocksPerBitNext = WireInit(
-      0.U((log2Ceil(params.maxClocksPerBit) + 1).W)
-    )
     val numOutputBitsNext = WireInit(
       0.U((log2Ceil(params.maxOutputBits) + 1).W)
     )
@@ -44,12 +41,10 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val dataNext      = WireInit(0.U(params.maxOutputBits.W))
     val loadNext      = WireInit(false.B)
 
-    clocksPerBitReg  := clocksPerBitNext
     numOutputBitsReg := numOutputBitsNext
     useParityReg     := useParityNext
     parityOddReg     := parityOddNext // Latch new parity configuration
 
-    clocksPerBitDbReg  := io.txConfig.clocksPerBitDb
     numOutputBitsDbReg := io.txConfig.numOutputBitsDb
     useParityDbReg     := io.txConfig.useParityDb
     parityOddDbReg     := io.txConfig.parityOddDb // load configuration
@@ -67,12 +62,31 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val completeWire     = uartFsm.io.complete
     val applyShiftReg    = uartFsm.io.shiftRegister
 
-    val startTransaction = (stateWire === UartState.Idle) && loadNext
+    val startTransaction =
+        (stateWire === UartState.Idle) && loadNext
 
     uartFsm.io.startTransaction := startTransaction
     uartFsm.io.clocksPerBitReg  := clocksPerBitReg
     uartFsm.io.numOutputBitsReg := numOutputBitsReg
     uartFsm.io.useParityReg     := useParityReg
+    uartFsm.io.updateBaud       := io.txConfig.updateBaud
+
+    // ###################
+    // Baud Rate Calculation
+    // ###################
+
+    val baudGen = Module(new UartBaudRateGenerator(params))
+    baudGen.io.clkFreq     := io.txConfig.clockFreq
+    baudGen.io.desiredBaud := io.txConfig.baud
+    baudGen.io.update      := stateWire === UartState.BaudUpdating
+
+    // The effective clocks-per-bit for the UART will come from the baud generator.
+    val effectiveClocksPerBit = baudGen.io.clocksPerBit
+
+    // Once the baud rate is valid, the state can go back to idle.
+    uartFsm.io.baudValid := baudGen.io.valid
+
+    clocksPerBitReg := effectiveClocksPerBit
 
     // Latch incoming data and capture txData for parity calculation.
     // (txDataReg holds the unshifted data for parity computation.)
@@ -100,31 +114,27 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     txNext := calculateTxOut(stateWire, dataShiftReg, txDataReg, parityOddReg)
     io.tx  := txNext
 
+    io.clocksPerBit := clocksPerBitReg
+
     // ###################
     // Finite State Machine (FSM)
     // ###################
     // Updated state transitions to include parity mode.
 
-    clocksPerBitNext := Mux(
-      stateWire === UartState.Idle,
-      clocksPerBitDbReg,
-      clocksPerBitReg
-    )
-
     numOutputBitsNext := Mux(
-      stateWire === UartState.Idle,
+      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
       numOutputBitsDbReg,
       numOutputBitsReg
     )
 
     useParityNext := Mux(
-      stateWire === UartState.Idle,
+      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
       useParityDbReg,
       useParityReg
     )
 
     parityOddNext := Mux(
-      stateWire === UartState.Idle,
+      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
       parityOddDbReg,
       parityOddReg
     )
@@ -168,6 +178,9 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
         val txOut = WireInit(true.B)
         switch(stateReg) {
             is(UartState.Idle) {
+                txOut := true.B
+            }
+            is(UartState.BaudUpdating) {
                 txOut := true.B
             }
             is(UartState.Start) {

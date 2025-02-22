@@ -85,21 +85,45 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // --------------------
     // Configuration Regs
     // --------------------
-    val clocksPerBitDb = RegInit(
-      0.U((log2Ceil(uartParams.maxClocksPerBit) + 1).W)
-    )
+
+    // Create a register that holds the desired baud rate in Hz.
+    // (For example, default to 115200 baud.)
+    val baud      = RegInit(115200.U(32.W))
+    val clockFreq = RegInit(25_000_000.U(32.W))
+
+    val updateBaud = RegInit(false.B)
     val numOutputBitsDb = RegInit(
       0.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
     )
     val useParityDb = RegInit(uartParams.parity.B)
     val parityOddDb = RegInit(uartParams.parity.B)
 
+    val clocksPerBitRx = WireInit(
+      0.U((log2Ceil(uartParams.maxClockFrequency) + 1).W)
+    )
+    val clocksPerBitTx = WireInit(
+      0.U((log2Ceil(uartParams.maxClockFrequency) + 1).W)
+    )
+
     registerMap.createAddressableRegister(
-      clocksPerBitDb,
-      "clocksPerBitDb",
+      baud,
+      "baudRate",
       readOnly = false,
       verbose = uartParams.verbose
     )
+    registerMap.createAddressableRegister(
+      clockFreq,
+      "clockFreq",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+    registerMap.createAddressableRegister(
+      updateBaud,
+      "updateBaud",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
     registerMap.createAddressableRegister(
       numOutputBitsDb,
       "numOutputBitsDb",
@@ -119,6 +143,19 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
+    registerMap.createAddressableRegister(
+      clocksPerBitRx,
+      "clocksPerBitRx",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    registerMap.createAddressableRegister(
+      clocksPerBitTx,
+      "clocksPerBitTx",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+
     // ---------------------------------------------
     // Initialize Address Decode Logic
     // ---------------------------------------------
@@ -134,7 +171,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // --------------------------------
     val uartInner = Module(
       new UartInner(uartParams, formal)
-    ) // <--- Line in question
+    )
 
     // Handle RX data valid signal
     val rxDataValid = RegNext(uartInner.io.valid)
@@ -191,17 +228,25 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // Connect TX control signals
     uartInner.io.txControlBundle.load            := load
     uartInner.io.txControlBundle.data            := dataIn
-    uartInner.io.txControlBundle.clocksPerBitDb  := clocksPerBitDb
+    uartInner.io.txControlBundle.baud            := baud
+    uartInner.io.txControlBundle.clockFreq       := clockFreq
+    uartInner.io.txControlBundle.updateBaud      := updateBaud
     uartInner.io.txControlBundle.numOutputBitsDb := numOutputBitsDb
     uartInner.io.txControlBundle.useParityDb     := useParityDb
     uartInner.io.txControlBundle.parityOddDb     := parityOddDb
 
+    clocksPerBitTx := uartInner.io.clocksPerBitTx
+
     // Connect RX control signals
-    uartInner.io.rxControlBundle.clocksPerBitDb  := clocksPerBitDb
+    uartInner.io.rxControlBundle.baud            := baud
+    uartInner.io.rxControlBundle.clockFreq       := clockFreq
+    uartInner.io.rxControlBundle.updateBaud      := updateBaud
     uartInner.io.rxControlBundle.numOutputBitsDb := numOutputBitsDb
     uartInner.io.rxControlBundle.useParityDb     := useParityDb
     uartInner.io.rxControlBundle.parityOddDb     := parityOddDb
     uartInner.io.rxControlBundle.clearErrorDb    := clearError
+
+    clocksPerBitRx := uartInner.io.clocksPerBitRx
 
     // Connect error signals
     error := uartInner.io.error
@@ -209,5 +254,10 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // Add pulse for load signal
     when(load) {
         load := false.B // Auto-clear after one cycle
+    }
+
+    // Add pulse for updateBaud signal
+    when(updateBaud) {
+        updateBaud := false.B // Auto-clear after one cycle
     }
 }

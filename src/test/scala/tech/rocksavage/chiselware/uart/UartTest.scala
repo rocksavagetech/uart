@@ -58,9 +58,10 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         val uartParams = UartParams(
           dataWidth = 32,
           addressWidth = 32,
-          maxClocksPerBit = 217,
           maxOutputBits = 8,
-          syncDepth = 2
+          syncDepth = 2,
+          maxBaudRate = 921_600,
+          maxClockFrequency = 25_000_000
         )
 
         info(
