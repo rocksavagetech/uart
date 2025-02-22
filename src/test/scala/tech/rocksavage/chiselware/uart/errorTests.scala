@@ -16,6 +16,7 @@ object errorTests {
     def frameErrorTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
         dut.clock.setTimeout(5000)
+        dut.io.rx.poke(1.U)
 
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
@@ -105,6 +106,7 @@ object errorTests {
     def parityErrorTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
         clk.setTimeout(5000)
+        dut.io.rx.poke(1.U)
 
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
@@ -201,6 +203,7 @@ object errorTests {
     def startBitErrorTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
         clk.setTimeout(5000)
+        dut.io.rx.poke(1.U)
 
         val clockFrequency = 25_000_000
         val baudRate       = 115_200

@@ -16,9 +16,9 @@ object randomTests {
     def randomBaudRateTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
         clk.setTimeout(10000)
+        dut.io.rx.poke(1.U)
 
         val clockFrequency = 25_000_000
-
         val validBaudRates = Seq(
           115200, 57600, 28800, 14400, 7200
         )
@@ -132,11 +132,9 @@ object randomTests {
         val numOutputBits = 8
 
         // Provide the baud rate
-        setBaudRate(dut.uart1, baudRate, clockFrequency)
-        setBaudRate(dut.uart2, baudRate, clockFrequency)
 
-        setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
+        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
+        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
 
         // Generate test patterns
         val patterns = Seq(
@@ -299,9 +297,15 @@ object randomTests {
         implicit val clk: Clock = dut.clock
         clk.setTimeout(10000)
 
-        val clocksPerBit = 217
-        setupUart(dut.io.uart1Apb, dut.getUart1, clocksPerBit)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clocksPerBit)
+        val clockFrequency = 25_000_000
+        val baudRate       = 115_200
+
+        val clocksPerBit  = clockFrequency / baudRate
+        val numOutputBits = 8
+
+        // Provide the baud rate
+        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
+        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
 
         for (_ <- 1 to 5) { // Run 5 noise pattern tests
             val testChar = Random.nextInt(128).toChar
@@ -422,7 +426,11 @@ object randomTests {
         implicit val clk: Clock = dut.clock
         clk.setTimeout(10000)
 
-        val clocksPerBit = 217
+        val clockFrequency = 25_000_000
+        val baudRate       = 115_200
+
+        val clocksPerBit  = clockFrequency / baudRate
+        val numOutputBits = 8
 
         for (_ <- 1 to 5) { // Test 5 random parity configurations
             val useParityDb = Random.nextBoolean()
@@ -459,14 +467,16 @@ object randomTests {
             setupUart(
               dut.io.uart1Apb,
               dut.getUart1,
-              clocksPerBit,
+              clockFrequency,
+              baudRate,
               useParityDb,
               parityOddDb
             )
             setupUart(
               dut.io.uart2Apb,
               dut.getUart2,
-              clocksPerBit,
+              clockFrequency,
+              baudRate,
               useParityDb,
               parityOddDb
             )
@@ -529,10 +539,25 @@ object randomTests {
     private def setupUart(
         apb: ApbBundle,
         uart: Uart,
-        clocksPerBit: Int,
+        clockFrequency: Int,
+        baudRate: Int,
         useParity: Boolean = false,
         parityOdd: Boolean = false
     )(implicit clock: Clock): Unit = {
+
+        // Seting up baud rate
+
+        val baudRateAddr = uart.registerMap.getAddressOfRegister("baudRate").get
+        val clockFreqAddr =
+            uart.registerMap.getAddressOfRegister("clockFreq").get
+        val updateBaudAddr =
+            uart.registerMap.getAddressOfRegister("updateBaud").get
+
+        writeAPB(apb, baudRateAddr.U, baudRate.U)
+        writeAPB(apb, clockFreqAddr.U, clockFrequency.U)
+        writeAPB(apb, updateBaudAddr.U, 1.U)
+        clock.step(40)
+
         writeAPB(
           apb,
           uart.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,

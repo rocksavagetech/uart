@@ -11,6 +11,7 @@ object baudRateTests {
     def baudRateAccuracyTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
         dut.clock.setTimeout(0)
+        dut.io.rx.poke(1.U)
 
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
@@ -85,6 +86,7 @@ object baudRateTests {
     def baudRateStabilityTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
         dut.clock.setTimeout(0)
+        dut.io.rx.poke(1.U)
 
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
@@ -94,7 +96,7 @@ object baudRateTests {
         setBaudRate(dut, baudRate, clockFrequency)
 
         println(s"Starting stability test with clocksPerBit = $clocksPerBit")
-        
+
         writeAPB(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("useParityDb").get.U,
