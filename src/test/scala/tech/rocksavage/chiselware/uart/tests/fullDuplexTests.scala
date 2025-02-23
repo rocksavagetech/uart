@@ -71,105 +71,6 @@ object fullDuplexTests {
         }
     }
 
-    def pollForRxData(apb: ApbBundle, uart: Uart, timeoutCycles: Int = 1000)(
-        implicit clock: Clock
-    ): Option[Char] = {
-        val rxDataAvailableAddr =
-            uart.registerMap.getAddressOfRegister("rxDataAvailable").get.U
-        val rxDataAddr = uart.registerMap.getAddressOfRegister("rxData").get.U
-
-        var cycles        = 0
-        var dataAvailable = false
-
-        while (!dataAvailable && cycles < timeoutCycles) {
-            val availableRaw = readAPB(apb, rxDataAvailableAddr)
-            dataAvailable = (availableRaw != 0)
-
-            if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam
-                println(
-                  s"pollForRxData: Cycle $cycles, availableRaw=$availableRaw, dataAvailable=$dataAvailable"
-                )
-            }
-
-            clock.step(1)
-            cycles += 1
-        }
-
-        if (dataAvailable) {
-            val data = readAPB(apb, rxDataAddr)
-            println(
-              s"pollForRxData: Got data = ${data.toInt} (char='${data.toInt.toChar}')"
-            )
-            Some(data.toInt.toChar)
-        } else {
-            println("pollForRxData: Timeout waiting for data")
-            None
-        }
-    }
-
-    def setupUart(
-        apb: ApbBundle,
-        uart: Uart,
-        clockFreq: Int,
-        baudRate: Int,
-        useParity: Boolean = false,
-        parityOdd: Boolean = false
-    )(implicit clock: Clock): Unit = {
-
-        val baudRateAddr = uart.registerMap.getAddressOfRegister("baudRate").get
-        val clockFreqAddr =
-            uart.registerMap.getAddressOfRegister("clockFreq").get
-        val updateBaudAddr =
-            uart.registerMap.getAddressOfRegister("updateBaud").get
-
-        writeAPB(apb, baudRateAddr.U, baudRate.U)
-        writeAPB(apb, clockFreqAddr.U, clockFreq.U)
-        writeAPB(apb, updateBaudAddr.U, 1.U)
-        clock.step(32)
-
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
-          8.U
-        )
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("useParityDb").get.U,
-          useParity.B
-        )
-        if (useParity) {
-            writeAPB(
-              apb,
-              uart.registerMap.getAddressOfRegister("parityOddDb").get.U,
-              parityOdd.B
-            )
-        }
-    }
-
-    def sendChar(apb: ApbBundle, uart: Uart, char: Char, clocksPerBit: Int)(
-        implicit clock: Clock
-    ): Unit = {
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("dataIn").get.U,
-          char.toInt.U
-        )
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("load").get.U,
-          true.B
-        )
-        clock.step(1)
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("load").get.U,
-          false.B
-        )
-        clock.step(
-          clocksPerBit * 12
-        ) // Wait for complete transmission including stop bit
-    }
-
     /** Tests simultaneous transmission from both UARTs
       */
     def simultaneousTransmissionTest(
@@ -412,6 +313,42 @@ object fullDuplexTests {
             }
 
             clock.step(clocksPerBit2 * 2) // Extra delay between characters
+        }
+    }
+
+    def pollForRxData(apb: ApbBundle, uart: Uart, timeoutCycles: Int = 1000)(
+        implicit clock: Clock
+    ): Option[Char] = {
+        val rxDataAvailableAddr =
+            uart.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+        val rxDataAddr = uart.registerMap.getAddressOfRegister("rxData").get.U
+
+        var cycles        = 0
+        var dataAvailable = false
+
+        while (!dataAvailable && cycles < timeoutCycles) {
+            val availableRaw = readAPB(apb, rxDataAvailableAddr)
+            dataAvailable = (availableRaw != 0)
+
+            if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam
+                println(
+                  s"pollForRxData: Cycle $cycles, availableRaw=$availableRaw, dataAvailable=$dataAvailable"
+                )
+            }
+
+            clock.step(1)
+            cycles += 1
+        }
+
+        if (dataAvailable) {
+            val data = readAPB(apb, rxDataAddr)
+            println(
+              s"pollForRxData: Got data = ${data.toInt} (char='${data.toInt.toChar}')"
+            )
+            Some(data.toInt.toChar)
+        } else {
+            println("pollForRxData: Timeout waiting for data")
+            None
         }
     }
 
@@ -693,5 +630,69 @@ object fullDuplexTests {
         // Verify lines return to idle
         dut.io.uart1_tx.expect(true.B)
         dut.io.uart2_tx.expect(true.B)
+    }
+
+    def setupUart(
+        apb: ApbBundle,
+        uart: Uart,
+        clockFreq: Int,
+        baudRate: Int,
+        useParity: Boolean = false,
+        parityOdd: Boolean = false
+    )(implicit clock: Clock): Unit = {
+
+        val baudRateAddr = uart.registerMap.getAddressOfRegister("baudRate").get
+        val clockFreqAddr =
+            uart.registerMap.getAddressOfRegister("clockFreq").get
+        val updateBaudAddr =
+            uart.registerMap.getAddressOfRegister("updateBaud").get
+
+        writeAPB(apb, baudRateAddr.U, baudRate.U)
+        writeAPB(apb, clockFreqAddr.U, clockFreq.U)
+        writeAPB(apb, updateBaudAddr.U, 1.U)
+        clock.step(32)
+
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
+          8.U
+        )
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("useParityDb").get.U,
+          useParity.B
+        )
+        if (useParity) {
+            writeAPB(
+              apb,
+              uart.registerMap.getAddressOfRegister("parityOddDb").get.U,
+              parityOdd.B
+            )
+        }
+    }
+
+    def sendChar(apb: ApbBundle, uart: Uart, char: Char, clocksPerBit: Int)(
+        implicit clock: Clock
+    ): Unit = {
+        clock.setTimeout(clocksPerBit * 12 + 100)
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("dataIn").get.U,
+          char.toInt.U
+        )
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("load").get.U,
+          true.B
+        )
+        clock.step(1)
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("load").get.U,
+          false.B
+        )
+        clock.step(
+          clocksPerBit * 12
+        ) // Wait for complete transmission including stop bit
     }
 }
