@@ -52,6 +52,8 @@ object UartTestUtils {
         clock: Clock
     ): Unit = {
 
+        clock.setTimeout(1000)
+
         val clockFrequency = config.clockFrequency
         val baudRate       = config.baudRate
 
@@ -140,17 +142,42 @@ object UartTestUtils {
           dut.registerMap.getAddressOfRegister("dataIn").get.U,
           data.U
         )
+
         writeApbNoDelay(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("load").get.U,
           true.B
         )
+
+        // #####################
+
         clock.step(1)
-        writeApbNoDelay(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("load").get.U,
-          false.B
-        )
+//        writeApbNoDelay(
+//          dut.io.apb,
+//          dut.registerMap.getAddressOfRegister("load").get.U,
+//          false.B
+//        )
+        dut.io.apb.PSEL.poke(1.U)
+        dut.io.apb.PENABLE.poke(1.U)
+        dut.io.apb.PWRITE.poke(1.U)
+        dut.io.apb.PADDR
+            .poke(dut.registerMap.getAddressOfRegister("load").get.U)
+        dut.io.apb.PWDATA.poke(data)
+
+        // fork this
+//        clock.step(1)
+//        dut.io.apb.PSEL.poke(0.U)
+//        dut.io.apb.PENABLE.poke(0.U)
+
+        // fork the final apb cleanup to avoid timing issues
+
+        fork {
+            clock.step(1)
+            dut.io.apb.PSEL.poke(0.U)
+            dut.io.apb.PENABLE.poke(0.U)
+        }
+
+        // #####################
 
         def expectConstantTx(expected: Boolean, cycles: Int): Unit = {
             dut.io.tx.expect(expected.B)
@@ -178,6 +205,131 @@ object UartTestUtils {
         )
     }
 
+    def receive(dut: Uart, config: UartRuntimeConfig)(implicit
+        clock: Clock
+    ): Unit = {
+
+        clock.setTimeout(1000)
+
+        val clockFrequency = config.clockFrequency
+        val baudRate       = config.baudRate
+
+        val clocksPerBit  = clockFrequency / baudRate
+        val numOutputBits = config.numOutputBits
+
+        val data = config.data
+
+        // initial state
+        dut.io.rx.poke(true.B)
+
+        // Provide the baud rate
+        setBaudRate(dut, baudRate, clockFrequency)
+
+        // Configure UART
+        writeAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
+          numOutputBits.U
+        )
+        writeAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("useParityDb").get.U,
+          config.useParity.B
+        )
+        writeAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("parityOddDb").get.U,
+          config.useParity.B
+        )
+
+        val foundNumOutputBits = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("numOutputBitsDb").get.U
+        )
+        val foundUseParity = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("useParityDb").get.U
+        )
+        val foundParityOdd = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("parityOddDb").get.U
+        )
+
+        assert(
+          foundNumOutputBits == numOutputBits,
+          "numOutputBitsDb register not set correctly"
+        )
+        assert(
+          (foundUseParity == 1) == config.useParity,
+          "useParityDb register not set correctly"
+        )
+        assert(
+          (foundParityOdd == 1) == config.useParity,
+          "parityOddDb register not set correctly"
+        )
+
+        println(s"Sending data: $data")
+
+        // assert that the data is within the range of 0 to 255
+        assert(
+          data >= 0 && data <= 2.pow(numOutputBits) - 1,
+          "Data must be in the range 0 to 255"
+        )
+
+        val dataBits: Seq[Boolean] = (0 until numOutputBits).map { i =>
+            ((data >> i) & 1) == 1
+        }.reverse
+
+        // Build the expected sequence
+        // match on useParity
+        val sequence =
+            if (config.useParity) {
+                val parityBit = dataBits.count(identity) % 2 == 0
+                Seq(false) ++ dataBits ++ Seq(parityBit) ++ Seq(true)
+            } else {
+                Seq(false) ++ dataBits ++ Seq(true)
+            }
+
+        val dataAvailable = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+        )
+        assert(
+          dataAvailable == 0,
+          "RX data should not be available before transmission"
+        )
+
+        // Start transmission
+        // Check each bit with a timeout
+        for ((bit, index) <- sequence.zipWithIndex) {
+            println(s"Checking bit $index: expected $bit")
+            dut.io.rx.poke(bit.B)
+            dut.clock.setTimeout(clocksPerBit + 1)
+            dut.clock.step(clocksPerBit)
+        }
+
+        dut.clock.setTimeout(10)
+        dut.clock.step(1)
+
+        // Verify final state
+        val dataAvailableActual = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+        )
+        assert(
+          dataAvailableActual == 1,
+          "RX data should be available after transmission"
+        )
+        val dataActual = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rxData").get.U
+        )
+        assert(
+          dataActual == data,
+          s"RX data should match transmitted data: expected $data, got $dataActual"
+        )
+    }
+
     def setBaudRate(dut: Uart, baudRate: Int, clockFrequency: Int): Unit = {
         implicit val clock = dut.clock
 
@@ -197,6 +349,7 @@ object UartTestUtils {
 
         val clocksPerBitExpected = clockFrequency / baudRate
 
+        clock.setTimeout(1000)
         var breakLoop = false
         while (!breakLoop) {
             val clocksPerBitActual = readAPB(

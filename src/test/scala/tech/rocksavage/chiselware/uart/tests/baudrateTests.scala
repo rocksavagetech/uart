@@ -1,161 +1,208 @@
-// baudRateTests.scala
 package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
 import chiseltest._
+import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.Uart
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.testutils.UartTestUtils
+import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
 
-object baudRateTests {
-    def baudRateAccuracyTest(dut: Uart, params: UartParams): Unit = {
+import scala.util.Random
+
+object baudrateTests {
+
+    def changeingBaudTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
-        dut.clock.setTimeout(0)
         dut.io.rx.poke(1.U)
 
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
-
-        val clocksPerBit  = clockFrequency / baudRate
-        val numOutputBits = 8
-        println(s"Testing with clocksPerBit = $clocksPerBit")
-
-//        setBaudRate(dut, baudRate, clockFrequency)
-
-        // Configure UART with known good values
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("dataIn").get.U,
-          0x55.U
-        ) // Alternating pattern
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("useParityDb").get.U,
-          false.B
+        val validClockFrequencies = Seq(
+          5_000_000
         )
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("parityOddDb").get.U,
-          false.B
+        val validBaudRates = Seq(
+          230_400,
+          460_800,
+          921_600
         )
+        val validDataBits = Seq(5, 6, 7, 8)
 
-        println("Initial configuration complete")
-        dut.clock.step(5) // Let configuration settle
+        val seed = Random.nextLong()
 
-        // Start transmission
-        println("Starting transmission")
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("load").get.U,
-          true.B
-        )
-        dut.clock.step(1)
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("load").get.U,
-          false.B
-        )
+        println(s"Random test seed: $seed")
+        Random.setSeed(seed)
 
-        var lastTx     = dut.io.tx.peekBoolean()
-        var edgeCount  = 0
-        var cycleCount = 0
-        val maxCycles  = clocksPerBit * 12 // One complete character time
+        for (_ <- 1 to 10) { // Test 10 random configurations
+            val config = UartTestUtils.generateNextValidRandomConfig(
+              validClockFrequencies,
+              validBaudRates,
+              validDataBits
+            )
 
-        println("Monitoring TX line for transitions")
-        while (cycleCount < maxCycles) {
-            if (cycleCount % 10 == 0) {
-                val txValue = dut.io.tx.peekBoolean()
-                println(s"Cycle $cycleCount: TX = $txValue")
-            }
+            println(
+              s"Testing random baud rate with configuration: \n$config"
+            )
 
-            dut.clock.step(1)
-            cycleCount += 1
-
-            val currentTx = dut.io.tx.peekBoolean()
-            if (currentTx != lastTx) {
-                edgeCount += 1
-                println(s"Edge detected at cycle $cycleCount")
-            }
-            lastTx = currentTx
+            // does all assertions that the behavior is correct
+            UartTestUtils.transmit(dut, config)
         }
-
-        println(s"Test completed: Found $edgeCount edges in $cycleCount cycles")
-        assert(edgeCount > 0, "No edges detected on TX line")
     }
 
-    def baudRateStabilityTest(dut: Uart, params: UartParams): Unit = {
-        implicit val clk: Clock = dut.clock
-        dut.clock.setTimeout(0)
-        dut.io.rx.poke(1.U)
+    // Helper Functions
+    private def setupUart(
+        apb: ApbBundle,
+        uart: Uart,
+        clockFrequency: Int,
+        baudRate: Int,
+        useParity: Boolean = false,
+        parityOdd: Boolean = false
+    )(implicit clock: Clock): Unit = {
 
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
+        // Seting up baud rate
 
-        val clocksPerBit  = clockFrequency / baudRate
-        val numOutputBits = 8
+        val baudRateAddr = uart.registerMap.getAddressOfRegister("baudRate").get
+        val clockFreqAddr =
+            uart.registerMap.getAddressOfRegister("clockFreq").get
+        val updateBaudAddr =
+            uart.registerMap.getAddressOfRegister("updateBaud").get
 
-        println(s"Starting stability test with clocksPerBit = $clocksPerBit")
-
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("useParityDb").get.U,
-          false.B
-        )
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("parityOddDb").get.U,
-          false.B
-        )
-
-        dut.clock.step(5) // Let configuration settle
-
-        // Test with a single character initially
-        val testChar = 'A'
-        println(s"Testing with character: $testChar")
+        writeAPB(apb, baudRateAddr.U, baudRate.U)
+        writeAPB(apb, clockFreqAddr.U, clockFrequency.U)
+        writeAPB(apb, updateBaudAddr.U, 1.U)
+        clock.step(40)
 
         writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("dataIn").get.U,
-          testChar.toInt.U
+          apb,
+          uart.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
+          8.U
         )
         writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("load").get.U,
-          true.B
+          apb,
+          uart.registerMap.getAddressOfRegister("useParityDb").get.U,
+          useParity.B
         )
-        dut.clock.step(1)
         writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("load").get.U,
-          false.B
+          apb,
+          uart.registerMap.getAddressOfRegister("parityOddDb").get.U,
+          parityOdd.B
         )
 
-        var lastTx     = dut.io.tx.peekBoolean()
-        var edgeCount  = 0
-        var cycleCount = 0
-        val maxCycles  = clocksPerBit * 12
+        val actualNumBits = readAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("numOutputBitsDb").get.U
+        )
+        val actualUseParity = readAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("useParityDb").get.U
+        )
+        val actualParityOdd = readAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("parityOddDb").get.U
+        )
 
-        println("Monitoring TX line for stability")
-        while (cycleCount < maxCycles) {
-            if (cycleCount % 10 == 0) {
-                val txValue = dut.io.tx.peekBoolean()
-                println(s"Cycle $cycleCount: TX = $txValue")
+        assert(
+          actualNumBits == 8,
+          s"NumOutputBits mismatch: expected 8, got ${actualNumBits}"
+        )
+        assert(
+          actualUseParity == (if (useParity) 1 else 0),
+          s"UseParity mismatch: expected $useParity, got ${actualUseParity}"
+        )
+        assert(
+          actualParityOdd == (if (parityOdd) 1 else 0),
+          s"ParityOdd mismatch: expected $parityOdd, got ${actualParityOdd}"
+        )
+    }
+
+    private def waitForDataAndVerify(
+        apb: ApbBundle,
+        uart: Uart,
+        expectedData: Int
+    )(implicit clock: Clock): Unit = {
+        var received    = false
+        var timeout     = 0
+        val maxTimeout  = 5000
+        var dataValid   = false
+        var validCycles = 0
+
+        while (!received && timeout < maxTimeout) {
+            val rxDataAvailable = readAPB(
+              apb,
+              uart.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+            )
+
+            if (rxDataAvailable.intValue != 0) {
+                validCycles += 1
+                if (validCycles >= 2) {
+                    dataValid = true
+                }
+            } else {
+                validCycles = 0
             }
 
-            dut.clock.step(1)
-            cycleCount += 1
+            if (dataValid) {
+                val receivedData = readAPB(
+                  apb,
+                  uart.registerMap.getAddressOfRegister("rxData").get.U
+                )
+                assert(
+                  receivedData == expectedData,
+                  s"Data mismatch: expected ${expectedData}, got ${receivedData}"
+                )
 
-            val currentTx = dut.io.tx.peekBoolean()
-            if (currentTx != lastTx) {
-                edgeCount += 1
-                println(s"Edge detected at cycle $cycleCount")
+                val errorStatus = readAPB(
+                  apb,
+                  uart.registerMap.getAddressOfRegister("error").get.U
+                )
+                assert(
+                  errorStatus == 0,
+                  s"Unexpected error status: ${errorStatus}"
+                )
+
+                received = true
             }
-            lastTx = currentTx
+
+            clock.step(1)
+            timeout += 1
         }
 
-        println(
-          s"Stability test completed: Found $edgeCount edges in $cycleCount cycles"
-        )
-        assert(edgeCount > 0, "No edges detected on TX line")
+        assert(received, s"Timeout waiting for data after $timeout cycles")
     }
+
+    private def verifyIdleState(
+        dut: FullDuplexUart
+    )(implicit clock: Clock): Unit = {
+        assert(dut.io.uart1_tx.peekBoolean(), "UART1 TX should be idle (high)")
+        assert(dut.io.uart2_tx.peekBoolean(), "UART2 TX should be idle (high)")
+
+        val uart1Error = readAPB(
+          dut.io.uart1Apb,
+          dut.getUart1.registerMap.getAddressOfRegister("error").get.U
+        )
+        val uart2Error = readAPB(
+          dut.io.uart2Apb,
+          dut.getUart2.registerMap.getAddressOfRegister("error").get.U
+        )
+
+        assert(uart1Error == 0, s"UART1 has unexpected errors: $uart1Error")
+        assert(uart2Error == 0, s"UART2 has unexpected errors: $uart2Error")
+
+        val uart1DataAvailable = readAPB(
+          dut.io.uart1Apb,
+          dut.getUart1.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+        )
+        val uart2DataAvailable = readAPB(
+          dut.io.uart2Apb,
+          dut.getUart2.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+        )
+
+        assert(
+          uart1DataAvailable == 0,
+          "UART1 should not have data available in idle state"
+        )
+        assert(
+          uart2DataAvailable == 0,
+          "UART2 should not have data available in idle state"
+        )
+    }
+
 }
