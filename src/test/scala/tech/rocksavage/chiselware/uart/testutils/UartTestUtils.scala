@@ -16,6 +16,38 @@ import scala.math.BigInt.int2bigInt
 
 object UartTestUtils {
 
+    def generateNextValidRandomConfig(
+        validClockFreqs: Seq[Int],
+        validBaudRates: Seq[Int],
+        validNumOutputBits: Seq[Int]
+    ): UartRuntimeConfig = {
+        while (true) {
+            try {
+                val data = scala.util.Random
+                    .nextInt(2.pow(validNumOutputBits.last).toInt)
+
+                val config = UartRuntimeConfig(
+                  baudRate = validBaudRates(
+                    scala.util.Random.nextInt(validBaudRates.length)
+                  ),
+                  clockFrequency = validClockFreqs(
+                    scala.util.Random.nextInt(validClockFreqs.length)
+                  ),
+                  numOutputBits = validNumOutputBits(
+                    scala.util.Random.nextInt(validNumOutputBits.length)
+                  ),
+                  data = data,
+                  useParity = scala.util.Random.nextBoolean(),
+                  parityOdd = scala.util.Random.nextBoolean()
+                )
+                return config
+            } catch {
+                case _: IllegalArgumentException =>
+            }
+        }
+        throw new RuntimeException("Failed to generate a valid config")
+    }
+
     def transmit(dut: Uart, config: UartRuntimeConfig)(implicit
         clock: Clock
     ): Unit = {

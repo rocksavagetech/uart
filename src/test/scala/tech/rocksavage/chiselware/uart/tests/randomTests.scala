@@ -6,7 +6,7 @@ import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
 import tech.rocksavage.chiselware.uart.param.UartParams
 import tech.rocksavage.chiselware.uart.testutils.UartTestUtils
-import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart, UartRuntimeConfig}
+import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
 
 import scala.util.Random
 
@@ -33,35 +33,16 @@ object randomTests {
         val validDataBits = Seq(5, 6, 7, 8)
 
 //        val seed = Random.nextLong()
-        
+
         val seed = -706700778016793525L
         println(s"Random test seed: $seed")
         Random.setSeed(seed)
 
         for (_ <- 1 to 10) { // Test 10 random configurations
-            val baudRate = validBaudRates(
-              Random.nextInt(validBaudRates.length)
-            )
-            val clockFrequency = validClockFrequencies(
-              Random.nextInt(validClockFrequencies.length)
-            )
-            val numOutputBits = validDataBits(
-              Random.nextInt(validDataBits.length)
-            )
-
-            // truncate data to the number of bits
-            val data = Random.nextInt(iexp(2, numOutputBits))
-
-            val useParity = Random.nextBoolean()
-            val parityOdd = Random.nextBoolean() && useParity
-
-            val config: UartRuntimeConfig = UartRuntimeConfig(
-              baudRate = baudRate,
-              clockFrequency = clockFrequency,
-              numOutputBits = numOutputBits,
-              data = data,
-              useParity = useParity,
-              parityOdd = parityOdd
+            val config = UartTestUtils.generateNextValidRandomConfig(
+              validClockFrequencies,
+              validBaudRates,
+              validDataBits
             )
 
             println(
@@ -210,122 +191,6 @@ object randomTests {
         }
     }
 
-    /** Random Parity Configuration Test Tests random combinations of parity
-      * settings
-      */
-    def randomParityTest(dut: FullDuplexUart, params: UartParams): Unit = {
-        implicit val clk: Clock = dut.clock
-        clk.setTimeout(10000)
-
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
-
-        val clocksPerBit  = clockFrequency / baudRate
-        val numOutputBits = 8
-
-        for (_ <- 1 to 5) { // Test 5 random parity configurations
-            val useParityDb = Random.nextBoolean()
-            val parityOddDb = Random.nextBoolean()
-            println(
-              s"Testing with parity enabled: $useParityDb, odd parity: $parityOddDb"
-            )
-
-            // Clear any existing errors
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("clearError").get.U,
-              true.B
-            )
-            writeAPB(
-              dut.io.uart2Apb,
-              dut.getUart2.registerMap.getAddressOfRegister("clearError").get.U,
-              true.B
-            )
-            clk.step(2)
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("clearError").get.U,
-              false.B
-            )
-            writeAPB(
-              dut.io.uart2Apb,
-              dut.getUart2.registerMap.getAddressOfRegister("clearError").get.U,
-              false.B
-            )
-            clk.step(2)
-
-            // Configure both UARTs
-            setupUart(
-              dut.io.uart1Apb,
-              dut.getUart1,
-              clockFrequency,
-              baudRate,
-              useParityDb,
-              parityOddDb
-            )
-            setupUart(
-              dut.io.uart2Apb,
-              dut.getUart2,
-              clockFrequency,
-              baudRate,
-              useParityDb,
-              parityOddDb
-            )
-            clk.step(clocksPerBit * 2)
-
-            // Verify parity configuration
-            val uart1ParityEnabled = readAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("useParityDb").get.U
-            )
-            val uart2ParityEnabled = readAPB(
-              dut.io.uart2Apb,
-              dut.getUart2.registerMap.getAddressOfRegister("useParityDb").get.U
-            )
-            assert(
-              uart1ParityEnabled.intValue == (if (useParityDb) 1 else 0),
-              "UART1 parity configuration mismatch"
-            )
-            assert(
-              uart2ParityEnabled.intValue == (if (useParityDb) 1 else 0),
-              "UART2 parity configuration mismatch"
-            )
-
-            // Send random character
-            val testChar = Random.nextInt(128).toChar
-            println(s"Sending character: $testChar")
-
-            // Send data
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("dataIn").get.U,
-              testChar.toInt.U
-            )
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
-              true.B
-            )
-            clk.step(1)
-            writeAPB(
-              dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
-              false.B
-            )
-
-            // Monitor transmission
-            var cycleCount = 0
-            while (cycleCount < clocksPerBit * (if (useParityDb) 11 else 10)) {
-                cycleCount += 1
-                clk.step(1)
-            }
-
-            // Verify data and check for errors
-            clk.step(clocksPerBit * 2) // Extra delay for stability
-            waitForDataAndVerify(dut.io.uart2Apb, dut.getUart2, testChar.toInt)
-        }
-    }
-
     // Helper Functions
     private def setupUart(
         apb: ApbBundle,
@@ -445,6 +310,122 @@ object randomTests {
         }
 
         assert(received, s"Timeout waiting for data after $timeout cycles")
+    }
+
+    /** Random Parity Configuration Test Tests random combinations of parity
+      * settings
+      */
+    def randomParityTest(dut: FullDuplexUart, params: UartParams): Unit = {
+        implicit val clk: Clock = dut.clock
+        clk.setTimeout(10000)
+
+        val clockFrequency = 25_000_000
+        val baudRate       = 115_200
+
+        val clocksPerBit  = clockFrequency / baudRate
+        val numOutputBits = 8
+
+        for (_ <- 1 to 5) { // Test 5 random parity configurations
+            val useParityDb = Random.nextBoolean()
+            val parityOddDb = Random.nextBoolean()
+            println(
+              s"Testing with parity enabled: $useParityDb, odd parity: $parityOddDb"
+            )
+
+            // Clear any existing errors
+            writeAPB(
+              dut.io.uart1Apb,
+              dut.getUart1.registerMap.getAddressOfRegister("clearError").get.U,
+              true.B
+            )
+            writeAPB(
+              dut.io.uart2Apb,
+              dut.getUart2.registerMap.getAddressOfRegister("clearError").get.U,
+              true.B
+            )
+            clk.step(2)
+            writeAPB(
+              dut.io.uart1Apb,
+              dut.getUart1.registerMap.getAddressOfRegister("clearError").get.U,
+              false.B
+            )
+            writeAPB(
+              dut.io.uart2Apb,
+              dut.getUart2.registerMap.getAddressOfRegister("clearError").get.U,
+              false.B
+            )
+            clk.step(2)
+
+            // Configure both UARTs
+            setupUart(
+              dut.io.uart1Apb,
+              dut.getUart1,
+              clockFrequency,
+              baudRate,
+              useParityDb,
+              parityOddDb
+            )
+            setupUart(
+              dut.io.uart2Apb,
+              dut.getUart2,
+              clockFrequency,
+              baudRate,
+              useParityDb,
+              parityOddDb
+            )
+            clk.step(clocksPerBit * 2)
+
+            // Verify parity configuration
+            val uart1ParityEnabled = readAPB(
+              dut.io.uart1Apb,
+              dut.getUart1.registerMap.getAddressOfRegister("useParityDb").get.U
+            )
+            val uart2ParityEnabled = readAPB(
+              dut.io.uart2Apb,
+              dut.getUart2.registerMap.getAddressOfRegister("useParityDb").get.U
+            )
+            assert(
+              uart1ParityEnabled.intValue == (if (useParityDb) 1 else 0),
+              "UART1 parity configuration mismatch"
+            )
+            assert(
+              uart2ParityEnabled.intValue == (if (useParityDb) 1 else 0),
+              "UART2 parity configuration mismatch"
+            )
+
+            // Send random character
+            val testChar = Random.nextInt(128).toChar
+            println(s"Sending character: $testChar")
+
+            // Send data
+            writeAPB(
+              dut.io.uart1Apb,
+              dut.getUart1.registerMap.getAddressOfRegister("dataIn").get.U,
+              testChar.toInt.U
+            )
+            writeAPB(
+              dut.io.uart1Apb,
+              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
+              true.B
+            )
+            clk.step(1)
+            writeAPB(
+              dut.io.uart1Apb,
+              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
+              false.B
+            )
+
+            // Monitor transmission
+            var cycleCount = 0
+            while (cycleCount < clocksPerBit * (if (useParityDb) 11 else 10)) {
+                cycleCount += 1
+                clk.step(1)
+            }
+
+            // Verify data and check for errors
+            clk.step(clocksPerBit * 2) // Extra delay for stability
+            waitForDataAndVerify(dut.io.uart2Apb, dut.getUart2, testChar.toInt)
+        }
     }
 
     private def verifyIdleState(
