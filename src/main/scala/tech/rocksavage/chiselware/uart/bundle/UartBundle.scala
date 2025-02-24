@@ -16,7 +16,7 @@ class UartBundle(params: UartParams) extends Bundle {
     // Data received from RX.
     val dataOut = Output(UInt(params.maxOutputBits.W))
     // Indicates that the received data is valid.
-    val valid = Output(Bool())
+    val rxValid = Output(Bool())
     // Error signal from the receiver.
     val error = Output(new UartError())
 

@@ -23,11 +23,11 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     // Connect the RX side
     rxModule.io.rx   := io.rx
     io.dataOut       := rxModule.io.data
-    io.valid         := rxModule.io.valid
+    io.rxValid       := rxModule.io.valid
     io.error.rxError := rxModule.io.error
 
-    io.clocksPerBitRx := rxModule.io.clocksPerBit
-    io.clocksPerBitTx := txModule.io.clocksPerBit
+    io.rxClocksPerBit := rxModule.io.clocksPerBit
+    io.txClocksPerBit := txModule.io.clocksPerBit
 
     // Connect control signals
     rxModule.io.rxConfig <> io.rxControlBundle

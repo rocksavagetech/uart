@@ -19,18 +19,16 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
         val tx  = Output(Bool())
     })
 
-    // ---------------------------------------------
-    // Create and initialize the register map first
-    // ---------------------------------------------
+    // Create a register map (this example reuses one register map but differentiates TX vs RX registers by name)
     val registerMap = new RegisterMap(dataWidth, addressWidth)
 
-    // ------------------
-    // Control registers
-    // ------------------
+    // -------------------------------------------------------
+    // TX registers (for the TX control bundle)
+    // -------------------------------------------------------
     val load = RegInit(false.B)
     registerMap.createAddressableRegister(
       load,
-      "load",
+      "tx_load",
       readOnly = false,
       verbose = uartParams.verbose
     )
@@ -38,33 +36,79 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     val dataIn = RegInit(0.U(uartParams.maxOutputBits.W))
     registerMap.createAddressableRegister(
       dataIn,
-      "dataIn",
+      "tx_dataIn",
       readOnly = false,
       verbose = uartParams.verbose
     )
 
-    // ------------------
-    // RX Data & Status
-    // ------------------
+    // Transmitter configuration registers
+    val tx_baud = RegInit(115200.U(32.W))
+    registerMap.createAddressableRegister(
+      tx_baud,
+      "tx_baudRate",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    val tx_clockFreq = RegInit(25_000_000.U(32.W))
+    registerMap.createAddressableRegister(
+      tx_clockFreq,
+      "tx_clockFreq",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    val tx_updateBaud = RegInit(false.B)
+    registerMap.createAddressableRegister(
+      tx_updateBaud,
+      "tx_updateBaud",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    val tx_numOutputBitsDb = RegInit(
+      0.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+    )
+    registerMap.createAddressableRegister(
+      tx_numOutputBitsDb,
+      "tx_numOutputBitsDb",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    val tx_useParityDb = RegInit(uartParams.parity.B)
+    registerMap.createAddressableRegister(
+      tx_useParityDb,
+      "tx_useParityDb",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    val tx_parityOddDb = RegInit(uartParams.parity.B)
+    registerMap.createAddressableRegister(
+      tx_parityOddDb,
+      "tx_parityOddDb",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    // -------------------------------------------------------
+    // RX registers (for the RX control bundle and RX data/status)
+    // -------------------------------------------------------
     val rxDataReg       = RegInit(0.U(uartParams.maxOutputBits.W))
     val rxDataAvailable = RegInit(false.B)
-
     registerMap.createAddressableRegister(
       rxDataReg,
-      "rxData",
+      "rx_data",
       readOnly = true,
       verbose = uartParams.verbose
     )
     registerMap.createAddressableRegister(
       rxDataAvailable,
-      "rxDataAvailable",
+      "rx_dataAvailable",
       readOnly = true,
       verbose = uartParams.verbose
     )
-
-    // -------------
-    // Error Status
-    // -------------
 
     val error = Wire(new UartError())
     registerMap.createAddressableRegister(
@@ -77,128 +121,145 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     val clearError = RegInit(false.B)
     registerMap.createAddressableRegister(
       clearError,
-      "clearError",
+      "rx_clearError",
       readOnly = false,
       verbose = uartParams.verbose
     )
 
-    // --------------------
-    // Configuration Regs
-    // --------------------
+    // Receiver configuration registers
+    val rx_baud = RegInit(115200.U(32.W))
+    registerMap.createAddressableRegister(
+      rx_baud,
+      "rx_baudRate",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
 
-    // Create a register that holds the desired baud rate in Hz.
-    // (For example, default to 115200 baud.)
-    val baud      = RegInit(115200.U(32.W))
-    val clockFreq = RegInit(25_000_000.U(32.W))
+    val rx_clockFreq = RegInit(25_000_000.U(32.W))
+    registerMap.createAddressableRegister(
+      rx_clockFreq,
+      "rx_clockFreq",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
 
-    val updateBaud = RegInit(false.B)
-    val numOutputBitsDb = RegInit(
+    val rx_updateBaud = RegInit(false.B)
+    registerMap.createAddressableRegister(
+      rx_updateBaud,
+      "rx_updateBaud",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    val rx_numOutputBitsDb = RegInit(
       0.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
     )
-    val useParityDb = RegInit(uartParams.parity.B)
-    val parityOddDb = RegInit(uartParams.parity.B)
+    registerMap.createAddressableRegister(
+      rx_numOutputBitsDb,
+      "rx_numOutputBitsDb",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
 
-    val clocksPerBitRx = WireInit(
+    val rx_useParityDb = RegInit(uartParams.parity.B)
+    registerMap.createAddressableRegister(
+      rx_useParityDb,
+      "rx_useParityDb",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    val rx_parityOddDb = RegInit(uartParams.parity.B)
+    registerMap.createAddressableRegister(
+      rx_parityOddDb,
+      "rx_parityOddDb",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
+    // -------------------------------------------------------
+    // Clocks-per-bit registers (read-only outputs)
+    // -------------------------------------------------------
+    val rxClocksPerBit = WireInit(
       0.U((log2Ceil(uartParams.maxClockFrequency) + 1).W)
     )
-    val clocksPerBitTx = WireInit(
+    val txClocksPerBit = WireInit(
       0.U((log2Ceil(uartParams.maxClockFrequency) + 1).W)
     )
-
     registerMap.createAddressableRegister(
-      baud,
-      "baudRate",
-      readOnly = false,
-      verbose = uartParams.verbose
-    )
-    registerMap.createAddressableRegister(
-      clockFreq,
-      "clockFreq",
-      readOnly = false,
-      verbose = uartParams.verbose
-    )
-    registerMap.createAddressableRegister(
-      updateBaud,
-      "updateBaud",
-      readOnly = false,
-      verbose = uartParams.verbose
-    )
-
-    registerMap.createAddressableRegister(
-      numOutputBitsDb,
-      "numOutputBitsDb",
-      readOnly = false,
-      verbose = uartParams.verbose
-    )
-    registerMap.createAddressableRegister(
-      useParityDb,
-      "useParityDb",
-      readOnly = false,
-      verbose = uartParams.verbose
-    )
-    registerMap.createAddressableRegister(
-      parityOddDb,
-      "parityOddDb",
-      readOnly = false,
-      verbose = uartParams.verbose
-    )
-
-    registerMap.createAddressableRegister(
-      clocksPerBitRx,
-      "clocksPerBitRx",
+      rxClocksPerBit,
+      "rx_clocksPerBit",
       readOnly = true,
       verbose = uartParams.verbose
     )
     registerMap.createAddressableRegister(
-      clocksPerBitTx,
-      "clocksPerBitTx",
+      txClocksPerBit,
+      "tx_clocksPerBit",
       readOnly = true,
       verbose = uartParams.verbose
     )
 
-    // ---------------------------------------------
-    // Initialize Address Decode Logic
-    // ---------------------------------------------
+    // ---------------------------------------------------------------
+    // APB address decode
+    // ---------------------------------------------------------------
     val addrDecodeParams = registerMap.getAddrDecodeParams
     val addrDecode       = Module(new AddrDecode(addrDecodeParams))
-
     addrDecode.io.addr     := io.apb.PADDR
     addrDecode.io.en       := io.apb.PSEL
     addrDecode.io.selInput := true.B
 
-    // --------------------------------
-    // Instantiate the Inner UART logic
-    // --------------------------------
-    val uartInner = Module(
-      new UartInner(uartParams, formal)
-    )
+    // ---------------------------------------------------------------
+    // Instantiate the inner UART module (which contains separate TX and RX logic)
+    // ---------------------------------------------------------------
+    val uartInner = Module(new UartInner(uartParams, formal))
 
-    // Handle RX data valid signal
-    val rxDataValid = RegNext(uartInner.io.valid)
-    when(uartInner.io.valid && !rxDataValid) {
+    // Connect the physical UART pins:
+    uartInner.io.rx := io.rx
+    io.tx           := uartInner.io.tx
+
+    // Capture RX data when the inner module asserts valid.
+    val prevRxValid = RegNext(uartInner.io.rxValid)
+    when(uartInner.io.rxValid & !prevRxValid) {
         rxDataReg       := uartInner.io.dataOut
         rxDataAvailable := true.B
-        printf(
-          p"[Uart.scala DEBUG] New data received: rxDataReg=${uartInner.io.dataOut}\n"
-        )
     }
 
-    // APB read handling
-    when(!io.apb.PWRITE) {
-        // Handle data read
-        for (reg <- registerMap.getRegisters if reg.name == "rxData") {
-            when(addrDecode.io.sel(reg.id) && rxDataAvailable) {
-                rxDataAvailable := false.B
-                printf(
-                  p"[Uart.scala DEBUG] Data read complete, clearing rxDataAvailable\n"
-                )
-            }
-        }
-    }
+    // ---------------------------------------------------------------
+    // Connect the control bundles using the separate configuration registers:
+    //   TX: load, data, tx_baud, tx_clockFreq, tx_updateBaud, tx_numOutputBitsDb, tx_useParityDb, tx_parityOddDb
+    //   RX: rx_baud, rx_clockFreq, rx_updateBaud, rx_numOutputBitsDb, rx_useParityDb, rx_parityOddDb, rx_clearError
+    // ---------------------------------------------------------------
+    // TX control bundle connection:
+    uartInner.io.txControlBundle.load            := load
+    uartInner.io.txControlBundle.data            := dataIn
+    uartInner.io.txControlBundle.baud            := tx_baud
+    uartInner.io.txControlBundle.clockFreq       := tx_clockFreq
+    uartInner.io.txControlBundle.updateBaud      := tx_updateBaud
+    uartInner.io.txControlBundle.numOutputBitsDb := tx_numOutputBitsDb
+    uartInner.io.txControlBundle.useParityDb     := tx_useParityDb
+    uartInner.io.txControlBundle.parityOddDb     := tx_parityOddDb
 
-    // ---------------
-    // APB Interface
-    // ---------------
+    // RX control bundle connection:
+    uartInner.io.rxControlBundle.baud            := rx_baud
+    uartInner.io.rxControlBundle.clockFreq       := rx_clockFreq
+    uartInner.io.rxControlBundle.updateBaud      := rx_updateBaud
+    uartInner.io.rxControlBundle.numOutputBitsDb := rx_numOutputBitsDb
+    uartInner.io.rxControlBundle.useParityDb     := rx_useParityDb
+    uartInner.io.rxControlBundle.parityOddDb     := rx_parityOddDb
+    uartInner.io.rxControlBundle.clearErrorDb    := clearError
+
+    // ---------------------------------------------------------------
+    // Connect clocks per bit outputs from inner module to our registers
+    // ---------------------------------------------------------------
+    txClocksPerBit := uartInner.io.txClocksPerBit
+    rxClocksPerBit := uartInner.io.rxClocksPerBit
+
+    // Connect error status (from inner module)
+    error := uartInner.io.error
+
+    // ---------------------------------------------------------------
+    // APB read/write interface handling
+    // ---------------------------------------------------------------
     io.apb.PREADY := io.apb.PENABLE && io.apb.PSEL
     io.apb.PSLVERR := addrDecode.io.errorCode === AddrDecodeError.AddressOutOfRange
     io.apb.PRDATA := 0.U
@@ -219,45 +280,23 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
         }
     }
 
-    // -------------------------
-    // Connect external signals
-    // -------------------------
-    uartInner.io.rx := io.rx
-    io.tx           := uartInner.io.tx
-
-    // Connect TX control signals
-    uartInner.io.txControlBundle.load            := load
-    uartInner.io.txControlBundle.data            := dataIn
-    uartInner.io.txControlBundle.baud            := baud
-    uartInner.io.txControlBundle.clockFreq       := clockFreq
-    uartInner.io.txControlBundle.updateBaud      := updateBaud
-    uartInner.io.txControlBundle.numOutputBitsDb := numOutputBitsDb
-    uartInner.io.txControlBundle.useParityDb     := useParityDb
-    uartInner.io.txControlBundle.parityOddDb     := parityOddDb
-
-    clocksPerBitTx := uartInner.io.clocksPerBitTx
-
-    // Connect RX control signals
-    uartInner.io.rxControlBundle.baud            := baud
-    uartInner.io.rxControlBundle.clockFreq       := clockFreq
-    uartInner.io.rxControlBundle.updateBaud      := updateBaud
-    uartInner.io.rxControlBundle.numOutputBitsDb := numOutputBitsDb
-    uartInner.io.rxControlBundle.useParityDb     := useParityDb
-    uartInner.io.rxControlBundle.parityOddDb     := parityOddDb
-    uartInner.io.rxControlBundle.clearErrorDb    := clearError
-
-    clocksPerBitRx := uartInner.io.clocksPerBitRx
-
-    // Connect error signals
-    error := uartInner.io.error
-
-    // Add pulse for load signal
-    when(load) {
-        load := false.B // Auto-clear after one cycle
+    // If RX data is read, clear the available flag.
+    when(!io.apb.PWRITE) {
+        for (reg <- registerMap.getRegisters if reg.name == "rx_data") {
+            when(addrDecode.io.sel(reg.id) && rxDataAvailable) {
+                rxDataAvailable := false.B
+            }
+        }
     }
 
-    // Add pulse for updateBaud signal
-    when(updateBaud) {
-        updateBaud := false.B // Auto-clear after one cycle
+    // Generate one‐cycle pulses for the load and updateBaud signals.
+    when(load) {
+        load := false.B
+    }
+    when(tx_updateBaud) {
+        tx_updateBaud := false.B
+    }
+    when(rx_updateBaud) {
+        rx_updateBaud := false.B
     }
 }

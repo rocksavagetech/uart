@@ -21,6 +21,15 @@ object specialCaseTests {
             useParity = true,
             parityOdd = true,
             data = 254
+          ),
+          UartRuntimeConfig(
+            useAsserts = true,
+            baudRate = 115200,
+            clockFrequency = 262144,
+            numOutputBits = 8,
+            useParity = true,
+            parityOdd = false,
+            data = 26
           )
         )
 
