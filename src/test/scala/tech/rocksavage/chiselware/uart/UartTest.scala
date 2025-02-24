@@ -21,7 +21,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "randomTransmit"
+        case true  => "specialCaseReceive"
         case false => testNameArg
     }
 
@@ -86,6 +86,26 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             randomTests.randomReceiveTest(dut, uartParams)
+                        }
+                }
+            case "specialCaseTransmit" =>
+                it should "handle special transmit cases" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            specialCaseTests.specialCaseTransmitTests(
+                              dut,
+                              uartParams
+                            )
+                        }
+                }
+            case "specialCaseReceive" =>
+                it should "handle special receive cases" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            specialCaseTests.specialCaseReceiveTests(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
             case "changingBaudRate" =>
