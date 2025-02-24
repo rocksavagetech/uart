@@ -5,12 +5,13 @@ package tech.rocksavage.chiselware.uart.testutils
 
 import chisel3._
 import chiseltest._
+import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils.{
     readAPB,
     writeAPB,
     writeApbNoDelay
 }
-import tech.rocksavage.chiselware.uart.{Uart, UartRuntimeConfig}
+import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart, UartRuntimeConfig}
 
 import scala.math.BigInt.int2bigInt
 
@@ -394,6 +395,190 @@ object UartTestUtils {
             }
             clock.step(1)
         }
+    }
+
+    def setupUart(
+        apb: ApbBundle,
+        uart: Uart,
+        clockFreq: Int,
+        baudRate: Int,
+        useParity: Boolean = false,
+        parityOdd: Boolean = false
+    )(implicit clock: Clock): Unit = {
+        setupRxUart(apb, uart, clockFreq, baudRate, useParity, parityOdd)
+        setupTxUart(apb, uart, clockFreq, baudRate, useParity, parityOdd)
+    }
+
+    def setupRxUart(
+        apb: ApbBundle,
+        uart: Uart,
+        clockFreq: Int,
+        baudRate: Int,
+        useParity: Boolean = false,
+        parityOdd: Boolean = false
+    )(implicit clock: Clock): Unit = {
+
+        val baudRateAddr =
+            uart.registerMap.getAddressOfRegister("rx_baudRate").get
+        val clockFreqAddr =
+            uart.registerMap.getAddressOfRegister("rx_clockFreq").get
+        val updateBaudAddr =
+            uart.registerMap.getAddressOfRegister("rx_updateBaud").get
+
+        writeAPB(apb, baudRateAddr.U, baudRate.U)
+        writeAPB(apb, clockFreqAddr.U, clockFreq.U)
+        writeAPB(apb, updateBaudAddr.U, 1.U)
+        clock.step(32)
+
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("rx_numOutputBitsDb").get.U,
+          8.U
+        )
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("rx_useParityDb").get.U,
+          useParity.B
+        )
+        if (useParity) {
+            writeAPB(
+              apb,
+              uart.registerMap.getAddressOfRegister("rx_parityOddDb").get.U,
+              parityOdd.B
+            )
+        }
+    }
+
+    def setupTxUart(
+        apb: ApbBundle,
+        uart: Uart,
+        clockFreq: Int,
+        baudRate: Int,
+        useParity: Boolean = false,
+        parityOdd: Boolean = false
+    )(implicit clock: Clock): Unit = {
+
+        val baudRateAddr =
+            uart.registerMap.getAddressOfRegister("tx_baudRate").get
+        val clockFreqAddr =
+            uart.registerMap.getAddressOfRegister("tx_clockFreq").get
+        val updateBaudAddr =
+            uart.registerMap.getAddressOfRegister("tx_updateBaud").get
+
+        writeAPB(apb, baudRateAddr.U, baudRate.U)
+        writeAPB(apb, clockFreqAddr.U, clockFreq.U)
+        writeAPB(apb, updateBaudAddr.U, 1.U)
+        clock.step(32)
+
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("tx_numOutputBitsDb").get.U,
+          8.U
+        )
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("tx_useParityDb").get.U,
+          useParity.B
+        )
+        if (useParity) {
+            writeAPB(
+              apb,
+              uart.registerMap.getAddressOfRegister("tx_parityOddDb").get.U,
+              parityOdd.B
+            )
+        }
+    }
+
+    def waitForDataAndVerify(
+        apb: ApbBundle,
+        uart: Uart,
+        expectedData: Int
+    )(implicit clock: Clock): Unit = {
+        var received    = false
+        var timeout     = 0
+        val maxTimeout  = 5000
+        var dataValid   = false
+        var validCycles = 0
+
+        while (!received && timeout < maxTimeout) {
+            val rxDataAvailable = readAPB(
+              apb,
+              uart.registerMap.getAddressOfRegister("rx_dataAvailable").get.U
+            )
+
+            if (rxDataAvailable.intValue != 0) {
+                validCycles += 1
+                if (validCycles >= 2) {
+                    dataValid = true
+                }
+            } else {
+                validCycles = 0
+            }
+
+            if (dataValid) {
+                val receivedData = readAPB(
+                  apb,
+                  uart.registerMap.getAddressOfRegister("rx_data").get.U
+                )
+                assert(
+                  receivedData == expectedData,
+                  s"Data mismatch: expected ${expectedData}, got ${receivedData}"
+                )
+
+                val errorStatus = readAPB(
+                  apb,
+                  uart.registerMap.getAddressOfRegister("error").get.U
+                )
+                assert(
+                  errorStatus == 0,
+                  s"Unexpected error status: ${errorStatus}"
+                )
+
+                received = true
+            }
+
+            clock.step(1)
+            timeout += 1
+        }
+
+        assert(received, s"Timeout waiting for data after $timeout cycles")
+    }
+
+    def verifyIdleState(
+        dut: FullDuplexUart
+    )(implicit clock: Clock): Unit = {
+        assert(dut.io.uart1_tx.peekBoolean(), "UART1 TX should be idle (high)")
+        assert(dut.io.uart2_tx.peekBoolean(), "UART2 TX should be idle (high)")
+
+        val uart1Error = readAPB(
+          dut.io.uart1Apb,
+          dut.getUart1.registerMap.getAddressOfRegister("error").get.U
+        )
+        val uart2Error = readAPB(
+          dut.io.uart2Apb,
+          dut.getUart2.registerMap.getAddressOfRegister("error").get.U
+        )
+
+        assert(uart1Error == 0, s"UART1 has unexpected errors: $uart1Error")
+        assert(uart2Error == 0, s"UART2 has unexpected errors: $uart2Error")
+
+        val uart1DataAvailable = readAPB(
+          dut.io.uart1Apb,
+          dut.getUart1.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+        )
+        val uart2DataAvailable = readAPB(
+          dut.io.uart2Apb,
+          dut.getUart2.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+        )
+
+        assert(
+          uart1DataAvailable == 0,
+          "UART1 should not have data available in idle state"
+        )
+        assert(
+          uart2DataAvailable == 0,
+          "UART2 should not have data available in idle state"
+        )
     }
 
 }

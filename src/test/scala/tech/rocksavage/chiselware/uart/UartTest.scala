@@ -26,7 +26,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     }
 
     println(s"Running test: $testName")
-    val useVerilator = System.getProperty("useVerilator", "true").toBoolean
+    val useVerilator = System.getProperty("useVerilator", "false").toBoolean
     val testDir      = "out/test"
     val backendAnnotations = {
         var annos: Seq[Annotation] = Seq()
@@ -271,6 +271,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
 
     def runAllTests(params: UartParams): Unit = {
         errorTestsFull(params)
+        baudrateTestsFull(params)
         transmissionTestsFull(params)
         fullDuplexTestsFull(params)
         randomTestsFull(params)
@@ -319,6 +320,15 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     specialCaseTests.specialCaseReceiveTests(dut, params)
+                }
+        }
+    }
+
+    def baudrateTestsFull(params: UartParams): Unit = {
+        it should "handle changing baud rate" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    baudrateTests.changeingBaudTest(dut, params)
                 }
         }
     }

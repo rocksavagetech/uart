@@ -5,6 +5,7 @@ import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.setupUart
 import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
 
 object fullDuplexTests {
@@ -71,42 +72,6 @@ object fullDuplexTests {
         }
     }
 
-    def pollForRxData(apb: ApbBundle, uart: Uart, timeoutCycles: Int = 1000)(
-        implicit clock: Clock
-    ): Option[Char] = {
-        val rxDataAvailableAddr =
-            uart.registerMap.getAddressOfRegister("rxDataAvailable").get.U
-        val rxDataAddr = uart.registerMap.getAddressOfRegister("rxData").get.U
-
-        var cycles        = 0
-        var dataAvailable = false
-
-        while (!dataAvailable && cycles < timeoutCycles) {
-            val availableRaw = readAPB(apb, rxDataAvailableAddr)
-            dataAvailable = (availableRaw != 0)
-
-            if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam
-                println(
-                  s"pollForRxData: Cycle $cycles, availableRaw=$availableRaw, dataAvailable=$dataAvailable"
-                )
-            }
-
-            clock.step(1)
-            cycles += 1
-        }
-
-        if (dataAvailable) {
-            val data = readAPB(apb, rxDataAddr)
-            println(
-              s"pollForRxData: Got data = ${data.toInt} (char='${data.toInt.toChar}')"
-            )
-            Some(data.toInt.toChar)
-        } else {
-            println("pollForRxData: Timeout waiting for data")
-            None
-        }
-    }
-
     /** Tests simultaneous transmission from both UARTs
       */
     def simultaneousTransmissionTest(
@@ -136,11 +101,11 @@ object fullDuplexTests {
         // Clear any pending data
         readAPB(
           dut.io.uart1Apb,
-          dut.getUart1.registerMap.getAddressOfRegister("rxData").get.U
+          dut.getUart1.registerMap.getAddressOfRegister("rx_data").get.U
         )
         readAPB(
           dut.io.uart2Apb,
-          dut.getUart2.registerMap.getAddressOfRegister("rxData").get.U
+          dut.getUart2.registerMap.getAddressOfRegister("rx_data").get.U
         )
 
         // We want to send 'A' from UART1, and 'B' from UART2
@@ -155,22 +120,22 @@ object fullDuplexTests {
 
         writeAPB(
           dut.io.uart1Apb,
-          dut.getUart1.registerMap.getAddressOfRegister("dataIn").get.U,
+          dut.getUart1.registerMap.getAddressOfRegister("tx_dataIn").get.U,
           char1.toInt.U
         )
         writeAPB(
           dut.io.uart2Apb,
-          dut.getUart2.registerMap.getAddressOfRegister("dataIn").get.U,
+          dut.getUart2.registerMap.getAddressOfRegister("tx_dataIn").get.U,
           char2.toInt.U
         )
         writeAPB(
           dut.io.uart1Apb,
-          dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
+          dut.getUart1.registerMap.getAddressOfRegister("tx_load").get.U,
           1.U
         )
         writeAPB(
           dut.io.uart2Apb,
-          dut.getUart2.registerMap.getAddressOfRegister("load").get.U,
+          dut.getUart2.registerMap.getAddressOfRegister("tx_load").get.U,
           1.U
         )
         clock.step(1)
@@ -178,12 +143,12 @@ object fullDuplexTests {
         // Clear loads
         writeAPB(
           dut.io.uart2Apb,
-          dut.getUart2.registerMap.getAddressOfRegister("load").get.U,
+          dut.getUart2.registerMap.getAddressOfRegister("tx_load").get.U,
           0.U
         )
         writeAPB(
           dut.io.uart1Apb,
-          dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
+          dut.getUart1.registerMap.getAddressOfRegister("tx_load").get.U,
           0.U
         )
 
@@ -262,7 +227,7 @@ object fullDuplexTests {
     ): Option[Int] = {
         val available = readAPB(
           apb,
-          uart.registerMap.getAddressOfRegister("rxDataAvailable").get.U
+          uart.registerMap.getAddressOfRegister("rx_dataAvailable").get.U
         )
         if (available > 0) {
             println(
@@ -271,7 +236,7 @@ object fullDuplexTests {
             // Actually read the data
             val data = readAPB(
               apb,
-              uart.registerMap.getAddressOfRegister("rxData").get.U
+              uart.registerMap.getAddressOfRegister("rx_data").get.U
             ).toInt
             println(
               "checkRxAvailableAndRead: got data=" + data + " (char=" + data.toChar + ")"
@@ -279,45 +244,6 @@ object fullDuplexTests {
             Some(data)
         } else {
             None
-        }
-    }
-
-    def setupUart(
-        apb: ApbBundle,
-        uart: Uart,
-        clockFreq: Int,
-        baudRate: Int,
-        useParity: Boolean = false,
-        parityOdd: Boolean = false
-    )(implicit clock: Clock): Unit = {
-
-        val baudRateAddr = uart.registerMap.getAddressOfRegister("baudRate").get
-        val clockFreqAddr =
-            uart.registerMap.getAddressOfRegister("clockFreq").get
-        val updateBaudAddr =
-            uart.registerMap.getAddressOfRegister("updateBaud").get
-
-        writeAPB(apb, baudRateAddr.U, baudRate.U)
-        writeAPB(apb, clockFreqAddr.U, clockFreq.U)
-        writeAPB(apb, updateBaudAddr.U, 1.U)
-        clock.step(32)
-
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
-          8.U
-        )
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("useParityDb").get.U,
-          useParity.B
-        )
-        if (useParity) {
-            writeAPB(
-              apb,
-              uart.registerMap.getAddressOfRegister("parityOddDb").get.U,
-              parityOdd.B
-            )
         }
     }
 
@@ -347,11 +273,11 @@ object fullDuplexTests {
         // Clear any pending data
         readAPB(
           dut.io.uart1Apb,
-          dut.getUart1.registerMap.getAddressOfRegister("rxData").get.U
+          dut.getUart1.registerMap.getAddressOfRegister("rx_data").get.U
         )
         readAPB(
           dut.io.uart2Apb,
-          dut.getUart2.registerMap.getAddressOfRegister("rxData").get.U
+          dut.getUart2.registerMap.getAddressOfRegister("rx_data").get.U
         )
 
         val testData = "Tes"
@@ -391,6 +317,67 @@ object fullDuplexTests {
         }
     }
 
+    def pollForRxData(apb: ApbBundle, uart: Uart, timeoutCycles: Int = 1000)(
+        implicit clock: Clock
+    ): Option[Char] = {
+        val rxDataAvailableAddr =
+            uart.registerMap.getAddressOfRegister("rx_dataAvailable").get.U
+        val rxDataAddr = uart.registerMap.getAddressOfRegister("rx_data").get.U
+
+        var cycles        = 0
+        var dataAvailable = false
+
+        while (!dataAvailable && cycles < timeoutCycles) {
+            val availableRaw = readAPB(apb, rxDataAvailableAddr)
+            dataAvailable = (availableRaw != 0)
+
+            if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam
+                println(
+                  s"pollForRxData: Cycle $cycles, availableRaw=$availableRaw, dataAvailable=$dataAvailable"
+                )
+            }
+
+            clock.step(1)
+            cycles += 1
+        }
+
+        if (dataAvailable) {
+            val data = readAPB(apb, rxDataAddr)
+            println(
+              s"pollForRxData: Got data = ${data.toInt} (char='${data.toInt.toChar}')"
+            )
+            Some(data.toInt.toChar)
+        } else {
+            println("pollForRxData: Timeout waiting for data")
+            None
+        }
+    }
+
+    def sendChar(apb: ApbBundle, uart: Uart, char: Char, clocksPerBit: Int)(
+        implicit clock: Clock
+    ): Unit = {
+        clock.setTimeout(100000)
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("tx_dataIn").get.U,
+          char.toInt.U
+        )
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("tx_load").get.U,
+          true.B
+        )
+        clock.step(1)
+        writeAPB(
+          apb,
+          uart.registerMap.getAddressOfRegister("tx_load").get.U,
+          false.B
+        )
+        clock.step(
+          clocksPerBit * 12
+        ) // Wait for complete transmission including stop bit
+    }
+
     /** Tests high-speed back-to-back transmission
       */
     def highSpeedTransmissionTest(
@@ -416,18 +403,18 @@ object fullDuplexTests {
         for (char <- testData) {
             writeAPB(
               dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("dataIn").get.U,
+              dut.getUart1.registerMap.getAddressOfRegister("tx_dataIn").get.U,
               char.toInt.U
             )
             writeAPB(
               dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
+              dut.getUart1.registerMap.getAddressOfRegister("tx_load").get.U,
               true.B
             )
             clock.step(1)
             writeAPB(
               dut.io.uart1Apb,
-              dut.getUart1.registerMap.getAddressOfRegister("load").get.U,
+              dut.getUart1.registerMap.getAddressOfRegister("tx_load").get.U,
               false.B
             )
             clock.step(clocksPerBit * 12)
@@ -548,37 +535,6 @@ object fullDuplexTests {
         }
     }
 
-    def readChar(apb: ApbBundle, uart: Uart)(implicit clock: Clock): Char = {
-        val dataRegAddr = uart.registerMap.getAddressOfRegister("rxData").get.U
-        val data        = readAPB(apb, dataRegAddr)
-        data.toChar
-    }
-
-    def sendChar(apb: ApbBundle, uart: Uart, char: Char, clocksPerBit: Int)(
-        implicit clock: Clock
-    ): Unit = {
-        clock.setTimeout(100000)
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("dataIn").get.U,
-          char.toInt.U
-        )
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("load").get.U,
-          true.B
-        )
-        clock.step(1)
-        writeAPB(
-          apb,
-          uart.registerMap.getAddressOfRegister("load").get.U,
-          false.B
-        )
-        clock.step(
-          clocksPerBit * 12
-        ) // Wait for complete transmission including stop bit
-    }
-
     /** Tests noise immunity
       */
     def noiseImmunityTest(dut: FullDuplexUart, params: UartParams): Unit = {
@@ -665,6 +621,12 @@ object fullDuplexTests {
 
             clock.step(clocksPerBit * 2) // Wait between baud rate changes
         }
+    }
+
+    def readChar(apb: ApbBundle, uart: Uart)(implicit clock: Clock): Char = {
+        val dataRegAddr = uart.registerMap.getAddressOfRegister("rx_data").get.U
+        val data        = readAPB(apb, dataRegAddr)
+        data.toChar
     }
 
     /** Tests line idle detection

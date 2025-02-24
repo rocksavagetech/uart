@@ -120,17 +120,17 @@ object errorTests {
         // Configure 8 data bits, parity ON (EVEN)
         writeAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
+          dut.registerMap.getAddressOfRegister("rx_numOutputBitsDb").get.U,
           numOutputBits.U
         )
         writeAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("useParityDb").get.U,
+          dut.registerMap.getAddressOfRegister("rx_useParityDb").get.U,
           1.U
         ) // parity on
         writeAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("parityOddDb").get.U,
+          dut.registerMap.getAddressOfRegister("rx_parityOddDb").get.U,
           0.U
         ) // 0 => even
         clk.step(clocksPerBit * 2)
@@ -217,12 +217,12 @@ object errorTests {
         // 8 bits, no parity
         writeAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("clocksPerBitDb").get.U,
+          dut.registerMap.getAddressOfRegister("rx_clocksPerBit").get.U,
           clocksPerBit.U
         )
         writeAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("numOutputBitsDb").get.U,
+          dut.registerMap.getAddressOfRegister("rx_numOutputBitsDb").get.U,
           8.U
         )
         clk.step(clocksPerBit * 2)
