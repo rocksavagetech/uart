@@ -103,11 +103,11 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
     stateReg            := stateNext
 
     io.state        := stateReg
-    io.sampleStart  := (stateReg === UartState.Start) && sampleNext
-    io.sampleData   := (stateReg === UartState.Data) && sampleNext
-    io.sampleParity := (stateReg === UartState.Parity) && sampleNext
+    io.sampleStart  := (stateNext === UartState.Start) && sampleNext
+    io.sampleData   := (stateNext === UartState.Data) && sampleNext
+    io.sampleParity := (stateNext === UartState.Parity) && sampleNext
     io.complete     := completeNext
-    io.shiftRegister := incrementCounterNext && (stateReg === UartState.Data) && bitCounterNext =/= 0.U
+    io.shiftRegister := incrementCounterNext && (stateNext === UartState.Data) && bitCounterNext =/= 0.U
 
     def incrementCounter(counter: UInt, max: UInt, condition: Bool): UInt = {
         val next = WireDefault(counter)
