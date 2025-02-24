@@ -165,6 +165,8 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     /** Next Error output register */
     val errorNext = WireInit(UartRxError.None)
 
+    val sampledRxSync = RegInit(true.B)
+
     dataReg  := dataNext
     validReg := validNext
     errorReg := errorNext
@@ -217,6 +219,10 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       io.rx
     )
 
+    when(sampleStartWire) {
+        sampledRxSync := rxSync
+    }
+
     dataShiftNext := calculateDataShiftNext(
       rxSync,
       dataShiftReg,
@@ -238,7 +244,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     errorNext := calculateErrorNext(
       stateReg = stateWire,
-      rxSync = rxSync,
+      rxSync = RegNext(rxSync),
       useParityReg = useParityReg,
       parityOddReg = parityOddReg,
       dataShiftReg = dataShiftReg,

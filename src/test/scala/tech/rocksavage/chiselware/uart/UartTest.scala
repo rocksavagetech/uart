@@ -63,7 +63,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
           addressWidth = 32,
           maxOutputBits = 8,
           syncDepth = 2,
-          maxBaudRate = 921_600,
+          maxBaudRate = 25_000_000,
           maxClockFrequency = 25_000_000
         )
 
@@ -123,6 +123,13 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             randomTests.randomNoiseTest(dut, uartParams)
+                        }
+                }
+            case "randomParity" =>
+                it should "handle random parity configurations" in {
+                    test(new FullDuplexUart(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomParityTest(dut, uartParams)
                         }
                 }
 
