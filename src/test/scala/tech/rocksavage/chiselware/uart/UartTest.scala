@@ -26,7 +26,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     }
 
     println(s"Running test: $testName")
-    val useVerilator = System.getProperty("useVerilator", "false").toBoolean
+    val useVerilator = System.getProperty("useVerilator", "true").toBoolean
     val testDir      = "out/test"
     val backendAnnotations = {
         var annos: Seq[Annotation] = Seq()
@@ -43,14 +43,16 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     }
 
     // Decide which test to run based on "testName"
-    if (testName == "regression") {
-        (1 to numTests).foreach { config =>
-            runTest(s"UART_test_config_$config")
-        }
-    } else {
-        // Single test
-        runTest(testName)
-    }
+    // will just run all tests if the test name is regression
+//    if (testName == "regression") {
+//        (1 to numTests).foreach { config =>
+//            runTest(s"UART_test_config_$config")
+//        }
+//    } else {
+//        // Single test
+//        runTest(testName)
+//    }
+    runTest(testName)
 
     def runTest(name: String): Unit = {
         behavior of name
@@ -272,6 +274,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         transmissionTestsFull(params)
         fullDuplexTestsFull(params)
         randomTestsFull(params)
+        specialCaseTestsFull(params)
     }
 
     def randomTestsFull(params: UartParams): Unit = {
@@ -300,6 +303,22 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
             test(new FullDuplexUart(params))
                 .withAnnotations(backendAnnotations) { dut =>
                     randomTests.randomParityTest(dut, params)
+                }
+        }
+    }
+
+    def specialCaseTestsFull(params: UartParams): Unit = {
+        it should "handle special transmit cases" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    specialCaseTests.specialCaseTransmitTests(dut, params)
+                }
+        }
+
+        it should "handle special receive cases" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    specialCaseTests.specialCaseReceiveTests(dut, params)
                 }
         }
     }
