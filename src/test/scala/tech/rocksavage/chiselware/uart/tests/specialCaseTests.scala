@@ -39,7 +39,7 @@ object specialCaseTests {
               s"Receive transaction with configuration: \n$config"
             )
 
-            UartTestUtils.receive(dut, config)
+            UartTestUtils.transmit(dut, config)
         }
     }
 
