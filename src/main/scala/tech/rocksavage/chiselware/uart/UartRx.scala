@@ -27,7 +27,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val rxSyncRegs = RegInit(VecInit(Seq.fill(params.syncDepth)(true.B)).asUInt)
 
     /** Next shift register for synchronizing received data */
-    val rxSyncNext = WireInit(0.U(params.syncDepth.W))
+    val rxSyncNext = WireInit(1.U(params.syncDepth.W))
 
     rxSyncRegs := rxSyncNext
 
@@ -92,22 +92,24 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     // State FSM
     // ###################
 
-    val uartFsm = Module(new UartFsm(params, formal))
+    val uartFsm = Module(new UartFsm(params))
 
-    val stateWire        = uartFsm.io.state
-    val combState        = uartFsm.io.combState
-    val sampleStartWire  = uartFsm.io.sampleStart
-    val sampleDataWire   = uartFsm.io.sampleData
-    val sampleParityWire = uartFsm.io.sampleParity
-    val completeWire     = uartFsm.io.complete
+    val state = uartFsm.io.state
+    val sampleStartWire =
+        uartFsm.io.sample && uartFsm.io.state === UartState.Start
+    val sampleDataWire =
+        uartFsm.io.sample && uartFsm.io.state === UartState.Data
+    val sampleParityWire =
+        uartFsm.io.sample && uartFsm.io.state === UartState.Parity
+    val completeWire = uartFsm.io.complete
 
     val startTransaction =
-        (rxSync === false.B) && (stateWire === UartState.Idle)
+        (rxSync === false.B) && (RegNext(state) === UartState.Idle)
 
     uartFsm.io.startTransaction := startTransaction
-    uartFsm.io.clocksPerBitReg  := clocksPerBitReg
-    uartFsm.io.numOutputBitsReg := numOutputBitsReg
-    uartFsm.io.useParityReg     := useParityReg
+    uartFsm.io.clocksPerBit     := clocksPerBitReg
+    uartFsm.io.numOutputBits    := numOutputBitsReg
+    uartFsm.io.useParity        := useParityReg
     uartFsm.io.updateBaud       := io.rxConfig.updateBaud
 
     // ###################
@@ -122,7 +124,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val baudGen = Module(new UartBaudRateGenerator(params))
     baudGen.io.clkFreq     := io.rxConfig.clockFreq
     baudGen.io.desiredBaud := io.rxConfig.baud
-    baudGen.io.update      := stateWire === UartState.BaudUpdating
+    baudGen.io.update      := RegNext(state) === UartState.BaudUpdating
 
     // The effective clocks-per-bit for the UART will come from the baud generator.
     val effectiveClocksPerBit = baudGen.io.clocksPerBit
@@ -192,25 +194,25 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     // ###################
 
     numOutputBitsNext := Mux(
-      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
+      state === UartState.Idle || state === UartState.BaudUpdating,
       numOutputBitsDbReg,
       numOutputBitsReg
     )
 
     useParityNext := Mux(
-      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
+      state === UartState.Idle || state === UartState.BaudUpdating,
       useParityDbReg,
       useParityReg
     )
 
     parityOddNext := Mux(
-      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
+      state === UartState.Idle || state === UartState.BaudUpdating,
       parityOddDbReg,
       parityOddReg
     )
 
     clearErrorNext := Mux(
-      stateWire === UartState.Idle || stateWire === UartState.BaudUpdating,
+      state === UartState.Idle || state === UartState.BaudUpdating,
       clearErrorDbReg,
       clearErrorReg
     )
@@ -244,7 +246,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     )
 
     errorNext := calculateErrorNext(
-      stateReg = combState,
+      stateReg = state,
       rxSync = rxSync,
       useParityReg = useParityReg,
       parityOddReg = parityOddReg,
