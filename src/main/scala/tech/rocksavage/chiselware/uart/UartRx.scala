@@ -344,8 +344,9 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         clearError: Bool,
         completeWire: Bool
     ): UartRxError.Type = {
-        val errorNext = WireDefault(errorReg)
-
+        val errorNext       = WireDefault(errorReg)
+        val delayedRxSync   = RegNext(rxSync)
+        val delayedComplete = RegNext(completeWire)
         // -----------------------
         //  Detect NEW errors
         // -----------------------
@@ -354,8 +355,8 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         }
         switch(stateReg) {
             is(UartState.Stop) {
-                when(completeWire) {
-                    when(rxSync =/= true.B) {
+                when(delayedComplete) {
+                    when(delayedRxSync =/= true.B) {
                         errorNext := UartRxError.StopBitError
                     }
                 }

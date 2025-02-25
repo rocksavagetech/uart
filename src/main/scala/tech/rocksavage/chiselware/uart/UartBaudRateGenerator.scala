@@ -36,8 +36,6 @@ class UartBaudRateGenerator(p: UartParams) extends Module {
 
     // Default outputs.
 
-//    val valid = (state === BaudGenState.Idle) && !io.update
-
     io.clocksPerBit := updatedClocksPerBit
     io.valid        := divider.io.valid
 
@@ -52,9 +50,6 @@ class UartBaudRateGenerator(p: UartParams) extends Module {
     divider.io.start       := false.B
     divider.io.numerator   := muxedNum
     divider.io.denominator := muxedDen
-
-//    val delayStart = RegInit(false.B)
-//    delayStart := io.update
 
     when(state === BaudGenState.Idle) {
         when(io.update) {

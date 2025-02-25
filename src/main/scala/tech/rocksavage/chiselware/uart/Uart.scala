@@ -67,7 +67,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     )
 
     val tx_numOutputBitsDb = RegInit(
-      0.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+      8.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
     )
     registerMap.createAddressableRegister(
       tx_numOutputBitsDb,
@@ -161,7 +161,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     )
 
     val rx_numOutputBitsDb = RegInit(
-      0.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+      8.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
     )
     registerMap.createAddressableRegister(
       rx_numOutputBitsDb,

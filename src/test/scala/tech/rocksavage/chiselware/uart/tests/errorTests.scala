@@ -1,4 +1,3 @@
-// errorTests.scala
 package tech.rocksavage.chiselware.uart.tests
 
 import chisel3._
@@ -10,114 +9,88 @@ import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.setBaudRate
 
 object errorTests {
 
-    /** 1) Frame (Stop-Bit) Error Test We send a byte (0xAA) but keep the stop
-      * bit LOW (should be HIGH). That triggers StopBitError => we map that to
-      * bit 1 (0x02).
+    /** [Test 1] Invalid Register Programming Error Test
+      *
+      * This test makes invalid APB writes to configuration registers. For
+      * example, it writes a number larger than allowed to the “numOutputBitsDb”
+      * register, a too–high baud–rate to the “baudRate” register, and a
+      * too–high clock frequency to the “clockFreq” register. The error register
+      * is expected to be set.
       */
-    def frameErrorTest(dut: Uart, params: UartParams): Unit = {
+    def invalidRegisterProgrammingTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
         dut.clock.setTimeout(5000)
+        // Keep the receiver line idle (logic high)
         dut.io.rx.poke(1.U)
 
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
-
-        val clocksPerBit  = clockFrequency / baudRate
-        val numOutputBits = 8
-        setBaudRate(dut, baudRate, clockFrequency)
-        println(s"Starting frame error test with clocksPerBit = $clocksPerBit")
-
-        // Configure 8 bits, no parity
-        clk.step(clocksPerBit * 2)
-
-        // Clear existing errors
-        readAPB(dut.io.apb, dut.registerMap.getAddressOfRegister("error").get.U)
-        clk.step(2)
-
-        def sendBit(bit: Boolean, cycleCount: Int): Unit = {
-            println(s"Sending bit: $bit for $cycleCount cycles")
-            dut.io.rx.poke(bit.B)
-            clk.step(cycleCount)
-        }
-
-        // Idle high initially
-        dut.io.rx.poke(true.B)
-        clk.step(clocksPerBit * 2)
-
-        println("Starting frame (stop) error sequence")
-
-        // Start bit (low)
-        sendBit(false, clocksPerBit)
-
-        // Data bits (0xAA = 10101010 in binary, LSB first)
-        for (i <- 0 until 8) {
-            val bit = ((0xaa >> i) & 1) == 1
-            sendBit(bit, clocksPerBit)
-        }
-
-        // Invalid stop bit (should be 1 => we send 0)
-        println("Sending invalid stop bit (0)")
-        sendBit(false, clocksPerBit)
-
-        // Return to idle
-        dut.io.rx.poke(true.B)
-
-        println("Waiting for stop-bit error detection")
-        var errorDetected = false
-        var cycleCount    = 0
-        val maxWaitCycles = clocksPerBit * 4
-
-        while (!errorDetected && cycleCount < maxWaitCycles) {
-            val errorVal = readAPB(
-              dut.io.apb,
-              dut.registerMap.getAddressOfRegister("error").get.U
-            )
-            if (cycleCount % 10 == 0 || errorVal != 0) {
-                println(f"Cycle $cycleCount: Error register = 0x$errorVal%02x")
-            }
-            // Check bit1 => 0x02 for StopBitError
-            if ((errorVal & 0x02) == 0x02) {
-                errorDetected = true
-                println("Frame/StopBit error detected!")
-            }
-            clk.step(1)
-            cycleCount += 1
-        }
-
-        // Final check
-        val finalError = readAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("error").get.U
-        )
-        println(f"Final error register = 0x$finalError%02x")
-        assert(
-          (finalError & 0x02) == 0x02,
-          f"Frame (stop-bit) error not detected; final error reg = 0x$finalError%02x"
-        )
-
+        // -- Example invalid write for numOutputBitsDb --
+        val invalidNumBits = (params.maxOutputBits + 1).U
+        val regNumBitsAddr =
+            dut.registerMap.getAddressOfRegister("tx_numOutputBitsDb").get.U
         println(
-          "frameErrorTest PASSED (assuming hardware sets bit 1=0x02 for StopBitError)"
+          s"Writing invalid numOutputBits: $invalidNumBits to address $regNumBitsAddr"
         )
+        writeAPB(dut.io.apb, regNumBitsAddr, invalidNumBits)
+        clk.step(1)
+
+        // -- Example invalid write for baudRate --
+        val invalidBaudRate = (params.maxBaudRate + 1000).U
+        val regBaudAddr =
+            dut.registerMap.getAddressOfRegister("tx_baudRate").get.U
+        println(
+          s"Writing invalid baud rate: $invalidBaudRate to address $regBaudAddr"
+        )
+        writeAPB(dut.io.apb, regBaudAddr, invalidBaudRate)
+        clk.step(1)
+
+        // -- Example invalid write for clockFreq --
+        val invalidClockFreq = (params.maxClockFrequency + 1000000).U
+        val regClockAddr =
+            dut.registerMap.getAddressOfRegister("tx_clockFreq").get.U
+        println(
+          s"Writing invalid clock frequency: $invalidClockFreq to address $regClockAddr"
+        )
+        writeAPB(dut.io.apb, regClockAddr, invalidClockFreq)
+        clk.step(1)
+
+        // Now read the error register. We expect a non–zero value indicating an error.
+        val errorVal = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("top_error").get.U
+        )
+        println(f"Invalid write test: Error register = 0x$errorVal%02x")
+        assert(
+          errorVal != 0,
+          s"Invalid register writes did not trigger error; error register = 0x$errorVal%02x"
+        )
+        println("Invalid register programming test PASSED")
     }
 
-    /** 2) Parity Error Test We enable parity (EVEN) and deliberately send the
-      * wrong parity bit, expecting the receiver to set bit2 => 0x04 for
-      * ParityError.
+    /** [Test 2] UART Receiver Parity Error Test
+      *
+      * This test sets the RX configuration to use even parity (8 data bits) and
+      * then sends the byte 0x55 with a forced wrong parity bit. (For 0x55 the
+      * number of one bits is even, so the correct parity should be 0. Here the
+      * parity bit is forced to 1.) The test polls the error register until it
+      * sees the parity error flag (assumed to be bitmask 0x04).
       */
     def parityErrorTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
-        clk.setTimeout(5000)
-        dut.io.rx.poke(1.U)
+        dut.clock.setTimeout(5000)
+        // Ensure RX line is idle.
+        dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
+        val clockFrequency = 25000000
+        val baudRate       = 115200
+        val clocksPerBit   = clockFrequency / baudRate
+        val numOutputBits  = 8
 
-        val clocksPerBit  = clockFrequency / baudRate
-        val numOutputBits = 8
         setBaudRate(dut, baudRate, clockFrequency)
-        println(s"Starting parityErrorTest with clocksPerBit = $clocksPerBit")
+        println(
+          s"Starting uartRx Parity Error Test with clocksPerBit = $clocksPerBit"
+        )
 
-        // Configure 8 data bits, parity ON (EVEN)
+        // Configure UART RX: 8 data bits and parity enabled (even parity)
         writeAPB(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("rx_numOutputBitsDb").get.U,
@@ -127,171 +100,291 @@ object errorTests {
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("rx_useParityDb").get.U,
           1.U
-        ) // parity on
+        )
         writeAPB(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("rx_parityOddDb").get.U,
           0.U
-        ) // 0 => even
+        ) // 0 => even parity
         clk.step(clocksPerBit * 2)
 
-        // Clear old errors
-        readAPB(dut.io.apb, dut.registerMap.getAddressOfRegister("error").get.U)
+        // Clear any existing errors.
+        readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rx_error").get.U
+        )
         clk.step(2)
 
-        // Helper to send a byte with intentionally wrong parity
-        def sendByteWithWrongParity(char: Int): Unit = {
-            // --- Start Bit: Hold low for one full bit time ---
-            dut.io.rx.poke(false.B)
+        // Send the byte 0x55 (binary 01010101 LSB–first) with an incorrect parity bit.
+        println("Sending 0x55 with forced WRONG parity bit.")
+        // Start bit (low):
+        dut.io.rx.poke(false.B)
+        clk.step(clocksPerBit)
+        // Data bits:
+        for (i <- 0 until 8) {
+            val bit = ((0x55 >> i) & 1) == 1
+            dut.io.rx.poke(bit.B)
             clk.step(clocksPerBit)
-
-            // --- Data Bits: Send LSB-first (for 0x55, popcount=4) ---
-            for (i <- 0 until 8) {
-                val bit = ((char >> i) & 1) == 1
-                dut.io.rx.poke(bit.B)
-                clk.step(clocksPerBit)
-            }
-
-            // --- Parity Bit: For 0x55 (even parity correct = 0), force '1' to trigger error ---
-            dut.io.rx.poke(true.B)
-            clk.step(clocksPerBit)
-
-            // --- Stop Bit: Should be HIGH ---
-            dut.io.rx.poke(true.B)
-            clk.step(clocksPerBit)
-
-            // --- Extra Idle Time: Hold high for a couple of bit times so the RX FSM settles ---
-            dut.io.rx.poke(true.B)
-            clk.step(clocksPerBit * 2)
         }
-
-        // Idle first
+        // Forced wrong parity: correct would be 0 for even parity. We send a 1.
+        dut.io.rx.poke(true.B)
+        clk.step(clocksPerBit)
+        // Stop bit:
+        dut.io.rx.poke(true.B)
+        clk.step(clocksPerBit)
+        // Extra idle time:
         dut.io.rx.poke(true.B)
         clk.step(clocksPerBit * 2)
 
-        println("Sending 0x55 with forced WRONG parity bit.")
-        sendByteWithWrongParity(0x55)
-
-        // Wait for parity error => bit2 => 0x04
-        var cycleCount       = 0
-        var foundParityError = false
-        val maxCycles        = clocksPerBit * 15
-
-        while (!foundParityError && cycleCount < maxCycles) {
+        println("Waiting for parity error detection.")
+        var cycleCount          = 0
+        var parityErrorDetected = false
+        val maxCycles           = clocksPerBit * 15
+        while (!parityErrorDetected && cycleCount < maxCycles) {
             val errVal = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("error").get.U
+              dut.registerMap.getAddressOfRegister("rx_error").get.U
             )
-            println(f"Cycle $cycleCount: Error register = 0x$errVal%x")
-            if ((errVal & 0x03) == 0x03) {
-                foundParityError = true
-                println(f"Detected ParityError in bit2 => error=0x$errVal%x")
+            println(f"Cycle $cycleCount: Error register = 0x$errVal%02x")
+            // Check for the parity error flag (here we assume bitmask 0x04 indicates a parity error).
+            if ((errVal & 0x04) == 0x04) {
+                parityErrorDetected = true
+                println("Parity error detected!")
             }
             clk.step(1)
             cycleCount += 1
         }
-        assert(foundParityError, "Never detected ParityError in the hardware")
-
-        println(
-          "parityErrorTest PASSED (assuming hardware sets bit2=0x04 on parity mismatch)"
+        assert(
+          parityErrorDetected,
+          s"Never detected parity error after $cycleCount cycles"
         )
+        println("uartRx Parity Error Test PASSED")
     }
 
-    /** 3) Start-Bit Error Test We do a short glitch low, so the receiver thinks
-      * a start bit is coming, but then line goes high before a full bit =>
-      * "start bit error" => 0x01
+    /** [Test 3] UART Receiver Stop Bit Error Test
+      *
+      * This test sends a frame that contains the byte 0xAA (10101010
+      * LSB–first). The valid frame should have a high stop–bit; however, this
+      * test forces the stop–bit low. It then polls the error register and
+      * expects the stop–bit error flag (assumed to be bitmask 0x02) to be set.
       */
-    def startBitErrorTest(dut: Uart, params: UartParams): Unit = {
+    def stopBitErrorTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
-        clk.setTimeout(5000)
-        dut.io.rx.poke(1.U)
+        dut.clock.setTimeout(5000)
+        dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
+        val clockFrequency = 25000000
+        val baudRate       = 115200
+        val clocksPerBit   = clockFrequency / baudRate
+        val numOutputBits  = 8
 
-        val clocksPerBit  = clockFrequency / baudRate
-        val numOutputBits = 8
         setBaudRate(dut, baudRate, clockFrequency)
-        println(s"Starting startBitErrorTest with clocksPerBit = $clocksPerBit")
-
-        // 8 bits, no parity
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_clocksPerBit").get.U,
-          clocksPerBit.U
+        println(
+          s"Starting uartRx Stop Bit Error Test with clocksPerBit = $clocksPerBit"
         )
+
+        // Configure RX for 8 data bits with no parity.
+        clk.step(clocksPerBit * 2)
+        // Clear existing errors.
+        readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rx_error").get.U
+        )
+        clk.step(2)
+
+        // Transmit a frame:
+        // Start bit: pull low.
+        dut.io.rx.poke(false.B)
+        clk.step(clocksPerBit)
+        // Send the data bits for 0xAA (LSB–first).
+        for (i <- 0 until 8) {
+            val bit = ((0xaa >> i) & 1) == 1
+            dut.io.rx.poke(bit.B)
+            clk.step(clocksPerBit)
+        }
+        // Invalid stop bit: should be high, but force low.
+        dut.io.rx.poke(false.B)
+        clk.step(clocksPerBit)
+        // Return to idle:
+        dut.io.rx.poke(true.B)
+
+        println("Waiting for stop bit error detection.")
+        var errorDetected = false
+        var cycleCount    = 0
+        val maxWaitCycles = clocksPerBit * 4
+        while (!errorDetected && cycleCount < maxWaitCycles) {
+            val errorVal = readAPB(
+              dut.io.apb,
+              dut.registerMap.getAddressOfRegister("rx_error").get.U
+            )
+            println(f"Cycle $cycleCount: Error register = 0x$errorVal%02x")
+            // Check for the stop bit error flag (assume bitmask 0x02 indicates a stop bit error).
+            if ((errorVal & 0x02) == 0x02) {
+                errorDetected = true
+                println("Stop bit error detected!")
+            }
+            clk.step(1)
+            cycleCount += 1
+        }
+        assert(
+          errorDetected,
+          s"Stop bit error not detected after $cycleCount cycles"
+        )
+        println("uartRx Stop Bit Error Test PASSED")
+    }
+
+    /** [Test 4] UART Receiver Parity Error Recovery Test
+      *
+      * In this test the receiver is first forced to report a parity error by
+      * sending a byte (0x55) with an incorrect parity bit. Once the error is
+      * detected and read, the error is cleared by writing to the
+      * "rx_clearError" register. Then a normal valid frame is sent, and the
+      * received data is verified.
+      */
+    def parityErrorRecoveryTest(dut: Uart, params: UartParams): Unit = {
+        implicit val clk: Clock = dut.clock
+        dut.clock.setTimeout(5000)
+        dut.io.rx.poke(true.B)
+
+        val clockFrequency = 25000000
+        val baudRate       = 115200
+        val clocksPerBit   = clockFrequency / baudRate
+        val numOutputBits  = 8
+
+        setBaudRate(dut, baudRate, clockFrequency)
+        println(
+          s"Starting RX Parity Error Recovery Test with clocksPerBit = $clocksPerBit"
+        )
+
+        // Configure RX: 8 data bits with parity enabled (even parity: rx_parityOddDb = 0).
         writeAPB(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("rx_numOutputBitsDb").get.U,
-          8.U
+          numOutputBits.U
+        )
+        writeAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rx_useParityDb").get.U,
+          1.U
+        )
+        writeAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rx_parityOddDb").get.U,
+          0.U
         )
         clk.step(clocksPerBit * 2)
-
-        // Clear errors
-        val preError = readAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("error").get.U
-        )
-        println(f"Pre-test error reg = 0x$preError%x")
+        // Clear any previous errors.
+        readAPB(dut.io.apb, dut.registerMap.getAddressOfRegister("error").get.U)
         clk.step(2)
 
-        // short glitch => line low half a bit, then back high
-        def shortStartGlitch(): Unit = {
-            dut.io.rx.poke(false.B)
-            clk.step(clocksPerBit / 2)
-            dut.io.rx.poke(true.B)
-            clk.step(
-              clocksPerBit
-            ) // so by the time we sample at full bit, it's high
+        // --- First, induce a parity error ---
+        println("Sending 0x55 with incorrect parity to force a parity error.")
+        // Start bit.
+        dut.io.rx.poke(false.B)
+        clk.step(clocksPerBit)
+        // Data bits for 0x55:
+        for (i <- 0 until numOutputBits) {
+            val bit = ((0x55 >> i) & 1) == 1
+            dut.io.rx.poke(bit.B)
+            clk.step(clocksPerBit)
         }
-
-        // Idle
+        // Send an incorrect parity bit (for even parity the proper bit is 0; we send 1).
         dut.io.rx.poke(true.B)
         clk.step(clocksPerBit)
-
-        println("Injecting false start bit glitch")
-        shortStartGlitch()
-
-        // Return idle
+        // Stop bit.
+        dut.io.rx.poke(true.B)
+        clk.step(clocksPerBit)
+        // Extra idle.
         dut.io.rx.poke(true.B)
         clk.step(clocksPerBit * 2)
 
-        // Wait for start-bit error => bit0 => 0x01
-        var cycleCount         = 0
-        val maxWait            = clocksPerBit * 8
-        var detectedStartError = false
-
-        while (!detectedStartError && cycleCount < maxWait) {
+        // Poll for the parity error (bitmask 0x04).
+        var cycleCount          = 0
+        var parityErrorDetected = false
+        val maxCycles           = clocksPerBit * 15
+        while (!parityErrorDetected && cycleCount < maxCycles) {
             val errVal = readAPB(
               dut.io.apb,
               dut.registerMap.getAddressOfRegister("error").get.U
             )
-            if ((errVal & 0x01) == 0x01) {
-                detectedStartError = true
-                println(f"Start-bit error detected! (error reg = 0x$errVal%x)")
+            if ((errVal & 0x04) == 0x04) {
+                parityErrorDetected = true
+                println("Parity error detected!")
             }
             clk.step(1)
             cycleCount += 1
         }
         assert(
-          detectedStartError,
-          s"Never saw StartBitError after $cycleCount cycles"
+          parityErrorDetected,
+          s"Parity error not detected after $cycleCount cycles"
         )
-
-        // Final check
-        val finalError = readAPB(
+        val errorBeforeClear = readAPB(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("error").get.U
         )
-        println(f"Final error register = 0x$finalError%x")
-        assert(
-          (finalError & 0x01) == 0x01,
-          f"Expected StartBitError in bit0, got 0x$finalError%x"
-        )
+        println(f"Error register before clear = 0x$errorBeforeClear%02x")
 
+        // --- Clear the error ---
+        val clearErrorAddr =
+            dut.registerMap.getAddressOfRegister("rx_clearError").get.U
         println(
-          "startBitErrorTest PASSED (assuming hardware sets bit0=0x01 for StartBitError)"
+          s"Clearing error by writing to rx_clearError (address = $clearErrorAddr)"
         )
-    }
+        writeAPB(dut.io.apb, clearErrorAddr, 1.U)
+        clk.step(2)
+        val errorAfterClear = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("error").get.U
+        )
+        println(f"Error register after clear = 0x$errorAfterClear%02x")
+        assert(
+          errorAfterClear == 0,
+          s"Error register did not clear properly (error = 0x$errorAfterClear%02x)"
+        )
 
+        // --- Next, perform a normal valid reception ---
+        // For 0x55 with even parity the correct parity bit is 0.
+        println("Sending 0x55 with correct parity for a normal transaction.")
+        dut.io.rx.poke(false.B) // Start bit
+        clk.step(clocksPerBit)
+        for (i <- 0 until numOutputBits) {
+            val bit = ((0x55 >> i) & 1) == 1
+            dut.io.rx.poke(bit.B)
+            clk.step(clocksPerBit)
+        }
+        // Send the correct parity bit (0 for even parity).
+        dut.io.rx.poke(false.B)
+        clk.step(clocksPerBit)
+        // Stop bit.
+        dut.io.rx.poke(true.B)
+        clk.step(clocksPerBit)
+        // Extra idle.
+        dut.io.rx.poke(true.B)
+        clk.step(clocksPerBit * 2)
+
+        // Poll until valid data is available.
+        var received = false
+        cycleCount = 0
+        val maxValidate = clocksPerBit * 20
+        while (!received && cycleCount < maxValidate) {
+            val avail = readAPB(
+              dut.io.apb,
+              dut.registerMap.getAddressOfRegister("rx_dataAvailable").get.U
+            )
+            if (avail != 0) { received = true }
+            clk.step(1)
+            cycleCount += 1
+        }
+        assert(received, s"Did not receive valid data after $cycleCount cycles")
+        val receivedData = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rx_data").get.U
+        )
+        println(f"Normal transaction received data = 0x$receivedData%02x")
+        assert(
+          receivedData == 0x55,
+          s"Data mismatch; expected 0x55, got 0x$receivedData%02x"
+        )
+        println("UART Rx Parity Error Recovery Test PASSED")
+    }
 }

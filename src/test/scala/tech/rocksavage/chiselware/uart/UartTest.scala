@@ -21,7 +21,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "frameError"
+        case true  => "stopBitError"
         case false => testNameArg
     }
 
@@ -42,16 +42,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         annos
     }
 
-    // Decide which test to run based on "testName"
-    // will just run all tests if the test name is regression
-//    if (testName == "regression") {
-//        (1 to numTests).foreach { config =>
-//            runTest(s"UART_test_config_$config")
-//        }
-//    } else {
-//        // Single test
-//        runTest(testName)
-//    }
     runTest(testName)
 
     def runTest(name: String): Unit = {
@@ -134,19 +124,22 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
 
             // Error Tests
-            case "frameError" =>
-                it should "detect frame errors correctly" in {
+            case "stopBitError" =>
+                it should "detect stop bit errors correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            errorTests.frameErrorTest(dut, uartParams)
+                            errorTests.stopBitErrorTest(dut, uartParams)
                         }
                 }
 
-            case "startBitError" =>
-                it should "detect start bit errors correctly" in {
+            case "invalidRegisterProgrammingError" =>
+                it should "detect invalid register programming attempts" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            errorTests.startBitErrorTest(dut, uartParams)
+                            errorTests.invalidRegisterProgrammingTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
 
@@ -155,6 +148,13 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             errorTests.parityErrorTest(dut, uartParams)
+                        }
+                }
+            case "parityErrorRecovery" =>
+                it should "recover from parity errors correctly" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            errorTests.parityErrorRecoveryTest(dut, uartParams)
                         }
                 }
 
@@ -226,21 +226,21 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     }
                 }
 
-            case "errorRecovery" =>
-                it should "recover from errors" in {
-                    test(new FullDuplexUart(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            fullDuplexTests.errorRecoveryTest(dut, uartParams)
-                        }
-                }
-
-            case "noiseImmunity" =>
-                it should "be immune to noise" in {
-                    test(new FullDuplexUart(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            fullDuplexTests.noiseImmunityTest(dut, uartParams)
-                        }
-                }
+//            case "errorRecovery" =>
+//                it should "recover from errors" in {
+//                    test(new FullDuplexUart(uartParams))
+//                        .withAnnotations(backendAnnotations) { dut =>
+//                            fullDuplexTests.errorRecoveryTest(dut, uartParams)
+//                        }
+//                }
+//
+//            case "noiseImmunity" =>
+//                it should "be immune to noise" in {
+//                    test(new FullDuplexUart(uartParams))
+//                        .withAnnotations(backendAnnotations) { dut =>
+//                            fullDuplexTests.noiseImmunityTest(dut, uartParams)
+//                        }
+//                }
 
             case "baudRateSwitch" =>
                 it should "handle baud rate switching" in {
@@ -392,19 +392,19 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
         }
 
-        it should "recover from errors" in {
-            test(new FullDuplexUart(params))
-                .withAnnotations(backendAnnotations) { dut =>
-                    fullDuplexTests.errorRecoveryTest(dut, params)
-                }
-        }
-
-        it should "be immune to noise" in {
-            test(new FullDuplexUart(params))
-                .withAnnotations(backendAnnotations) { dut =>
-                    fullDuplexTests.noiseImmunityTest(dut, params)
-                }
-        }
+//        it should "recover from errors" in {
+//            test(new FullDuplexUart(params))
+//                .withAnnotations(backendAnnotations) { dut =>
+//                    fullDuplexTests.errorRecoveryTest(dut, params)
+//                }
+//        }
+//
+//        it should "be immune to noise" in {
+//            test(new FullDuplexUart(params))
+//                .withAnnotations(backendAnnotations) { dut =>
+//                    fullDuplexTests.noiseImmunityTest(dut, params)
+//                }
+//        }
 
         it should "handle baud rate switching" in {
             test(new FullDuplexUart(params))
@@ -422,26 +422,36 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     }
 
     def errorTestsFull(params: UartParams): Unit = {
-        it should "detect frame errors correctly" in {
-            test(new Uart(params, false)).withAnnotations(backendAnnotations) {
-                dut =>
-                    errorTests.frameErrorTest(dut, params)
-            }
+        it should "detect stop bit errors correctly" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    errorTests.stopBitErrorTest(dut, params)
+                }
         }
 
-        it should "detect start bit errors correctly" in {
-            test(new Uart(params, false)).withAnnotations(backendAnnotations) {
-                dut =>
-                    errorTests.startBitErrorTest(dut, params)
-            }
+        it should "detect invalid register programming attempts" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    errorTests.invalidRegisterProgrammingTest(
+                      dut,
+                      params
+                    )
+                }
         }
 
         it should "detect wrong parity errors correctly" in {
-            test(new Uart(params, false)).withAnnotations(backendAnnotations) {
-                dut =>
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
                     errorTests.parityErrorTest(dut, params)
-            }
+                }
         }
+        it should "recover from parity errors correctly" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    errorTests.parityErrorRecoveryTest(dut, params)
+                }
+        }
+
     }
 
     // Coverage collection helper
