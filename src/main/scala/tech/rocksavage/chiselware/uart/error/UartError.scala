@@ -6,6 +6,6 @@ import chisel3._
 /** Bundle defining the error type for a UART.
   */
 class UartError() extends Bundle {
-    val rxError = UartRxError()
-
+    val rxError  = UartRxError()
+    val topError = UartErrorObject()
 }

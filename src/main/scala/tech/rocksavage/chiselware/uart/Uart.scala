@@ -6,7 +6,7 @@ import chisel3.util._
 import tech.rocksavage.chiselware.addrdecode.{AddrDecode, AddrDecodeError}
 import tech.rocksavage.chiselware.addressable.RegisterMap
 import tech.rocksavage.chiselware.apb.{ApbBundle, ApbParams}
-import tech.rocksavage.chiselware.uart.error.UartError
+import tech.rocksavage.chiselware.uart.error.{UartError, UartErrorObject}
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
@@ -112,11 +112,20 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
 
     val error = Wire(new UartError())
     registerMap.createAddressableRegister(
-      error,
-      "error",
+      error.rxError,
+      "rx_error",
       readOnly = true,
       verbose = uartParams.verbose
     )
+
+    val topError = RegInit(UartErrorObject.None)
+    registerMap.createAddressableRegister(
+      error.topError,
+      "top_error",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    error.topError := topError
 
     val clearError = RegInit(false.B)
     registerMap.createAddressableRegister(
@@ -289,6 +298,38 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
         }
     }
 
+    // Error Checks
+    // Add error checking for invalid register values
+    when(io.apb.PSEL && io.apb.PENABLE) {
+        val registerProgrammingError = WireDefault(false.B)
+        for (reg <- registerMap.getRegisters) {
+            when(addrDecode.io.sel(reg.id)) {
+                // Check for invalid values in configuration registers
+                when(reg.name.contains("numOutputBitsDb").B) {
+                    val maxBits = uartParams.maxOutputBits.U
+                    when(io.apb.PWDATA > maxBits) {
+                        registerProgrammingError := true.B
+                    }
+                }.elsewhen(reg.name.contains("_baudRate").B) {
+                    val maxBaud = uartParams.maxBaudRate.U
+                    when(io.apb.PWDATA > maxBaud) {
+                        registerProgrammingError := true.B
+                    }
+                }.elsewhen(reg.name.contains("clockFreq").B) {
+                    val maxFreq = uartParams.maxClockFrequency.U
+                    when(io.apb.PWDATA > maxFreq) {
+                        registerProgrammingError := true.B
+                    }
+                }
+            }
+        }
+
+        // Set top-level error if any invalid values detected
+        when(registerProgrammingError) {
+            topError := UartErrorObject.InvalidRegisterProgramming
+        }
+    }
+
     // Generate one‐cycle pulses for the load and updateBaud signals.
     when(load) {
         load := false.B
@@ -298,5 +339,9 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     }
     when(rx_updateBaud) {
         rx_updateBaud := false.B
+    }
+    when(clearError) {
+        clearError := false.B
+        topError   := UartErrorObject.None
     }
 }
