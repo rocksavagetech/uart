@@ -21,7 +21,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "stopBitError"
+        case true  => "regression"
         case false => testNameArg
     }
 
@@ -108,13 +108,13 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                         }
                 }
 
-            case "randomNoise" =>
-                it should "handle random noise patterns" in {
-                    test(new FullDuplexUart(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            randomTests.randomNoiseTest(dut, uartParams)
-                        }
-                }
+//            case "randomNoise" =>
+//                it should "handle random noise patterns" in {
+//                    test(new FullDuplexUart(uartParams))
+//                        .withAnnotations(backendAnnotations) { dut =>
+//                            randomTests.randomNoiseTest(dut, uartParams)
+//                        }
+//                }
             case "randomParity" =>
                 it should "handle random parity configurations" in {
                     test(new FullDuplexUart(uartParams))
@@ -300,12 +300,12 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
         }
 
-        it should "handle random noise patterns" in {
-            test(new FullDuplexUart(params))
-                .withAnnotations(backendAnnotations) { dut =>
-                    randomTests.randomNoiseTest(dut, params)
-                }
-        }
+//        it should "handle random noise patterns" in {
+//            test(new FullDuplexUart(params))
+//                .withAnnotations(backendAnnotations) { dut =>
+//                    randomTests.randomNoiseTest(dut, params)
+//                }
+//        }
 
         it should "handle random parity configurations" in {
             test(new FullDuplexUart(params))

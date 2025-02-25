@@ -20,6 +20,7 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
 
         // ############# output signals
         val state         = Output(UartState())
+        val combState     = Output(UartState())
         val sampleStart   = Output(Bool())
         val sampleData    = Output(Bool())
         val sampleParity  = Output(Bool())
@@ -103,6 +104,7 @@ class UartFsm(params: UartParams, formal: Boolean = true) extends Module {
     stateReg            := stateNext
 
     io.state        := stateReg
+    io.combState    := stateNext
     io.sampleStart  := (stateNext === UartState.Start) && sampleNext
     io.sampleData   := (stateNext === UartState.Data) && sampleNext
     io.sampleParity := (stateNext === UartState.Parity) && sampleNext

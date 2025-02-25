@@ -95,6 +95,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val uartFsm = Module(new UartFsm(params, formal))
 
     val stateWire        = uartFsm.io.state
+    val combState        = uartFsm.io.combState
     val sampleStartWire  = uartFsm.io.sampleStart
     val sampleDataWire   = uartFsm.io.sampleData
     val sampleParityWire = uartFsm.io.sampleParity
@@ -243,14 +244,15 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     )
 
     errorNext := calculateErrorNext(
-      stateReg = stateWire,
-      rxSync = RegNext(rxSync),
+      stateReg = combState,
+      rxSync = rxSync,
       useParityReg = useParityReg,
       parityOddReg = parityOddReg,
       dataShiftReg = dataShiftReg,
       errorReg = errorReg,
       clearError = clearErrorReg,
-      completeWire = completeWire
+      completeWire = completeWire,
+      sampleParityWire = sampleParityWire
     )
 
     /** Computes the next rxSync value.
@@ -342,31 +344,34 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         dataShiftReg: UInt,
         errorReg: UartRxError.Type,
         clearError: Bool,
-        completeWire: Bool
+        completeWire: Bool,
+        sampleParityWire: Bool
     ): UartRxError.Type = {
-        val errorNext       = WireDefault(errorReg)
-        val delayedRxSync   = RegNext(rxSync)
-        val delayedComplete = RegNext(completeWire)
+        val errorNext = WireDefault(errorReg)
         // -----------------------
         //  Detect NEW errors
         // -----------------------
+
+        val rxSyncDelay = RegNext(rxSync)
+
         when(clearError) {
             errorNext := UartRxError.None
         }
+
         switch(stateReg) {
             is(UartState.Stop) {
-                when(delayedComplete) {
-                    when(delayedRxSync =/= true.B) {
+                when(completeWire) {
+                    when(rxSync =/= true.B) {
                         errorNext := UartRxError.StopBitError
                     }
                 }
             }
             is(UartState.Parity) {
-                when(completeWire) {
+                when(sampleParityWire) {
                     val expectedParity =
                         UartParity.parityChisel(dataShiftReg, parityOddReg)
                     when(useParityReg === true.B) {
-                        when(rxSync =/= expectedParity) {
+                        when(rxSyncDelay =/= expectedParity) {
                             errorNext := UartRxError.ParityError
                         }
                     }

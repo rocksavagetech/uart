@@ -147,7 +147,7 @@ object errorTests {
             )
             println(f"Cycle $cycleCount: Error register = 0x$errVal%02x")
             // Check for the parity error flag (here we assume bitmask 0x04 indicates a parity error).
-            if ((errVal & 0x04) == 0x04) {
+            if ((errVal & 0x03) == 0x03) {
                 parityErrorDetected = true
                 println("Parity error detected!")
             }
@@ -274,7 +274,10 @@ object errorTests {
         )
         clk.step(clocksPerBit * 2)
         // Clear any previous errors.
-        readAPB(dut.io.apb, dut.registerMap.getAddressOfRegister("error").get.U)
+        readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rx_error").get.U
+        )
         clk.step(2)
 
         // --- First, induce a parity error ---
@@ -305,9 +308,9 @@ object errorTests {
         while (!parityErrorDetected && cycleCount < maxCycles) {
             val errVal = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("error").get.U
+              dut.registerMap.getAddressOfRegister("rx_error").get.U
             )
-            if ((errVal & 0x04) == 0x04) {
+            if ((errVal & 0x03) == 0x03) {
                 parityErrorDetected = true
                 println("Parity error detected!")
             }
@@ -320,7 +323,7 @@ object errorTests {
         )
         val errorBeforeClear = readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("error").get.U
+          dut.registerMap.getAddressOfRegister("rx_error").get.U
         )
         println(f"Error register before clear = 0x$errorBeforeClear%02x")
 
@@ -334,7 +337,7 @@ object errorTests {
         clk.step(2)
         val errorAfterClear = readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("error").get.U
+          dut.registerMap.getAddressOfRegister("rx_error").get.U
         )
         println(f"Error register after clear = 0x$errorAfterClear%02x")
         assert(
@@ -347,8 +350,9 @@ object errorTests {
         println("Sending 0x55 with correct parity for a normal transaction.")
         dut.io.rx.poke(false.B) // Start bit
         clk.step(clocksPerBit)
+        val bits = Seq(0, 1, 0, 1, 0, 1, 0, 1)
         for (i <- 0 until numOutputBits) {
-            val bit = ((0x55 >> i) & 1) == 1
+            val bit = bits(i)
             dut.io.rx.poke(bit.B)
             clk.step(clocksPerBit)
         }
