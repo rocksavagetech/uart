@@ -1,0 +1,132 @@
+\section{Register Programming Guide}
+\subsection{Register Map Summary}
+\begin{longtable}{|l|l|l|l|l|}
+\hline
+\textbf{Address} & \textbf{Register Name} & \textbf{Width} & \textbf{Type} & \textbf{Reset Value} \\ \hline
+0x00 & TX\_LOAD & 1 & W & 0x0 \\ \hline
+0x04 & TX\_DATA\_IN & 9 & W & 0x000 \\ \hline
+0x08 & TX\_BAUD\_RATE & 32 & R/W & 115200 \\ \hline
+0x0C & TX\_CLOCK\_FREQ & 32 & R/W & 25,000,000 \\ \hline
+0x10 & TX\_UPDATE\_BAUD & 1 & W & 0x0 \\ \hline
+0x14 & TX\_NUM\_OUTPUT\_BITS\_DB & 5 & R/W & 0x8 \\ \hline
+0x18 & TX\_USE\_PARITY\_DB & 1 & R/W & 0x0 \\ \hline
+0x1C & TX\_PARITY\_ODD\_DB & 1 & R/W & 0x0 \\ \hline
+0x20 & RX\_DATA & 9 & R & 0x000 \\ \hline
+0x24 & RX\_DATA\_AVAILABLE & 1 & R & 0x0 \\ \hline
+0x28 & RX\_ERROR & 2 & R & 0x0 \\ \hline
+0x2C & TOP\_ERROR & 1 & R & 0x0 \\ \hline
+0x30 & RX\_CLEAR\_ERROR & 1 & W & 0x0 \\ \hline
+0x34 & RX\_BAUD\_RATE & 32 & R/W & 115200 \\ \hline
+0x38 & RX\_CLOCK\_FREQ & 32 & R/W & 25,000,000 \\ \hline
+0x3C & RX\_UPDATE\_BAUD & 1 & W & 0x0 \\ \hline
+0x40 & RX\_NUM\_OUTPUT\_BITS\_DB & 5 & R/W & 0x8 \\ \hline
+0x44 & RX\_USE\_PARITY\_DB & 1 & R/W & 0x0 \\ \hline
+0x48 & RX\_PARITY\_ODD\_DB & 1 & R/W & 0x0 \\ \hline
+0x4C & RX\_CLOCKS\_PER\_BIT & 21 & R & Calculated \\ \hline
+0x50 & TX\_CLOCKS\_PER\_BIT & 21 & R & Calculated \\ \hline
+\end{longtable}
+
+\subsection{Key Register Descriptions}
+
+\subsubsection{TX\_LOAD (0x00)}
+\begin{itemize}
+\item \textbf{Function}: Transmission trigger (write 1 to start)
+\item \textbf{Valid Inputs}: 0 (idle), 1 (start transmission)
+\item \textbf{Effect}: Initiates transmission of TX\_DATA\_IN contents
+\end{itemize}
+
+\subsubsection{TX\_DATA\_IN (0x04)}
+\begin{itemize}
+\item \textbf{Function}: Data to transmit (LSB-aligned)
+\item \textbf{Valid Inputs}: 0x000-0x1FF (9-bit data)
+\item \textbf{Invalid Inputs}: Values > 9 bits wide
+\item \textbf{Effect}: Latched when TX\_LOAD is asserted
+\end{itemize}
+
+\subsubsection{TX\_NUM\_OUTPUT\_BITS\_DB (0x14)}
+\begin{itemize}
+\item \textbf{Function}: Number of data bits per frame
+\item \textbf{Valid Inputs}: 5-8 (0x5-0x8)
+\item \textbf{Invalid Inputs}: <5 or >8
+\item \textbf{Effect}: Changes take effect on next transmission
+\end{itemize}
+
+\subsubsection{RX\_ERROR (0x28)}
+\begin{itemize}
+\item \textbf{Bits}:
+  \begin{itemize}
+  \item [1:0] Error type: 00=OK, 01=Parity, 10=Framing, 11=Overrun
+  \end{itemize}
+\item \textbf{Clear}: Write 1 to RX\_CLEAR\_ERROR
+\end{itemize}
+
+\subsubsection{TX\_CLOCKS\_PER\_BIT (0x50)}
+\begin{itemize}
+\item \textbf{Function}: Calculated baud rate divisor
+\item \textbf{Formula}: $\frac{TX\_CLOCK\_FREQ}{TX\_BAUD\_RATE}$
+\item \textbf{Update}: Write 1 to TX\_UPDATE\_BAUD
+\end{itemize}
+
+\subsection{Programming Template}
+\begin{lstlisting}[language=C,frame=single]
+typedef struct {
+    // Transmitter Registers
+    volatile uint32_t TX_LOAD;            // 0x00
+    volatile uint32_t TX_DATA_IN;         // 0x04
+    volatile uint32_t TX_BAUD_RATE;       // 0x08
+    volatile uint32_t TX_CLOCK_FREQ;      // 0x0C
+    volatile uint32_t TX_UPDATE_BAUD;     // 0x10
+    volatile uint32_t TX_NUM_BITS;        // 0x14
+    volatile uint32_t TX_PARITY_CTRL;     // 0x18 (bit 0: enable, bit 1: odd)
+
+    // Receiver Registers
+    volatile uint32_t RX_DATA;            // 0x20
+    volatile uint32_t RX_STATUS;          // 0x24 (bit 0: available)
+    volatile uint32_t RX_ERRORS;          // 0x28
+    volatile uint32_t TOP_ERROR;          // 0x2C
+    volatile uint32_t RX_CLEAR_ERR;       // 0x30
+    volatile uint32_t RX_BAUD_RATE;       // 0x34
+    volatile uint32_t RX_CLOCK_FREQ;      // 0x38
+    volatile uint32_t RX_UPDATE_BAUD;     // 0x3C
+    volatile uint32_t RX_NUM_BITS;        // 0x40
+    volatile uint32_t RX_PARITY_CTRL;     // 0x44
+} UART_Regs;
+
+// Example 8N1 Configuration:
+UART_Regs *uart = (UART_Regs*)BASE_ADDRESS;
+uart->TX_BAUD_RATE = 115200;
+uart->TX_CLOCK_FREQ = 25000000;
+uart->TX_NUM_BITS = 0x8;  // 8 data bits
+uart->TX_PARITY_CTRL = 0x0; // No parity
+\end{lstlisting}
+
+\subsection{Configuration Workflow}
+\begin{enumerate}
+\item Configure baud rates:
+  \begin{itemize}
+  \item Set TX\_BAUD\_RATE/RX\_BAUD\_RATE
+  \item Set TX\_CLOCK\_FREQ/RX\_CLOCK\_FREQ
+  \item Pulse TX\_UPDATE\_BAUD/RX\_UPDATE\_BAUD
+  \end{itemize}
+
+\item Set data format:
+  \begin{itemize}
+  \item TX\_NUM\_OUTPUT\_BITS\_DB/RX\_NUM\_OUTPUT\_BITS\_DB (5-8)
+  \item TX\_USE\_PARITY\_DB/RX\_USE\_PARITY\_DB (0/1)
+  \item TX\_PARITY\_ODD\_DB/RX\_PARITY\_ODD\_DB (0=even=odd)
+  \end{itemize}
+
+\item Verify configuration:
+  \begin{itemize}
+  \item Read TX\_CLOCKS\_PER\_BIT/RX\_CLOCKS\_PER\_BIT
+  \item Check TOP\_ERROR for configuration issues
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Error Conditions}
+\begin{itemize}
+\item \textbf{Parity Error}: Received parity doesn't match calculation
+\item \textbf{Framing Error}: Stop bit not detected
+\item \textbf{Overrun Error}: New data received before previous read
+\item \textbf{Configuration Error}: Invalid register values (reported in TOP\_ERROR)
+\end{itemize}
