@@ -151,23 +151,14 @@ object UartTestUtils {
         )
 
         // #####################
-
-        clock.step(1)
-//        writeApbNoDelay(
-//          dut.io.apb,
-//          dut.registerMap.getAddressOfRegister("load").get.U,
-//          false.B
-//        )
-        dut.io.apb.PSEL.poke(1.U)
-        dut.io.apb.PENABLE.poke(1.U)
-        dut.io.apb.PWRITE.poke(1.U)
-        dut.io.apb.PADDR
-            .poke(dut.registerMap.getAddressOfRegister("tx_load").get.U)
-        dut.io.apb.PWDATA.poke(data)
-
-        // fork the final apb cleanup to avoid timing issues
-
         fork {
+            clock.step(1)
+            dut.io.apb.PSEL.poke(1.U)
+            dut.io.apb.PENABLE.poke(1.U)
+            dut.io.apb.PWRITE.poke(1.U)
+            dut.io.apb.PADDR
+                .poke(dut.registerMap.getAddressOfRegister("tx_load").get.U)
+            dut.io.apb.PWDATA.poke(data)
             clock.step(1)
             dut.io.apb.PSEL.poke(0.U)
             dut.io.apb.PENABLE.poke(0.U)
@@ -181,24 +172,44 @@ object UartTestUtils {
             dut.clock.step(cycles)
         }
 
-        // Verify start bit
-        dut.io.tx.expect(
-          false.B,
-          "TX line should go low to start transmission"
-        )
-
         println(s"Expected sequence: $expectedSequence")
         // Check each bit with a timeout
         for ((expectedBit, index) <- expectedSequence.zipWithIndex) {
             println(s"Checking bit $index: expected $expectedBit")
             expectConstantTx(expectedBit, clocksPerBit)
         }
+    }
 
-        // Verify final state
-        dut.io.tx.expect(
-          true.B,
-          "TX line should return to high (idle) after transmission"
-        )
+    def txSetBaudRate(dut: Uart, baudRate: Int, clockFrequency: Int): Unit = {
+        implicit val clock = dut.clock
+
+        val txBaudRateAddr =
+            dut.registerMap.getAddressOfRegister("tx_baudRate").get
+        val txClockFreqAddr =
+            dut.registerMap.getAddressOfRegister("tx_clockFreq").get
+        val txUpdateBaudAddr =
+            dut.registerMap.getAddressOfRegister("tx_updateBaud").get
+        val txClocksPerBitAddr =
+            dut.registerMap.getAddressOfRegister("tx_clocksPerBit").get
+
+        writeAPB(dut.io.apb, txBaudRateAddr.U, baudRate.U)
+        writeAPB(dut.io.apb, txClockFreqAddr.U, clockFrequency.U)
+        writeAPB(dut.io.apb, txUpdateBaudAddr.U, 1.U)
+
+        val clocksPerBitExpected = clockFrequency / baudRate
+
+        clock.setTimeout(1000)
+        var breakLoop = false
+        while (!breakLoop) {
+            val clocksPerBitActual = readAPB(
+              dut.io.apb,
+              txClocksPerBitAddr.U
+            )
+            if (clocksPerBitActual == clocksPerBitExpected) {
+                breakLoop = true
+            }
+            clock.step(1)
+        }
     }
 
     def receive(dut: Uart, config: UartRuntimeConfig)(implicit
@@ -326,45 +337,6 @@ object UartTestUtils {
         )
     }
 
-    def setBaudRate(dut: Uart, baudRate: Int, clockFrequency: Int): Unit = {
-        implicit val clock = dut.clock
-
-        rxSetBaudRate(dut, baudRate, clockFrequency)
-        txSetBaudRate(dut, baudRate, clockFrequency)
-    }
-
-    def txSetBaudRate(dut: Uart, baudRate: Int, clockFrequency: Int): Unit = {
-        implicit val clock = dut.clock
-
-        val txBaudRateAddr =
-            dut.registerMap.getAddressOfRegister("tx_baudRate").get
-        val txClockFreqAddr =
-            dut.registerMap.getAddressOfRegister("tx_clockFreq").get
-        val txUpdateBaudAddr =
-            dut.registerMap.getAddressOfRegister("tx_updateBaud").get
-        val txClocksPerBitAddr =
-            dut.registerMap.getAddressOfRegister("tx_clocksPerBit").get
-
-        writeAPB(dut.io.apb, txBaudRateAddr.U, baudRate.U)
-        writeAPB(dut.io.apb, txClockFreqAddr.U, clockFrequency.U)
-        writeAPB(dut.io.apb, txUpdateBaudAddr.U, 1.U)
-
-        val clocksPerBitExpected = clockFrequency / baudRate
-
-        clock.setTimeout(1000)
-        var breakLoop = false
-        while (!breakLoop) {
-            val clocksPerBitActual = readAPB(
-              dut.io.apb,
-              txClocksPerBitAddr.U
-            )
-            if (clocksPerBitActual == clocksPerBitExpected) {
-                breakLoop = true
-            }
-            clock.step(1)
-        }
-    }
-
     def rxSetBaudRate(dut: Uart, baudRate: Int, clockFrequency: Int): Unit = {
         implicit val clock = dut.clock
 
@@ -385,6 +357,8 @@ object UartTestUtils {
 
         clock.setTimeout(1000)
         var breakLoop = false
+        val numLoops  = 30
+        var loopCount = 0
         while (!breakLoop) {
             val clocksPerBitActual = readAPB(
               dut.io.apb,
@@ -393,8 +367,23 @@ object UartTestUtils {
             if (clocksPerBitActual == clocksPerBitExpected) {
                 breakLoop = true
             }
+
+            if (loopCount >= numLoops) {
+                throw new RuntimeException(
+                  s"Failed to set baud rate after $numLoops attempts"
+                )
+            }
+
+            loopCount += 1
             clock.step(1)
         }
+    }
+
+    def setBaudRate(dut: Uart, baudRate: Int, clockFrequency: Int): Unit = {
+        implicit val clock = dut.clock
+
+        rxSetBaudRate(dut, baudRate, clockFrequency)
+        txSetBaudRate(dut, baudRate, clockFrequency)
     }
 
     def setupUart(

@@ -30,6 +30,15 @@ object specialCaseTests {
             useParity = true,
             parityOdd = false,
             data = 26
+          ),
+          UartRuntimeConfig(
+            useAsserts = true,
+            baudRate = 921600,
+            clockFrequency = 5000000,
+            numOutputBits = 7,
+            useParity = false,
+            parityOdd = false,
+            data = 21
           )
         )
 
@@ -51,6 +60,15 @@ object specialCaseTests {
           UartRuntimeConfig(
             useAsserts = true,
             baudRate = 1_000_000,
+            clockFrequency = 1_000_000,
+            numOutputBits = 8,
+            useParity = true,
+            parityOdd = true,
+            data = 254
+          ),
+          UartRuntimeConfig(
+            useAsserts = true,
+            baudRate = 100_000,
             clockFrequency = 1_000_000,
             numOutputBits = 8,
             useParity = true,
