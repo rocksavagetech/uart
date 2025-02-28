@@ -1,26 +1,38 @@
 \section{Theory of Operations}
-
-\subsection{Introduction}
-The \textbf{Timer} is a configurable timer module that supports a variety of timing functions, including PWM generation and interrupt signaling. It features a counter that can be configured with a prescaler, maximum count value, and PWM ceiling value.
-
+\subsection{Block Diagram}
 \begin{figure}[h]
-  \includegraphics[width=0.80\textwidth]{images/block-diagram.png}
-  \caption{Block Diagram}\label{fig:block-diagram}
+  \includegraphics[width=0.80\textwidth]{images/uart-block-diagram.png}
+  \caption{UART Block Diagram}\label{fig:block-diagram}
 \end{figure}
 
-The Timer module provides the following outputs:
-
-\begin{itemize}[noitemsep]
-  \item{\textit{count}: Current value of the counter.}
-  \item{\textit{maxReached}: Signal indicating the counter has reached its maximum value.}
-  \item{\textit{pwm}: PWM output signal with a duty cycle controlled by \textit{pwmCeiling}.}
-  \item{\textit{interrupt}: Interrupt signal indicating timer events (e.g., max reached).}
+\subsection{APB Interface}
+The UART uses the APB interface for configuration and data transfer:
+\begin{itemize}
+  \item Configuration registers mapped to APB address space
+  \item Separate TX/RX control registers
+  \item Status registers for error reporting
+  \item Double-buffered data registers
 \end{itemize}
 
-\subsection{Interface Timing}
-The Timer operates on a synchronous clock and provides outputs that are valid on the rising edge of the clock. The timing diagram below illustrates the behavior of the Timer when the counter reaches its maximum value and generates an interrupt.
+\subsection{Baud Rate Generation}
+\begin{itemize}
+  \item Programmable divisor: $\text{clocks\_per\_bit} = \frac{\text{clock\_freq}}{\text{baud\_rate}}$
+  \item Automatic baud rate calculation
+  \item Update synchronization to prevent glitches
+\end{itemize}
 
-% \begin{figure}[h]
-%   \includegraphics[width=\textwidth]{images/timing.png}
-%   \caption{Timing Diagram}\label{fig:timing}
-% \end{figure}
+\subsection{Data Framing}
+\begin{itemize}
+  \item Start bit detection
+  \item Majority voting on sample points
+  \item Optional parity generation/checking
+  \item Configurable stop bits (fixed at 1 in current implementation)
+\end{itemize}
+
+\subsection{Error Handling}
+\begin{itemize}
+  \item Parity error detection
+  \item Framing error detection
+  \item Overrun detection
+  \item Clearable error flags
+\end{itemize}

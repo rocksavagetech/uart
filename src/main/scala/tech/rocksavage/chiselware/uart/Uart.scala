@@ -208,6 +208,9 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
+//    val regDesc = registerMap.prettyPrint
+//    println(regDesc)
+
     // ---------------------------------------------------------------
     // APB address decode
     // ---------------------------------------------------------------

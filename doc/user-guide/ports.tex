@@ -1,12 +1,5 @@
 \section{Port Descriptions}
-
-The ports for \textbf{Timer} are shown below in Table~\ref{table:ports}. The width of several ports is controlled by the following input parameters:
-
-\begin{itemize}[noitemsep]
-  \item \textit{dataWidth} is the width of the data bus in bits.
-  \item \textit{addressWidth} is the width of the address bus in bits.
-  \item \textit{countWidth} is the width of the counter in bits.
-\end{itemize}
+The ports for \textbf{UART} are shown below in Table~\ref{table:ports}.
 
 \renewcommand*{\arraystretch}{1.4}
 \begin{longtable}[H]{
@@ -20,66 +13,54 @@ The ports for \textbf{Timer} are shown below in Table~\ref{table:ports}. The wid
   \textbf{Width} &
   \textbf{Direction} &
   \textbf{Description} \\ \hline \hline
-
   clock &
   1 &
   Input &
-  Positive edge clock \\ \hline
-
+  System clock \\ \hline
   reset &
   1 &
   Input &
-  Active high reset \\ \hline
-
-  en &
+  Active-high reset \\ \hline
+  rx &
   1 &
   Input &
-  Enable signal for the timer \\ \hline
-
-  prescaler &
-  \textit{countWidth} &
-  Input &
-  Prescaler value to divide the clock frequency \\ \hline
-
-  maxCount &
-  \textit{countWidth} &
-  Input &
-  Maximum count value before the timer resets \\ \hline
-
-  pwmCeiling &
-  \textit{countWidth} &
-  Input &
-  PWM ceiling value to control the duty cycle of the PWM signal \\ \hline
-
-  setCountValue &
-  \textit{countWidth} &
-  Input &
-  Value to set the counter to when \textit{setCount} is asserted \\ \hline
-
-  setCount &
-  1 &
-  Input &
-  Signal to set the counter to \textit{setCountValue} \\ \hline
-
-  count &
-  \textit{countWidth} &
-  Output &
-  Current count value of the timer \\ \hline
-
-  maxReached &
+  Serial receive input \\ \hline
+  tx &
   1 &
   Output &
-  Signal indicating that the timer has reached its maximum count value \\ \hline
-
-  pwm &
+  Serial transmit output \\ \hline
+  apb.PADDR &
+  addressWidth &
+  Input &
+  APB address bus \\ \hline
+  apb.PWDATA &
+  dataWidth &
+  Input &
+  APB write data \\ \hline
+  apb.PRDATA &
+  dataWidth &
+  Output &
+  APB read data \\ \hline
+  apb.PSEL &
+  1 &
+  Input &
+  APB peripheral select \\ \hline
+  apb.PENABLE &
+  1 &
+  Input &
+  APB enable signal \\ \hline
+  apb.PWRITE &
+  1 &
+  Input &
+  APB write/read control \\ \hline
+  apb.PREADY &
   1 &
   Output &
-  PWM output signal with a duty cycle controlled by \textit{pwmCeiling} \\ \hline
-
-  interrupt &
+  APB transfer ready \\ \hline
+  apb.PSLVERR &
   1 &
   Output &
-  Interrupt signal indicating timer events (e.g., max reached) \\ \hline
-
+  APB transfer error \\ \hline
+  
   \caption{Port Descriptions}\label{table:ports}
 \end{longtable}

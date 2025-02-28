@@ -1,6 +1,5 @@
 \section{Parameter Descriptions}
-
-The parameters for \textbf{Timer} are shown below in Table~\ref{table:params}.
+The parameters for \textbf{UART} are shown below in Table~\ref{table:params}.
 
 \renewcommand*{\arraystretch}{1.4}
 \begin{longtable}[H]{
@@ -16,35 +15,59 @@ The parameters for \textbf{Timer} are shown below in Table~\ref{table:params}.
   \textbf{Min}  &
   \textbf{Max}  &
   \textbf{Description}            \\ \hline \hline
-
-  dataWidth     &
-  Int           &
-  8             &
-  $\ge$ 8       &
-  The width of the data bus in bits      \\ \hline
-
-  addressWidth  &
-  Int           &
-  8             &
-  $\ge$ 8       &
-  The width of the address bus in bits   \\ \hline
-
-  countWidth    &
-  Int           &
-  8             &
-  $\ge$ 8       &
-  The width of the counter in bits       \\ \hline
-
+  dataWidth &
+  Int &
+  8 &
+  64 &
+  Width of the APB data bus in bits \\ \hline
+  addressWidth &
+  Int &
+  8 &
+  64 &
+  Width of the APB address bus in bits \\ \hline
+  maxOutputBits &
+  Int &
+  5 &
+  9 &
+  Maximum number of data bits per frame \\ \hline
+  syncDepth &
+  Int &
+  1 &
+  4 &
+  Number of synchronization stages for RX input \\ \hline
+  maxBaudRate &
+  Int &
+  9600 &
+  921600 &
+  Maximum supported baud rate \\ \hline
+  maxClockFrequency &
+  Int &
+  1000000 &
+  100000000 &
+  Maximum system clock frequency \\ \hline
+  parity &
+  Boolean &
+  - &
+  - &
+  Default parity enable state \\ \hline
+  verbose &
+  Boolean &
+  - &
+  - &
+  Enable verbose debug output \\ \hline
+  
   \caption{Parameter Descriptions}\label{table:params}
 \end{longtable}
 
-The Timer is instantiated into a design as follows:
-
+The UART is instantiated as follows:
 \begin{lstlisting}[language=Scala]
-  // Instantiate Timer with default parameters
-  val myTimer = new Timer(TimerParams(
-    dataWidth = 32,
-    addressWidth = 32,
-    countWidth = 64
-  ))
+val uartParams = UartParams(
+  dataWidth = 32,
+  addressWidth = 32,
+  maxOutputBits = 8,
+  syncDepth = 2,
+  maxBaudRate = 921600,
+  maxClockFrequency = 25000000
+)
+val uart = new Uart(uartParams)
 \end{lstlisting}

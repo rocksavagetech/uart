@@ -12,7 +12,7 @@ default: verilog
 docs:
 	@echo Generating docs
 	mkdir -p $(shell pwd)/out/doc
-	cd doc/user-guide && pdflatex -output-directory=$(shell pwd)/out/doc timer.tex | tee -a $(shell pwd)/out/doc/doc.rpt
+	cd doc/user-guide && pdflatex -output-directory=$(shell pwd)/out/doc uart.tex | tee -a $(shell pwd)/out/doc/doc.rpt
 
 update:
 	@echo Updating...
