@@ -5,7 +5,11 @@ import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
 import tech.rocksavage.chiselware.uart.param.UartParams
-import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.setupUart
+import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.{
+    setupRxUart,
+    setupTxUart,
+    setupUart
+}
 import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
 
 object fullDuplexTests {
@@ -69,6 +73,42 @@ object fullDuplexTests {
                 case None =>
                     assert(false, "UART1 did not receive data in time")
             }
+        }
+    }
+
+    def pollForRxData(apb: ApbBundle, uart: Uart, timeoutCycles: Int = 1000)(
+        implicit clock: Clock
+    ): Option[Char] = {
+        val rxDataAvailableAddr =
+            uart.registerMap.getAddressOfRegister("rx_dataAvailable").get.U
+        val rxDataAddr = uart.registerMap.getAddressOfRegister("rx_data").get.U
+
+        var cycles        = 0
+        var dataAvailable = false
+
+        while (!dataAvailable && cycles < timeoutCycles) {
+            val availableRaw = readAPB(apb, rxDataAvailableAddr)
+            dataAvailable = (availableRaw != 0)
+
+            if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam
+                println(
+                  s"pollForRxData: Cycle $cycles, availableRaw=$availableRaw, dataAvailable=$dataAvailable"
+                )
+            }
+
+            clock.step(1)
+            cycles += 1
+        }
+
+        if (dataAvailable) {
+            val data = readAPB(apb, rxDataAddr)
+            println(
+              s"pollForRxData: Got data = ${data.toInt} (char='${data.toInt.toChar}')"
+            )
+            Some(data.toInt.toChar)
+        } else {
+            println("pollForRxData: Timeout waiting for data")
+            None
         }
     }
 
@@ -266,9 +306,32 @@ object fullDuplexTests {
         println(s"UART2: clocksPerBit = $clocksPerBit2 (57600 baud)")
 
         // Configure UARTs and let settings settle
-        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate1)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate2)
-        clock.step(clocksPerBit2 * 2) // Wait for slower UART to settle
+        setupRxUart(
+          dut.io.uart1Apb,
+          dut.getUart1,
+          clockFrequency,
+          baudRate2
+        )
+        setupTxUart(
+          dut.io.uart1Apb,
+          dut.getUart1,
+          clockFrequency,
+          baudRate1
+        )
+        setupRxUart(
+          dut.io.uart2Apb,
+          dut.getUart2,
+          clockFrequency,
+          baudRate1
+        )
+        setupTxUart(
+          dut.io.uart2Apb,
+          dut.getUart2,
+          clockFrequency,
+          baudRate2
+        )
+        val maxClocksPerBit = math.max(clocksPerBit1, clocksPerBit2)
+        clock.step(maxClocksPerBit * 2) // Wait for slower UART to settle
 
         // Clear any pending data
         readAPB(
@@ -314,42 +377,6 @@ object fullDuplexTests {
             }
 
             clock.step(clocksPerBit2 * 2) // Extra delay between characters
-        }
-    }
-
-    def pollForRxData(apb: ApbBundle, uart: Uart, timeoutCycles: Int = 1000)(
-        implicit clock: Clock
-    ): Option[Char] = {
-        val rxDataAvailableAddr =
-            uart.registerMap.getAddressOfRegister("rx_dataAvailable").get.U
-        val rxDataAddr = uart.registerMap.getAddressOfRegister("rx_data").get.U
-
-        var cycles        = 0
-        var dataAvailable = false
-
-        while (!dataAvailable && cycles < timeoutCycles) {
-            val availableRaw = readAPB(apb, rxDataAvailableAddr)
-            dataAvailable = (availableRaw != 0)
-
-            if (cycles % 10 == 0) { // Print every 10 cycles to avoid log spam
-                println(
-                  s"pollForRxData: Cycle $cycles, availableRaw=$availableRaw, dataAvailable=$dataAvailable"
-                )
-            }
-
-            clock.step(1)
-            cycles += 1
-        }
-
-        if (dataAvailable) {
-            val data = readAPB(apb, rxDataAddr)
-            println(
-              s"pollForRxData: Got data = ${data.toInt} (char='${data.toInt.toChar}')"
-            )
-            Some(data.toInt.toChar)
-        } else {
-            println("pollForRxData: Timeout waiting for data")
-            None
         }
     }
 
@@ -432,39 +459,6 @@ object fullDuplexTests {
           receivedData.toString == testData,
           "Data mismatch in long transmission"
         )
-    }
-
-    /** Tests variable baud rate switching
-      */
-    def baudRateSwitchingTest(dut: FullDuplexUart, params: UartParams): Unit = {
-        implicit val clock: Clock = dut.clock
-        clock.setTimeout(0)
-
-        val clockFrequency = 25_000_000
-
-        val baudRates = Seq(
-          115200,
-          57600,
-          28800
-        )
-
-        for (baudRate <- baudRates) {
-            setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-            setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
-
-            val clocksPerBit = clockFrequency / baudRate
-
-            val testChar = 'R'
-            sendChar(dut.io.uart1Apb, dut.getUart1, testChar, clocksPerBit)
-            val received = readChar(dut.io.uart2Apb, dut.getUart2)
-
-            assert(
-              received == testChar,
-              s"Character mismatch at baud rate $baudRate: got $received, expected $testChar"
-            )
-
-            clock.step(clocksPerBit * 2) // Wait between baud rate changes
-        }
     }
 
     /** Tests error recovery
@@ -627,6 +621,39 @@ object fullDuplexTests {
         clock.step(
           clocksPerBit * 12
         ) // Wait for complete transmission including stop bit
+    }
+
+    /** Tests variable baud rate switching
+      */
+    def baudRateSwitchingTest(dut: FullDuplexUart, params: UartParams): Unit = {
+        implicit val clock: Clock = dut.clock
+        clock.setTimeout(0)
+
+        val clockFrequency = 25_000_000
+
+        val baudRates = Seq(
+          115200,
+          57600,
+          28800
+        )
+
+        for (baudRate <- baudRates) {
+            setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
+            setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
+
+            val clocksPerBit = clockFrequency / baudRate
+
+            val testChar = 'R'
+            sendChar(dut.io.uart1Apb, dut.getUart1, testChar, clocksPerBit)
+            val received = readChar(dut.io.uart2Apb, dut.getUart2)
+
+            assert(
+              received == testChar,
+              s"Character mismatch at baud rate $baudRate: got $received, expected $testChar"
+            )
+
+            clock.step(clocksPerBit * 2) // Wait between baud rate changes
+        }
     }
 
     /** Tests line idle detection

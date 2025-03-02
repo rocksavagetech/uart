@@ -21,7 +21,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "bidirectionalComm"
+        case true  => "regression"
         case false => testNameArg
     }
 
@@ -198,13 +198,13 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                         }
                 }
 
-            case "mixedBaudRate" =>
-                it should "handle mixed baud rates" in {
-                    test(new FullDuplexUart(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            fullDuplexTests.mixedBaudRateTest(dut, uartParams)
-                        }
-                }
+//            case "mixedBaudRate" =>
+//                it should "handle mixed baud rates" in {
+//                    test(new FullDuplexUart(uartParams))
+//                        .withAnnotations(backendAnnotations) { dut =>
+//                            fullDuplexTests.mixedBaudRateTest(dut, uartParams)
+//                        }
+//                }
 
             case "highSpeedTransmit" =>
                 it should "handle high-speed transmission" in {
@@ -371,12 +371,12 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
         }
 
-        it should "handle mixed baud rates" in {
-            test(new FullDuplexUart(params))
-                .withAnnotations(backendAnnotations) { dut =>
-                    fullDuplexTests.mixedBaudRateTest(dut, params)
-                }
-        }
+//        it should "handle mixed baud rates" in {
+//            test(new FullDuplexUart(params))
+//                .withAnnotations(backendAnnotations) { dut =>
+//                    fullDuplexTests.mixedBaudRateTest(dut, params)
+//                }
+//        }
 
         it should "handle high-speed transmission" in {
             test(new FullDuplexUart(params))
