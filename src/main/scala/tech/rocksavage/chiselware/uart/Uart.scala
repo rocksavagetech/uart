@@ -95,10 +95,10 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // -------------------------------------------------------
     // RX registers (for the RX control bundle and RX data/status)
     // -------------------------------------------------------
-    val rxDataReg       = RegInit(0.U(uartParams.maxOutputBits.W))
+    val rxData          = WireInit(0.U(uartParams.maxOutputBits.W))
     val rxDataAvailable = RegInit(false.B)
     registerMap.createAddressableRegister(
-      rxDataReg,
+      rxData,
       "rx_data",
       readOnly = true,
       verbose = uartParams.verbose
@@ -225,14 +225,21 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // ---------------------------------------------------------------
     val uartInner = Module(new UartInner(uartParams, formal))
 
+    // rxDataRegRead is a one-cycle pulse that indicates when the RX data register has been read. It is passed inwards to the rx fifo.
+    val rxDataRegRead = WireDefault(false.B)
+
+    // txDataRegWrite is a one-cycle pulse that indicates when the TX data register has been written. It is passed inwards to the tx fifo.
+    val txDataRegWrite = WireDefault(false.B)
+
     // Connect the physical UART pins:
     uartInner.io.rx := io.rx
     io.tx           := uartInner.io.tx
 
     // Capture RX data when the inner module asserts valid.
+
     val prevRxValid = RegNext(uartInner.io.rxValid)
+    rxData := uartInner.io.dataOut
     when(uartInner.io.rxValid & !prevRxValid) {
-        rxDataReg       := uartInner.io.dataOut
         rxDataAvailable := true.B
     }
 
@@ -250,6 +257,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.txControlBundle.numOutputBitsDb := tx_numOutputBitsDb
     uartInner.io.txControlBundle.useParityDb     := tx_useParityDb
     uartInner.io.txControlBundle.parityOddDb     := tx_parityOddDb
+    uartInner.io.txControlBundle.txDataRegWrite  := txDataRegWrite
 
     // RX control bundle connection:
     uartInner.io.rxControlBundle.baud            := rx_baud
@@ -259,6 +267,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.rxControlBundle.useParityDb     := rx_useParityDb
     uartInner.io.rxControlBundle.parityOddDb     := rx_parityOddDb
     uartInner.io.rxControlBundle.clearErrorDb    := clearError
+    uartInner.io.rxControlBundle.rxDataRegRead   := rxDataRegRead
 
     // ---------------------------------------------------------------
     // Connect clocks per bit outputs from inner module to our registers
@@ -296,7 +305,15 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     when(!io.apb.PWRITE) {
         for (reg <- registerMap.getRegisters if reg.name == "rx_data") {
             when(addrDecode.io.sel(reg.id) && rxDataAvailable) {
+                rxDataRegRead   := true.B
                 rxDataAvailable := false.B
+            }
+        }
+    }
+    when(io.apb.PWRITE) {
+        for (reg <- registerMap.getRegisters if reg.name == "tx_dataIn") {
+            when(addrDecode.io.sel(reg.id)) {
+                txDataRegWrite := true.B
             }
         }
     }

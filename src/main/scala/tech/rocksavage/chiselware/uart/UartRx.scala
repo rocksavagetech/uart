@@ -3,6 +3,7 @@ package tech.rocksavage.chiselware.uart
 
 import chisel3._
 import chisel3.util._
+import tech.rocksavage.chiselware.dynamicfifo.{DynamicFifo, DynamicFifoParams}
 import tech.rocksavage.chiselware.uart.bundle.UartRxBundle
 import tech.rocksavage.chiselware.uart.error.UartRxError
 import tech.rocksavage.chiselware.uart.param.UartParams
@@ -175,11 +176,26 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     errorReg := errorNext
 
     // ###################
+    // Fifo for reads
+    // ###################
+    val fifoParams = DynamicFifoParams(
+      dataWidth = params.maxOutputBits,
+      fifoDepth = params.bufferSize,
+      coverage = false,
+      formal = formal
+    )
+    val fifo = Module(new DynamicFifo(fifoParams))
+    fifo.io.push   := completeWire && errorReg === UartRxError.None
+    fifo.io.pop    := io.rxConfig.rxDataRegRead
+    fifo.io.dataIn := dataShiftReg
+    io.data        := fifo.io.dataOut
+
+    fifo.io.almostFullLevel  := 0.U
+    fifo.io.almostEmptyLevel := 0.U
+
+    // ###################
     // Output Assignments
     // ###################
-
-    /** Assign output data */
-    io.data := dataReg
 
     /** Assign output valid signal */
     io.valid := validReg
@@ -241,7 +257,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     validNext := calculateValidNext(
       validReg,
-      completeWire,
+      completeWire && errorReg === UartRxError.None,
       startTransaction
     )
 

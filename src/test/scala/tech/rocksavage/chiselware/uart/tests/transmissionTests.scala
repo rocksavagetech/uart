@@ -50,8 +50,10 @@ object transmissionTests {
                   s"Timeout waiting for valid signal on character $char"
                 )
             }
-
+            dut.io.rxConfig.rxDataRegRead.poke(true.B)
             dut.io.data.expect(char.U)
+            dut.clock.step(1)
+            dut.io.rxConfig.rxDataRegRead.poke(false.B)
             dut.clock.step(clocksPerBit) // Wait between characters
         }
     }
@@ -94,6 +96,10 @@ object transmissionTests {
 
         // Initiate transmission
         dut.io.txConfig.data.poke(data.U)
+        dut.io.txConfig.txDataRegWrite.poke(true.B)
+        dut.clock.step(1)
+        dut.io.txConfig.txDataRegWrite.poke(false.B)
+        dut.clock.step(1)
         dut.io.txConfig.load.poke(true.B)
         dut.clock.step(1)
         dut.io.txConfig.load.poke(false.B)

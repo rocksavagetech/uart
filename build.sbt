@@ -23,6 +23,9 @@ lazy val apb = RootProject(uri("https://github.com/The-Chiselers/apb.git#main"))
 lazy val registermap = RootProject(
   uri("https://github.com/The-Chiselers/registermap.git#main")
 )
+lazy val dynamicfifo_one_cycle = RootProject(
+  uri("https://github.com/The-Chiselers/dynamicfifo_one_cycle.git#main")
+)
 lazy val root = (project in file("."))
     .settings(
       name                   := "uart",
@@ -49,7 +52,8 @@ lazy val root = (project in file("."))
       synth,
       addrdecode,
       apb,
-      registermap
+      registermap,
+      dynamicfifo_one_cycle
     )
 val chiselVersion   = "6.6.0"
 val scalafmtVersion = "2.5.0"

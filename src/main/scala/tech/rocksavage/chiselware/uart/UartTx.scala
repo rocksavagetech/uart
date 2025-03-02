@@ -3,6 +3,7 @@ package tech.rocksavage.chiselware.uart
 
 import chisel3._
 import chisel3.util._
+import tech.rocksavage.chiselware.dynamicfifo.{DynamicFifo, DynamicFifoParams}
 import tech.rocksavage.chiselware.uart.bundle.UartTxBundle
 import tech.rocksavage.chiselware.uart.param.UartParams
 
@@ -41,6 +42,8 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val dataNext      = WireInit(0.U(params.maxOutputBits.W))
     val loadNext      = WireInit(false.B)
 
+    val fifoEmptyReg = RegInit(true.B)
+
     numOutputBitsReg := numOutputBitsNext
     useParityReg     := useParityNext
     parityOddReg     := parityOddNext // Latch new parity configuration
@@ -62,8 +65,14 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val completeWire     = uartFsm.io.complete
     val applyShiftReg    = sampleDataWire || sampleParityWire
 
+    val active = RegInit(false.B)
+    when((RegNext(state) === UartState.Idle) && (loadNext)) {
+        active := true.B
+    }.elsewhen(fifoEmptyReg) {
+        active := false.B
+    }
     val startTransaction =
-        (RegNext(state) === UartState.Idle) && loadNext
+        (RegNext(state) === UartState.Idle) && (loadNext || active)
 
     uartFsm.io.startTransaction := startTransaction
     uartFsm.io.clocksPerBit     := clocksPerBitReg
@@ -90,10 +99,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     // Latch incoming data and capture txData for parity calculation.
     // (txDataReg holds the unshifted data for parity computation.)
-    val txDataReg = RegInit(0.U(params.maxOutputBits.W))
-    when(startTransaction) {
-        txDataReg := io.txConfig.data
-    }
+    val txData = WireInit(0.U(params.maxOutputBits.W))
     dataNext := io.txConfig.data
     loadNext := io.txConfig.load
 
@@ -106,12 +112,32 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     dataShiftReg := dataShiftNext
 
     // ###################
+    // Fifo for reads
+    // ###################
+    val fifoParams = DynamicFifoParams(
+      dataWidth = params.maxOutputBits,
+      fifoDepth = params.bufferSize,
+      coverage = false,
+      formal = formal
+    )
+    val fifo = Module(new DynamicFifo(fifoParams))
+    fifo.io.push   := RegNext(io.txConfig.txDataRegWrite)
+    fifo.io.pop    := startTransaction
+    fifo.io.dataIn := io.txConfig.data
+
+    fifo.io.almostFullLevel  := 0.U
+    fifo.io.almostEmptyLevel := 0.U
+    fifoEmptyReg             := fifo.io.empty
+
+    txData := fifo.io.dataOut
+
+    // ###################
     // Output Register
     // ###################
     // The TX output should be high in idle.
     val txNext = WireInit(true.B)
     // The calculateTxOut now also has a branch for the Parity state.
-    txNext := calculateTxOut(state, dataShiftReg, txDataReg, parityOddReg)
+    txNext := calculateTxOut(state, dataShiftReg, txData, parityOddReg)
     io.tx  := txNext
 
     io.clocksPerBit := clocksPerBitReg
@@ -141,7 +167,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     dataShiftNext := calculateDataShiftNext(
       dataShiftReg,
-      dataNext,
+      fifo.io.dataOut,
       startTransaction,
       applyShiftReg,
       numOutputBitsReg

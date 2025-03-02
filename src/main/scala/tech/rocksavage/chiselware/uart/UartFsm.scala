@@ -119,7 +119,7 @@ class UartFsm(params: UartParams) extends Module {
     io.state  := state
 
     // Outputs
-    io.sample := (state =/= UartState.Idle) && (clockCounter === (io.clocksPerBit >> 1.U))
+    io.sample := (state =/= UartState.Idle) && (state =/= UartState.BaudUpdating) && (clockCounter === (io.clocksPerBit >> 1.U))
     io.complete := (state === UartState.Stop) && (clockCounter === clockCounterMax - 1.U)
     io.shiftRegister := state === UartState.Data || state === UartState.Parity
 
