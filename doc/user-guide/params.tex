@@ -97,5 +97,24 @@ Depth of the \textit{DynamicFifo} used in TX and RX. Must be a power of 2 for ce
 \label{table:uart_params}
 \endgroup
 
-\noindent
-\textbf{Note:} The new \texttt{bufferSize} parameter defines how many words/bytes can be queued in the internal FIFOs for TX and RX. If set to 1, you effectively have a minimal buffer. Larger depths (e.g.\ 16, 32) allow more data to be queued without CPU intervention.
+
+\textbf{Example Instantiation:}
+
+A typical instantiation of the UART module in Scala might be as follows:
+
+\begin{lstlisting}[language=Scala]
+val myUart = Module(new Uart(
+  UartParams(
+    dataWidth         = 32,
+    addressWidth      = 32,
+    maxClockFrequency = 25000000,  // 25 MHz
+    maxBaudRate       = 921600,
+    maxOutputBits     = 8,
+    syncDepth         = 2,
+    parity            = false,
+    verbose           = false,
+    bufferSize        = 16
+  ),
+  formal = false
+))
+\end{lstlisting}
