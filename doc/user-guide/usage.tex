@@ -1,0 +1,61 @@
+\section{Usage Examples}
+
+This section gives a few code snippets demonstrating typical APB register writes/reads for transmitting and receiving data.
+
+\subsection{Basic Transmit}
+
+\begin{verbatim}
+// 1. Configure the baud rate, data bits, parity, etc.
+write(clocksPerBitDb, 217);  // Example for 115200 baud if PCLK ~ 25 MHz
+write(numOutputBitsDb, 8);
+write(useParityDb, 0);       // No parity
+write(parityOddDb, 0);       // Irrelevant if parity is disabled
+
+// 2. Write data to TX FIFO
+write(dataIn, 0x55); // data = 0x55
+write(load, 0x1);    // triggers TX FIFO write
+
+// 3. Wait until TX FIFO is empty
+while (read(txFifoEmpty) == 0) { /* poll or yield */ }
+\end{verbatim}
+
+\subsection{Basic Receive}
+
+\begin{verbatim}
+// 1. Same configuration steps for baud, data bits, parity, etc.
+
+// 2. Poll for data
+while (read(rxFifoEmpty) == 1) {
+  // or check rxDataAvailable
+  // wait for incoming data
+}
+
+// 3. Read the data from the RX FIFO
+uint32_t rx_data = read(rxData);
+
+// 4. Indicate read completion
+write(rxRead, 0x1);
+
+// 5. Check for any errors
+uint32_t err = read(error);
+if (err != 0) {
+  // handle error
+  // possibly clear them
+  write(clearError, 0x1);
+}
+\end{verbatim}
+
+\subsection{Handling Parity}
+
+\begin{verbatim}
+// Enable parity (odd)
+write(useParityDb, 1);
+write(parityOddDb, 1);
+
+// Transmit a byte with odd parity
+write(dataIn, 0xAB);
+write(load, 1);
+
+// Meanwhile, the RX side will check the parity bit automatically.
+// If a parity mismatch occurs, the error register is updated with ParityError.
+\end{verbatim}
