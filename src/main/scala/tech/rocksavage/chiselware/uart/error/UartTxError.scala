@@ -4,5 +4,6 @@ package tech.rocksavage.chiselware.uart.error
 import chisel3._
 
 object UartTxError extends ChiselEnum {
-  val None, ParityError, StopBitError = Value  // Error types for UART Tx
+    val None, ParityError, StopBitError, OverflowError, UnderflowError =
+        Value // Error types for UART Tx
 }
