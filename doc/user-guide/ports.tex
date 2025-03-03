@@ -1,19 +1,23 @@
 \section{Port Descriptions}
 
+The UART module provides two sets of ports:
+\begin{enumerate}
+  \item The external UART interface (serial TX and RX signals)
+  \item The APB interface for register access
+\end{enumerate}
+
 \subsection{UART Interface}
 
-Table~\ref{table:ports} shows the top-level ports related to the UART signals.
+The UART-specific ports allow the module to communicate with external devices over a standard asynchronous serial link. The key signals are:
 
 \renewcommand*{\arraystretch}{1.3}
 \begingroup
 \small
 \rowcolors{2}{gray!30}{gray!10}
-\arrayrulecolor{gray!80}
-
 \begin{longtable}[H]{
-  | p{0.20\textwidth}
-  | p{0.20\textwidth}
-  | p{0.10\textwidth}
+  | p{0.25\textwidth}
+  | p{0.15\textwidth}
+  | p{0.15\textwidth}
   | p{0.40\textwidth} |
 }
 \hline
@@ -21,8 +25,7 @@ Table~\ref{table:ports} shows the top-level ports related to the UART signals.
 \textcolor{white}{\textbf{Port Name}} &
 \textcolor{white}{\textbf{Width}} &
 \textcolor{white}{\textbf{Direction}} &
-\textcolor{white}{\textbf{Description}} \\ 
-\hline
+\textcolor{white}{\textbf{Description}} \\ \hline
 \endfirsthead
 
 \hline
@@ -30,8 +33,7 @@ Table~\ref{table:ports} shows the top-level ports related to the UART signals.
 \textcolor{white}{\textbf{Port Name}} &
 \textcolor{white}{\textbf{Width}} &
 \textcolor{white}{\textbf{Direction}} &
-\textcolor{white}{\textbf{Description}} \\ 
-\hline
+\textcolor{white}{\textbf{Description}} \\ \hline
 \endhead
 
 \hline
@@ -40,41 +42,37 @@ Table~\ref{table:ports} shows the top-level ports related to the UART signals.
 \texttt{rx} &
 1 &
 Input &
-Receive data line (serial input). \\ \hline
+Asynchronous serial receive data input. This signal is synchronized internally and sampled by the receiver FSM. \\ \hline
 
 \texttt{tx} &
 1 &
 Output &
-Transmit data line (serial output). \\ \hline
-
+Serial transmit data output. When idle, this line remains high. \\ \hline
 \end{longtable}
-\captionof{table}{UART-Specific I/O Ports}
-\label{table:ports}
+\captionof{table}{UART Interface Ports}
+\label{table:uart_ports}
 \endgroup
 
-\subsection{APB3 Interface}
+\subsection{APB Interface}
 
-The \textbf{APB3 Interface} is a typical APB Slave interface. See Table~\ref{table:uart_apb_ports} for details. The widths of the data/address buses are parameterized by \textit{dataWidth} and \textit{addressWidth}.
+The APB interface provides access to the UART’s registers, allowing software to configure and monitor both the TX and RX operations (including baud rate settings, FIFO control, and error status). The APB signals are defined as follows:
 
 \renewcommand*{\arraystretch}{1.3}
 \begingroup
 \small
 \rowcolors{2}{gray!30}{gray!10}
-\arrayrulecolor{gray!80}
-
 \begin{longtable}[H]{
   | p{0.20\textwidth}
   | p{0.20\textwidth}
-  | p{0.10\textwidth}
-  | p{0.40\textwidth} |
+  | p{0.12\textwidth}
+  | p{0.43\textwidth} |
 }
 \hline
 \rowcolor{gray}
 \textcolor{white}{\textbf{Port Name}} &
 \textcolor{white}{\textbf{Width}} &
 \textcolor{white}{\textbf{Direction}} &
-\textcolor{white}{\textbf{Description}} \\ 
-\hline
+\textcolor{white}{\textbf{Description}} \\ \hline
 \endfirsthead
 
 \hline
@@ -82,8 +80,7 @@ The \textbf{APB3 Interface} is a typical APB Slave interface. See Table~\ref{tab
 \textcolor{white}{\textbf{Port Name}} &
 \textcolor{white}{\textbf{Width}} &
 \textcolor{white}{\textbf{Direction}} &
-\textcolor{white}{\textbf{Description}}\\ 
-\hline
+\textcolor{white}{\textbf{Description}}\\ \hline
 \endhead
 
 \hline
@@ -92,32 +89,32 @@ The \textbf{APB3 Interface} is a typical APB Slave interface. See Table~\ref{tab
 \texttt{PCLK} &
 1 &
 Input &
-Positive edge clock for register accesses. \\ \hline
+APB clock signal for register access. \\ \hline
 
 \texttt{PRESETN} &
 1 &
 Input &
-Active-low asynchronous reset. \\ \hline
+Active–low asynchronous reset. \\ \hline
 
 \texttt{PSEL} &
 1 &
 Input &
-Select signal for APB slave. \\ \hline
+Select signal indicating that the UART is addressed. \\ \hline
 
 \texttt{PENABLE} &
 1 &
 Input &
-Indicates second cycle of APB transfer. \\ \hline
+Indicates the second cycle of an APB transfer. \\ \hline
 
 \texttt{PWRITE} &
 1 &
 Input &
-\texttt{HIGH} for write, \texttt{LOW} for read. \\ \hline
+Determines the operation: HIGH for write, LOW for read. \\ \hline
 
 \texttt{PADDR} &
 \textit{addressWidth} &
 Input &
-APB address bus. \\ \hline
+APB address bus for register selection. \\ \hline
 
 \texttt{PWDATA} &
 \textit{dataWidth} &
@@ -132,14 +129,13 @@ APB read data bus. \\ \hline
 \texttt{PREADY} &
 1 &
 Output &
-Indicates transfer ready. \\ \hline
+Indicates that the UART is ready for the next transfer. \\ \hline
 
 \texttt{PSLVERR} &
 1 &
 Output &
 Indicates a transfer error. \\ \hline
-
 \end{longtable}
-\captionof{table}{APB Ports Descriptions}
-\label{table:uart_apb_ports}
+\captionof{table}{APB Interface Ports}
+\label{table:apb_ports}
 \endgroup
