@@ -1,73 +1,120 @@
 \section{Parameter Descriptions}
-The parameters for \textbf{UART} are shown below in Table~\ref{table:params}.
 
-\renewcommand*{\arraystretch}{1.4}
+The parameters for the \textbf{UART} module are listed in Table~\ref{table:uart_params}. These parameters configure the APB interface, baud rate generation, data framing, and the internal FIFO buffering for both TX and RX.
+
+\renewcommand*{\arraystretch}{1.3}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\arrayrulecolor{gray!80}
+
 \begin{longtable}[H]{
-    | p{0.25\textwidth}
-    | p{0.10\textwidth}
-    | p{0.05\textwidth}
-    | p{0.05\textwidth}
-    | p{0.47\textwidth} |
-  }
-  \hline
-  \textbf{Name} &
-  \textbf{Type} &
-  \textbf{Min}  &
-  \textbf{Max}  &
-  \textbf{Description}            \\ \hline \hline
-  dataWidth &
-  Int &
-  8 &
-  64 &
-  Width of the APB data bus in bits \\ \hline
-  addressWidth &
-  Int &
-  8 &
-  64 &
-  Width of the APB address bus in bits \\ \hline
-  maxOutputBits &
-  Int &
-  5 &
-  9 &
-  Maximum number of data bits per frame \\ \hline
-  syncDepth &
-  Int &
-  1 &
-  4 &
-  Number of synchronization stages for RX input \\ \hline
-  maxBaudRate &
-  Int &
-  9600 &
-  921600 &
-  Maximum supported baud rate \\ \hline
-  maxClockFrequency &
-  Int &
-  1000000 &
-  100000000 &
-  Maximum system clock frequency \\ \hline
-  parity &
-  Boolean &
-  - &
-  - &
-  Default parity enable state \\ \hline
-  verbose &
-  Boolean &
-  - &
-  - &
-  Enable verbose debug output \\ \hline
-  
-  \caption{Parameter Descriptions}\label{table:params}
-\end{longtable}
+  | p{0.22\textwidth}
+  | p{0.13\textwidth}
+  | p{0.08\textwidth}
+  | p{0.08\textwidth}
+  | p{0.42\textwidth} |
+}
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Name}} &
+\textcolor{white}{\textbf{Type}} &
+\textcolor{white}{\textbf{Min}} &
+\textcolor{white}{\textbf{Max}} &
+\textcolor{white}{\textbf{Description}} \\ 
+\hline
+\endfirsthead
 
-The UART is instantiated as follows:
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Name}} &
+\textcolor{white}{\textbf{Type}} &
+\textcolor{white}{\textbf{Min}} &
+\textcolor{white}{\textbf{Max}} &
+\textcolor{white}{\textbf{Description}} \\ 
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\texttt{dataWidth} &
+Integer &
+8 &
+32 &
+Data width for APB bus operations. \\ \hline
+
+\texttt{addressWidth} &
+Integer &
+1 &
+-- &
+Address width for APB bus. \\ \hline
+
+\texttt{maxClockFrequency} &
+Integer &
+-- &
+-- &
+Maximum system clock frequency in Hz (used by the internal Baud Rate Generator). \\ \hline
+
+\texttt{maxBaudRate} &
+Integer &
+-- &
+-- &
+Maximum achievable baud rate (used to size internal counters). \\ \hline
+
+\texttt{maxOutputBits} &
+Integer &
+5 &
+16 &
+Maximum number of data bits plus optional parity bit (TX/RX). \\ \hline
+
+\texttt{syncDepth} &
+Integer &
+2 &
+-- &
+Depth for RX input synchronization flip‐flops. \\ \hline
+
+\texttt{parity} &
+Bool &
+N/A &
+N/A &
+Default parity selection (odd/even) at reset, may be overridden in registers. \\ \hline
+
+\texttt{verbose} &
+Bool &
+N/A &
+N/A &
+Enables debug \texttt{printf} statements. \\ \hline
+
+\textbf{\texttt{bufferSize}} &
+Integer &
+1 &
+-- &
+Depth of the \textit{DynamicFifo} used in TX and RX. Must be a power of 2 for certain synthesis flows. \\ \hline
+
+\end{longtable}
+\captionof{table}{UART Parameter Descriptions}
+\label{table:uart_params}
+\endgroup
+
+
+\textbf{Example Instantiation:}
+
+A typical instantiation of the UART module in Scala might be as follows:
+
 \begin{lstlisting}[language=Scala]
-val uartParams = UartParams(
-  dataWidth = 32,
-  addressWidth = 32,
-  maxOutputBits = 8,
-  syncDepth = 2,
-  maxBaudRate = 921600,
-  maxClockFrequency = 25000000
-)
-val uart = new Uart(uartParams)
+val myUart = Module(new Uart(
+  UartParams(
+    dataWidth         = 32,
+    addressWidth      = 32,
+    maxClockFrequency = 25000000,  // 25 MHz
+    maxBaudRate       = 921600,
+    maxOutputBits     = 8,
+    syncDepth         = 2,
+    parity            = false,
+    verbose           = false,
+    bufferSize        = 16
+  ),
+  formal = false
+))
 \end{lstlisting}
