@@ -17,5 +17,6 @@ class UartRxControlBundle(params: UartParams) extends Bundle {
     val useParityDb     = Input(Bool())
     val parityOddDb     = Input(Bool())
     val clearErrorDb    = Input(Bool())
+    val rxDataRegRead   = Input(Bool())
 
 }

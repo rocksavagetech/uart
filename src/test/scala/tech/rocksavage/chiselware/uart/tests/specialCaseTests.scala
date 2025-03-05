@@ -15,6 +15,15 @@ object specialCaseTests {
         val specialCases: Seq[UartRuntimeConfig] = Seq(
           UartRuntimeConfig(
             useAsserts = true,
+            baudRate = 460800,
+            clockFrequency = 5000000,
+            numOutputBits = 6,
+            useParity = false,
+            parityOdd = false,
+            data = 43
+          ),
+          UartRuntimeConfig(
+            useAsserts = true,
             baudRate = 1_000_000,
             clockFrequency = 1_000_000,
             numOutputBits = 8,

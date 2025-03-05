@@ -1,16 +1,16 @@
 \section{Overview}
-
 \subsection{Features}
 \begin{itemize}
-    \item Configurable PWM Output
-    \item Timer/Counter Mode
-    \item Event driven Counter
-    \item Watchdog Timer
-    \item RTC
-    \item Interrupts available in all modes
+    \item Full-duplex UART communication
+    \item Configurable baud rate (up to 921,600 baud)
+    \item Programmable data bits (5-8 bits)
+    \item Optional parity generation/checking (odd/even)
+    \item APB (Advanced Peripheral Bus) interface
+    \item Separate configuration for TX and RX
+    \item Error detection (parity, framing)
+    \item Double-buffered configuration registers
+    \item Synchronous design with configurable clock frequency
 \end{itemize}
 
 \section{Introduction}
-The hardware timer is a versatile and highly configurable peripheral designed for precise time 
-measurement, event generation, and waveform control. It can be configured as a standard timer, 
-RTC, or Watchdog Timer. Each mode generates differnt hardware and registers to cut down on unused registers.
+The UART (Universal Asynchronous Receiver/Transmitter) IP core provides serial communication capabilities with highly configurable parameters. It supports full-duplex communication with independent transmit and receive paths, configurable through APB registers. The core includes features for baud rate generation, parity checking, and error detection, making it suitable for a wide range of embedded communication applications.

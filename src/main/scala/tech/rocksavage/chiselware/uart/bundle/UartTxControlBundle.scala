@@ -18,7 +18,8 @@ class UartTxControlBundle(params: UartParams) extends Bundle {
     val useParityDb     = Input(Bool())
     val parityOddDb     = Input(Bool())
     val baud            = Input(UInt((log2Ceil(params.maxBaudRate) + 1).W))
-    val clockFreq  = Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
-    val updateBaud = Input(Bool())
+    val clockFreq      = Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+    val updateBaud     = Input(Bool())
+    val txDataRegWrite = Input(Bool())
 
 }

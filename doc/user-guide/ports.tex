@@ -1,85 +1,141 @@
 \section{Port Descriptions}
 
-The ports for \textbf{Timer} are shown below in Table~\ref{table:ports}. The width of several ports is controlled by the following input parameters:
+The UART module provides two sets of ports:
+\begin{enumerate}
+  \item The external UART interface (serial TX and RX signals)
+  \item The APB interface for register access
+\end{enumerate}
 
-\begin{itemize}[noitemsep]
-  \item \textit{dataWidth} is the width of the data bus in bits.
-  \item \textit{addressWidth} is the width of the address bus in bits.
-  \item \textit{countWidth} is the width of the counter in bits.
-\end{itemize}
+\subsection{UART Interface}
 
-\renewcommand*{\arraystretch}{1.4}
+The UART-specific ports allow the module to communicate with external devices over a standard asynchronous serial link. The key signals are:
+
+\renewcommand*{\arraystretch}{1.3}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\begin{longtable}[H]{
+  | p{0.25\textwidth}
+  | p{0.15\textwidth}
+  | p{0.15\textwidth}
+  | p{0.40\textwidth} |
+}
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Port Name}} &
+\textcolor{white}{\textbf{Width}} &
+\textcolor{white}{\textbf{Direction}} &
+\textcolor{white}{\textbf{Description}} \\ \hline
+\endfirsthead
+
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Port Name}} &
+\textcolor{white}{\textbf{Width}} &
+\textcolor{white}{\textbf{Direction}} &
+\textcolor{white}{\textbf{Description}} \\ \hline
+\endhead
+
+\hline
+\endfoot
+
+\texttt{rx} &
+1 &
+Input &
+Asynchronous serial receive data input. This signal is synchronized internally and sampled by the receiver FSM. \\ \hline
+
+\texttt{tx} &
+1 &
+Output &
+Serial transmit data output. When idle, this line remains high. \\ \hline
+\end{longtable}
+\captionof{table}{UART Interface Ports}
+\label{table:uart_ports}
+\endgroup
+
+\subsection{APB Interface}
+
+The APB interface provides access to the UART’s registers, allowing software to configure and monitor both the TX and RX operations (including baud rate settings, FIFO control, and error status). The APB signals are defined as follows:
+
+\renewcommand*{\arraystretch}{1.3}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
 \begin{longtable}[H]{
   | p{0.20\textwidth}
   | p{0.20\textwidth}
   | p{0.12\textwidth}
   | p{0.43\textwidth} |
-  }
-  \hline
-  \textbf{Port Name} &
-  \textbf{Width} &
-  \textbf{Direction} &
-  \textbf{Description} \\ \hline \hline
+}
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Port Name}} &
+\textcolor{white}{\textbf{Width}} &
+\textcolor{white}{\textbf{Direction}} &
+\textcolor{white}{\textbf{Description}} \\ \hline
+\endfirsthead
 
-  clock &
-  1 &
-  Input &
-  Positive edge clock \\ \hline
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Port Name}} &
+\textcolor{white}{\textbf{Width}} &
+\textcolor{white}{\textbf{Direction}} &
+\textcolor{white}{\textbf{Description}}\\ \hline
+\endhead
 
-  reset &
-  1 &
-  Input &
-  Active high reset \\ \hline
+\hline
+\endfoot
 
-  en &
-  1 &
-  Input &
-  Enable signal for the timer \\ \hline
+\texttt{PCLK} &
+1 &
+Input &
+APB clock signal for register access. \\ \hline
 
-  prescaler &
-  \textit{countWidth} &
-  Input &
-  Prescaler value to divide the clock frequency \\ \hline
+\texttt{PRESETN} &
+1 &
+Input &
+Active–low asynchronous reset. \\ \hline
 
-  maxCount &
-  \textit{countWidth} &
-  Input &
-  Maximum count value before the timer resets \\ \hline
+\texttt{PSEL} &
+1 &
+Input &
+Select signal indicating that the UART is addressed. \\ \hline
 
-  pwmCeiling &
-  \textit{countWidth} &
-  Input &
-  PWM ceiling value to control the duty cycle of the PWM signal \\ \hline
+\texttt{PENABLE} &
+1 &
+Input &
+Indicates the second cycle of an APB transfer. \\ \hline
 
-  setCountValue &
-  \textit{countWidth} &
-  Input &
-  Value to set the counter to when \textit{setCount} is asserted \\ \hline
+\texttt{PWRITE} &
+1 &
+Input &
+Determines the operation: HIGH for write, LOW for read. \\ \hline
 
-  setCount &
-  1 &
-  Input &
-  Signal to set the counter to \textit{setCountValue} \\ \hline
+\texttt{PADDR} &
+\textit{addressWidth} &
+Input &
+APB address bus for register selection. \\ \hline
 
-  count &
-  \textit{countWidth} &
-  Output &
-  Current count value of the timer \\ \hline
+\texttt{PWDATA} &
+\textit{dataWidth} &
+Input &
+APB write data bus. \\ \hline
 
-  maxReached &
-  1 &
-  Output &
-  Signal indicating that the timer has reached its maximum count value \\ \hline
+\texttt{PRDATA} &
+\textit{dataWidth} &
+Output &
+APB read data bus. \\ \hline
 
-  pwm &
-  1 &
-  Output &
-  PWM output signal with a duty cycle controlled by \textit{pwmCeiling} \\ \hline
+\texttt{PREADY} &
+1 &
+Output &
+Indicates that the UART is ready for the next transfer. \\ \hline
 
-  interrupt &
-  1 &
-  Output &
-  Interrupt signal indicating timer events (e.g., max reached) \\ \hline
-
-  \caption{Port Descriptions}\label{table:ports}
+\texttt{PSLVERR} &
+1 &
+Output &
+Indicates a transfer error. \\ \hline
 \end{longtable}
+\captionof{table}{APB Interface Ports}
+\label{table:apb_ports}
+\endgroup

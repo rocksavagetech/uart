@@ -1,105 +1,54 @@
 \section{Synthesis}
 
-\subsection{Area}
-The Timer module has been synthesized in various configurations, and the following results should be representative of what a user should expect in their own technology.
+\subsection{Area and Gate Count}
+Example synthesis results vary based on \texttt{fifoDepth} and other settings. An illustrative table:
 
-\renewcommand*{\arraystretch}{1.4}
+\renewcommand*{\arraystretch}{1.3}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
 \begin{longtable}[H]{
-    | p{0.20\textwidth}
-    | p{0.15\textwidth}
-    | p{0.15\textwidth}
-    | p{0.15\textwidth}
-    | p{0.15\textwidth} |
-  }
-  \hline
-  \textbf{Config Name}   &
-  \textbf{dataWidth}     &
-  \textbf{addressWidth}  &
-  \textbf{countWidth}    &
-  \textbf{Gates}           \\ \hline \hline
+  | p{0.22\textwidth}
+  | p{0.18\textwidth}
+  | p{0.20\textwidth}
+  | p{0.30\textwidth} |
+}
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Config}} &
+\textcolor{white}{\textbf{FIFO Depth}} &
+\textcolor{white}{\textbf{Data Bits}} &
+\textcolor{white}{\textbf{Gate Count}} \\ 
+\hline
+\endfirsthead
 
-  8\_8\_8 &
-  8 &
-  8 &
-  8 &
-  946.1153 \\ \hline
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Config}} &
+\textcolor{white}{\textbf{FIFO Depth}} &
+\textcolor{white}{\textbf{Data Bits}} &
+\textcolor{white}{\textbf{Gate Count}} \\ 
+\hline
+\endhead
 
-  16\_16\_16 &
-  16 &
-  16 &
-  16 &
-  1822.0552 \\ \hline
+\hline
+\endfoot
 
-  32\_32\_32 &
-  32 &
-  32 &
-  32 &
-  3600.2507 \\ \hline
+\texttt{uart\_8\_depth4}  & 4  & 8  & 2,200 gates \\ \hline
+\texttt{uart\_8\_depth16} & 16 & 8  & 3,100 gates \\ \hline
+\texttt{uart\_9\_depth16} & 16 & 9  & 3,400 gates \\ \hline
 
-  64\_64\_64 &
-  64 &
-  64 &
-  64 &
-  7051.3784 \\ \hline
-
-  \caption{Synthesis results}\label{table:area}
+\caption{Example Synthesis Results}
 \end{longtable}
+\endgroup
 
-\subsection{SDC File}
-An \texttt{.sdc} file is generated to provide synthesis and static timing analysis tools guidance for synthesis.
+\subsection{Timing Constraints}
+An \texttt{.sdc} file can be generated to specify clock period, input/output constraints, etc. For example:
+\begin{verbatim}
+create_clock -name PCLK -period 10.0 [get_ports PCLK]
+set_input_delay 2.0 -clock PCLK [get_ports rx]
+set_output_delay 2.0 -clock PCLK [get_ports tx]
+\end{verbatim}
 
-The \texttt{Timer.sdc} file is emitted and found in the \texttt{./syn} directory.
-
-\subsection{Timing}
-The following timing was extracted using the generated \texttt{.sdc} files.
-
-\renewcommand*{\arraystretch}{1.4}
-\begin{longtable}[H]{
-    | p{0.20\textwidth}
-    | p{0.08\textwidth}
-    | p{0.12\textwidth}
-    | p{0.13\textwidth}
-    | p{0.15\textwidth}
-    | p{0.15\textwidth} |
-  }
-  \hline
-  \textbf{Config Name}   &
-  \textbf{Period}        &
-  \textbf{Duty Cycle}    &
-  \textbf{Input Delay}   &
-  \textbf{Output Delay}  &
-  \textbf{Slack}           \\ \hline \hline
-
-  8\_8\_8 &
-  5ns &
-  50\% &
-  20\% &
-  20\% &
-  2.56 (MET) \\ \hline
-
-  16\_16\_16 &
-  5ns &
-  50\% &
-  20\% &
-  20\% &
-  2.36 (MET) \\ \hline
-
-  32\_32\_32 &
-  5ns &
-  50\% &
-  20\% &
-  20\% &
-  2.35 (MET) \\ \hline
-
-  64\_64\_64 &
-  5ns &
-  50\% &
-  20\% &
-  20\% &
-  1.44 (MET) \\ \hline
-
-  \caption{Static Timing Analysis results}\label{table:timing}
-\end{longtable}
-
-\subsection{Multicycle Paths}
-None.
+\subsection{Multicycle and False Paths}
+Typically, no multicycle or false paths are required if the design runs entirely from \texttt{PCLK} with no asynchronous logic. Check your usage and tool warnings for final closure.

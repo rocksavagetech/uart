@@ -1,0 +1,312 @@
+\section{Register Interface}
+
+The UART module is controlled via an APB interface that maps configuration, status, and data registers for both the transmitter (TX) and receiver (RX) sections. In the updated design, the module uses internal dynamic FIFOs to buffer data and a dedicated baud–rate generator to compute the effective clocks–per–bit. This section describes the register map and details the functionality of each register.
+
+\subsection{Register Map Summary}
+
+The table below summarizes the complete register space. All addresses assume a 32–bit APB data bus. Note that some registers (e.g. TX\_CLOCKS\_PER\_BIT and RX\_CLOCKS\_PER\_BIT) are computed dynamically and are read–only.
+
+\renewcommand*{\arraystretch}{1.25}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\arrayrulecolor{gray!80}
+\begin{longtable}{|c|c|c|c|c|p{0.35\textwidth}|}
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Width}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
+\endfirsthead
+
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Width}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
+\endhead
+
+\hline
+\endfoot
+
+% Transmitter registers
+0x00 & TX\_DATA\_IN & $\text{maxOutputBits}+1$ & W & 0x000 & Data word to be transmitted. The LSB is transmitted first after internal reversal. \\ \hline
+0x04 & TX\_LOAD & 1 bit & W & 0x0 & Writing ‘1’ pushes the contents of TX\_DATA\_IN into the TX FIFO. This signal auto–clears. \\ \hline
+0x08 & TX\_BAUD\_RATE & \textit{dataWidth} & R/W & 115200 & Desired baud rate for transmission. \\ \hline
+0x0C & TX\_CLOCK\_FREQ & \textit{dataWidth} & R/W & 25,000,000 & System clock frequency for the TX baud generator. \\ \hline
+0x10 & TX\_UPDATE\_BAUD & 1 bit & W & 0x0 & Pulse ‘1’ to trigger recalculation of the baud divisor via the UartBaudRateGenerator. \\ \hline
+0x14 & TX\_NUM\_OUTPUT\_BITS\_DB & $\lceil\log_2(\text{maxOutputBits})\rceil+1$ & R/W & 0x8 & Configures the number of data bits to be transmitted per frame. \\ \hline
+0x18 & TX\_USE\_PARITY\_DB & 1 bit & R/W & 0x0 & Set to ‘1’ to enable parity generation on the TX side. \\ \hline
+0x1C & TX\_PARITY\_ODD\_DB & 1 bit & R/W & 0x0 & When parity is enabled, ‘1’ selects odd parity; ‘0’ selects even parity. \\ \hline
+0x20 & TX\_CLOCKS\_PER\_BIT & $\lceil\log_2(\tfrac{\text{maxClockFrequency}}{\text{maxBaudRate}})\rceil+1$ & R & Calculated & Computed clock divisor used for TX bit timing. \\ \hline
+
+% Receiver registers
+0x24 & RX\_DATA & $\text{maxOutputBits}+1$ & R & 0x000 & Contains the received data word (includes parity bit if enabled). \\ \hline
+0x28 & RX\_DATA\_AVAILABLE & 1 bit & R & 0x0 & High if a new word is available in the RX FIFO. \\ \hline
+0x2C & RX\_ERROR & $\lceil\log_2(3)\rceil$ & R & 0x0 & Error flags: 00 = No error, 01 = Parity error, 10 = Framing error, 11 = Overrun error. \\ \hline
+0x30 & TOP\_ERROR & 1 bit & R & 0x0 & Indicates configuration or top–level errors. \\ \hline
+0x34 & RX\_CLEAR\_ERROR & 1 bit & W & 0x0 & Writing ‘1’ clears the RX\_ERROR flags. \\ \hline
+0x38 & RX\_BAUD\_RATE & \textit{dataWidth} & R/W & 115200 & Desired baud rate for reception. \\ \hline
+0x3C & RX\_CLOCK\_FREQ & \textit{dataWidth} & R/W & 25,000,000 & System clock frequency for the RX baud generator. \\ \hline
+0x40 & RX\_UPDATE\_BAUD & 1 bit & W & 0x0 & Pulse ‘1’ to trigger an update of the RX baud divisor. \\ \hline
+0x44 & RX\_NUM\_OUTPUT\_BITS\_DB & $\lceil\log_2(\text{maxOutputBits})\rceil+1$ & R/W & 0x8 & Configures the number of data bits expected per RX frame. \\ \hline
+0x48 & RX\_USE\_PARITY\_DB & 1 bit & R/W & 0x0 & Set to ‘1’ to enable parity checking in RX. \\ \hline
+0x4C & RX\_PARITY\_ODD\_DB & 1 bit & R/W & 0x0 & When parity is enabled, ‘1’ indicates odd parity; ‘0’ indicates even parity. \\ \hline
+0x50 & RX\_CLOCKS\_PER\_BIT & $\lceil\log_2(\tfrac{\text{maxClockFrequency}}{\text{maxBaudRate}})\rceil+1$ & R & Calculated & Computed clock divisor used for RX bit sampling. \\ \hline
+\end{longtable}
+\captionof{table}{UART Register Map}
+\label{table:uart_register_map}
+\endgroup
+
+\subsection{Parameter Relationships and Calculations}
+
+\textbf{Key Parameter Relationships:}
+\begin{itemize}
+    \item \texttt{dataWidth}: Width of the APB data bus (e.g., 32 bits).
+    \item \texttt{maxOutputBits}: Maximum number of data bits per frame (excluding start/stop bits). An extra bit is provided for parity when enabled.
+    \item \texttt{maxClockFrequency}: The maximum system clock frequency used by the baud generators (e.g., 25\,MHz).
+    \item \texttt{maxBaudRate}: The highest supported baud rate (e.g., 921600 baud).
+    \item \texttt{bufferSize}: Defines the depth of the internal dynamic FIFOs used in both TX and RX.
+\end{itemize}
+
+\textbf{Width Calculations:}
+\begin{itemize}
+    \item \texttt{TX\_DATA\_IN} / \texttt{RX\_DATA}: Width = \(\text{maxOutputBits}+1\). The extra bit is used to accommodate an optional parity bit.
+    \item \texttt{TX\_NUM\_OUTPUT\_BITS\_DB} / \texttt{RX\_NUM\_OUTPUT\_BITS\_DB}: Width = \(\lceil\log_2(\text{maxOutputBits})\rceil+1\).
+    
+    \textit{Example:} For \(\text{maxOutputBits}=8\), the width is \(\lceil\log_2(8)\rceil+1 = 3+1 = 4\) bits.
+    
+    \item \texttt{TX\_CLOCKS\_PER\_BIT} / \texttt{RX\_CLOCKS\_PER\_BIT}: Width = \(\lceil\log_2(\tfrac{\text{maxClockFrequency}}{\text{maxBaudRate}})\rceil+1\).
+    
+    \textit{Example:} For a 25\,MHz clock and 921600 baud, the width is \(\lceil\log_2(25\,000\,000/921600)\rceil+1 \approx \lceil4.76\rceil+1 = 5+1 = 6\) bits.
+\end{itemize}
+
+\subsection{Key Register Descriptions}
+
+\subsubsection{TX\_DATA\_IN (Address 0x00)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Holds the data word to be transmitted.
+    \item \textbf{Usage:} Software writes the desired value (e.g., an 8-bit word with an extra parity bit if used) before triggering transmission.
+    \item \textbf{Reset Value:} 0x000.
+\end{itemize}
+
+\subsubsection{TX\_LOAD (Address 0x04)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Triggers the transfer of the content in TX\_DATA\_IN into the TX FIFO.
+    \item \textbf{Usage:} Write ‘1’ to this register to push the data into the FIFO. It auto–clears after one cycle.
+    \item \textbf{Reset Value:} 0x0.
+\end{itemize}
+
+\subsubsection{TX\_BAUD\_RATE (Address 0x08) \& TX\_CLOCK\_FREQ (Address 0x0C)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} 
+    \begin{itemize}
+        \item TX\_BAUD\_RATE sets the desired baud rate (e.g., 115200).
+        \item TX\_CLOCK\_FREQ specifies the system clock frequency driving the baud generator.
+    \end{itemize}
+    \item \textbf{Usage:} After writing these registers, software must pulse TX\_UPDATE\_BAUD to update the baud divisor.
+    \item \textbf{Reset Values:} 115200 and 25,000,000 respectively.
+\end{itemize}
+
+\subsubsection{TX\_UPDATE\_BAUD (Address 0x10)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Triggers an update of the TX baud divisor.
+    \item \textbf{Usage:} A pulse (write ‘1’) causes the UartBaudRateGenerator to compute a new \texttt{clocksPerBit} value, which is then stored in TX\_CLOCKS\_PER\_BIT.
+    \item \textbf{Reset Value:} 0x0.
+\end{itemize}
+
+\subsubsection{TX\_NUM\_OUTPUT\_BITS\_DB (Address 0x14)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Configures the number of data bits to be transmitted.
+    \item \textbf{Usage:} Valid values typically range from 5 to \texttt{maxOutputBits}. The setting takes effect on the next transmission.
+    \item \textbf{Reset Value:} 0x8 (for an 8-bit frame).
+\end{itemize}
+
+\subsubsection{TX\_USE\_PARITY\_DB (Address 0x18) and TX\_PARITY\_ODD\_DB (Address 0x1C)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} 
+    \begin{itemize}
+        \item TX\_USE\_PARITY\_DB enables parity generation when set to ‘1’.
+        \item TX\_PARITY\_ODD\_DB selects odd parity if ‘1’; if ‘0’, even parity is used.
+    \end{itemize}
+    \item \textbf{Usage:} Set these registers appropriately to control parity on transmission.
+    \item \textbf{Reset Values:} Both default to 0 (parity disabled).
+\end{itemize}
+
+\subsubsection{TX\_CLOCKS\_PER\_BIT (Address 0x20)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Contains the calculated number of clock cycles per transmitted bit.
+    \item \textbf{Usage:} This read–only value is computed by the TX baud generator after a TX\_UPDATE\_BAUD pulse.
+    \item \textbf{Reset Value:} Dynamically calculated.
+\end{itemize}
+
+\subsubsection{RX\_DATA (Address 0x24)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Holds the data word received by the UART.
+    \item \textbf{Usage:} After successful reception and FIFO push, software reads RX\_DATA to retrieve the word.
+    \item \textbf{Reset Value:} 0x000.
+\end{itemize}
+
+\subsubsection{RX\_DATA\_AVAILABLE (Address 0x28)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Indicates whether new data is available in the RX FIFO.
+    \item \textbf{Usage:} Poll this register to determine when data is ready for reading.
+    \item \textbf{Reset Value:} 0x0.
+\end{itemize}
+
+\subsubsection{RX\_ERROR (Address 0x2C)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Reports reception errors:
+    \begin{itemize}
+        \item 00: No error.
+        \item 01: Parity error.
+        \item 10: Framing error.
+        \item 11: Overrun error.
+    \end{itemize}
+    \item \textbf{Usage:} Monitor this register to detect errors; errors are cleared by writing to RX\_CLEAR\_ERROR.
+    \item \textbf{Reset Value:} 0x0.
+\end{itemize}
+
+\subsubsection{TOP\_ERROR (Address 0x30)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Indicates configuration or top–level errors.
+    \item \textbf{Usage:} Software should check this register to ensure the module is correctly configured.
+    \item \textbf{Reset Value:} 0x0.
+\end{itemize}
+
+\subsubsection{RX\_CLEAR\_ERROR (Address 0x34)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Clears the RX error flags (in RX\_ERROR).
+    \item \textbf{Usage:} Write ‘1’ to reset any error status.
+    \item \textbf{Reset Value:} 0x0.
+\end{itemize}
+
+\subsubsection{RX\_BAUD\_RATE (Address 0x38) and RX\_CLOCK\_FREQ (Address 0x3C)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} 
+    \begin{itemize}
+        \item RX\_BAUD\_RATE: Desired baud rate for reception.
+        \item RX\_CLOCK\_FREQ: System clock frequency for the RX baud generator.
+    \end{itemize}
+    \item \textbf{Usage:} Configure these values similarly to the TX side.
+    \item \textbf{Reset Values:} 115200 for RX\_BAUD\_RATE and 25,000,000 for RX\_CLOCK\_FREQ.
+\end{itemize}
+
+\subsubsection{RX\_UPDATE\_BAUD (Address 0x40)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Triggers an update of the RX baud divisor.
+    \item \textbf{Usage:} Pulse ‘1’ to have the UartBaudRateGenerator recalculate the effective clocks–per–bit.
+    \item \textbf{Reset Value:} 0x0.
+\end{itemize}
+
+\subsubsection{RX\_NUM\_OUTPUT\_BITS\_DB (Address 0x44)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Sets the expected number of data bits per received frame.
+    \item \textbf{Usage:} This value must match the transmitter’s setting to avoid framing errors.
+    \item \textbf{Reset Value:} 0x8.
+\end{itemize}
+
+\subsubsection{RX\_USE\_PARITY\_DB (Address 0x48) and RX\_PARITY\_ODD\_DB (Address 0x4C)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} 
+    \begin{itemize}
+        \item RX\_USE\_PARITY\_DB: Enables parity checking when set to ‘1’.
+        \item RX\_PARITY\_ODD\_DB: Selects odd parity if ‘1’ (even parity if ‘0’).
+    \end{itemize}
+    \item \textbf{Usage:} Configure these registers as needed for the desired parity configuration.
+    \item \textbf{Reset Values:} Both default to 0.
+\end{itemize}
+
+\subsubsection{RX\_CLOCKS\_PER\_BIT (Address 0x50)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Function:} Contains the computed number of system clock cycles per received bit.
+    \item \textbf{Usage:} This read–only value is generated by the RX baud generator and used internally for sampling.
+    \item \textbf{Reset Value:} Calculated dynamically.
+\end{itemize}
+
+\subsection{Programming Template}
+
+Below is an example C–struct mapping for the UART registers, assuming a 32–bit data bus:
+
+\begin{lstlisting}[language=C,frame=single]
+typedef struct {
+  // Transmitter Registers
+  volatile uint32_t TX_DATA_IN;             // 0x00
+  volatile uint32_t TX_LOAD;                // 0x04
+  volatile uint32_t TX_BAUD_RATE;           // 0x08
+  volatile uint32_t TX_CLOCK_FREQ;          // 0x0C
+  volatile uint32_t TX_UPDATE_BAUD;         // 0x10
+  volatile uint32_t TX_NUM_OUTPUT_BITS_DB;  // 0x14
+  volatile uint32_t TX_USE_PARITY_DB;       // 0x18
+  volatile uint32_t TX_PARITY_ODD_DB;       // 0x1C
+  volatile uint32_t TX_CLOCKS_PER_BIT;      // 0x20
+
+  // Receiver Registers
+  volatile uint32_t RX_DATA;                // 0x24
+  volatile uint32_t RX_DATA_AVAILABLE;      // 0x28
+  volatile uint32_t RX_ERROR;               // 0x2C
+  volatile uint32_t TOP_ERROR;              // 0x30
+  volatile uint32_t RX_CLEAR_ERROR;         // 0x34
+  volatile uint32_t RX_BAUD_RATE;           // 0x38
+  volatile uint32_t RX_CLOCK_FREQ;          // 0x3C
+  volatile uint32_t RX_UPDATE_BAUD;         // 0x40
+  volatile uint32_t RX_NUM_OUTPUT_BITS_DB;  // 0x44
+  volatile uint32_t RX_USE_PARITY_DB;       // 0x48
+  volatile uint32_t RX_PARITY_ODD_DB;       // 0x4C
+  volatile uint32_t RX_CLOCKS_PER_BIT;      // 0x50
+} UART_Regs;
+
+#define UART_BASE_ADDR (0x40000000UL)  // Example base address
+#define UART ((UART_Regs*)UART_BASE_ADDR)
+
+// Example configuration for maximum baud rate:
+void uart_config_max_baud(void) {
+  UART->TX_BAUD_RATE    = 921600;
+  UART->TX_CLOCK_FREQ   = 25000000;
+  UART->TX_UPDATE_BAUD  = 1;   // triggers TX baud update
+
+  UART->RX_BAUD_RATE    = 921600;
+  UART->RX_CLOCK_FREQ   = 25000000;
+  UART->RX_UPDATE_BAUD  = 1;   // triggers RX baud update
+}
+\end{lstlisting}
+
+\subsection{Configuration Workflow}
+
+A typical configuration sequence is as follows:
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Set Baud Rates:}
+    \begin{itemize}[noitemsep]
+        \item Write the desired baud rate to TX\_BAUD\_RATE and RX\_BAUD\_RATE.
+        \item Write the system clock frequency to TX\_CLOCK\_FREQ and RX\_CLOCK\_FREQ.
+        \item Pulse TX\_UPDATE\_BAUD and RX\_UPDATE\_BAUD to trigger the baud generators.
+    \end{itemize}
+    
+    \item \textbf{Configure Data Format:}
+    \begin{itemize}[noitemsep]
+        \item Set TX\_NUM\_OUTPUT\_BITS\_DB and RX\_NUM\_OUTPUT\_BITS\_DB to the desired number of data bits.
+        \item Enable parity via TX\_USE\_PARITY\_DB and RX\_USE\_PARITY\_DB, and select odd/even with TX\_PARITY\_ODD\_DB and RX\_PARITY\_ODD\_DB if required.
+    \end{itemize}
+    
+    \item \textbf{Initiate Transmission:}
+    \begin{itemize}[noitemsep]
+        \item Write the data word to TX\_DATA\_IN.
+        \item Pulse TX\_LOAD to enqueue the data into the TX FIFO.
+    \end{itemize}
+    
+    \item \textbf{Data Reception:}
+    \begin{itemize}[noitemsep]
+        \item Poll RX\_DATA\_AVAILABLE to determine if new data is ready.
+        \item When available, issue a pop command (e.g., via a register control such as RX\_READ) and read RX\_DATA.
+        \item Check RX\_ERROR for any reception errors and clear them using RX\_CLEAR\_ERROR.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Error Conditions}
+
+The UART module detects several error conditions:
+\begin{itemize}[noitemsep]
+    \item \textbf{Parity Error:} Occurs when parity checking is enabled and the received parity bit does not match the computed parity.
+    \item \textbf{Framing Error:} Triggered when the expected stop bit is not detected.
+    \item \textbf{Overrun Error:} Occurs if new data arrives before the previous word has been read from the RX FIFO.
+    \item \textbf{Configuration Error:} Invalid configuration values (e.g., mismatched data bit settings) may trigger TOP\_ERROR.
+\end{itemize}
+Errors are reported in RX\_ERROR and can be cleared by writing ‘1’ to RX\_CLEAR\_ERROR.
+

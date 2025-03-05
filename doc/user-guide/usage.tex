@@ -1,0 +1,101 @@
+\section{Usage Examples}
+
+This section demonstrates typical APB register write/read sequences for operating the UART module. The examples show how to configure the baud rate and data format, how to enqueue data for transmission via the TX FIFO, and how to read received data from the RX FIFO. These examples assume that the updated register interface uses a configuration bundle (e.g. \texttt{txConfig} for TX and \texttt{rxConfig} for RX) and that status signals (such as FIFO empty flags) are available for polling.
+
+\subsection{Basic Transmit}
+
+The following example shows how to configure the TX path, enqueue data into the TX FIFO, and wait for the transmission to complete.
+
+\begin{verbatim}
+// 1. Configure TX baud rate and data format
+write(txConfig.clockFreq, 25000000);  // Set TX system clock frequency to 25 MHz
+write(txConfig.baud, 115200);           // Set desired baud rate to 115200
+write(txConfig.updateBaud, 1);          // Trigger TX baud rate update
+
+write(txConfig.numOutputBitsDb, 8);     // Configure for 8 data bits per frame
+write(txConfig.useParityDb, 0);         // Disable parity
+write(txConfig.parityOddDb, 0);         // (Ignored if parity is disabled)
+
+// 2. Enqueue data for transmission
+write(txConfig.data, 0x55);             // Write data word (e.g., 0x55)
+write(txConfig.load, 1);                // Pulse 'load' to push data into the TX FIFO
+
+// 3. Wait until the TX FIFO is empty
+while (read(txFifoEmpty) == 0) {
+    // Poll status or yield until TX FIFO becomes empty
+}
+\end{verbatim}
+
+\vspace{1em}
+\noindent
+\textbf{Explanation:}  
+The transmitter configuration sets the baud rate using \texttt{txConfig.clockFreq} and \texttt{txConfig.baud} and then pulses \texttt{txConfig.updateBaud} to update the internal divisor. The data word is then loaded into \texttt{txConfig.data} and a pulse on \texttt{txConfig.load} pushes it into the internal dynamic FIFO. The transmitter automatically pops data from the FIFO and transmits it (LSB first, after an internal reversal) through the TX state machine.
+
+\subsection{Basic Receive}
+
+The following example demonstrates how to configure the RX path, poll for incoming data, read the received word from the FIFO, and clear any errors.
+
+\begin{verbatim}
+// 1. Configure RX baud rate and data format
+write(rxConfig.clockFreq, 25000000);  // Set RX system clock frequency to 25 MHz
+write(rxConfig.baud, 115200);           // Set desired baud rate to 115200
+write(rxConfig.updateBaud, 1);          // Trigger RX baud rate update
+
+write(rxConfig.numOutputBitsDb, 8);     // Configure for 8 data bits per frame
+write(rxConfig.useParityDb, 0);         // Disable parity (set to 1 to enable)
+write(rxConfig.parityOddDb, 0);         // (Ignored if parity is disabled)
+
+// 2. Poll for data reception
+while (read(rxFifoEmpty) == 1) {
+    // Wait until RX FIFO is not empty (data available)
+}
+
+// 3. Read the received data word
+uint32_t rx_data = read(rxData);
+
+// 4. Indicate that the data has been read (pop from FIFO)
+write(rxConfig.rxDataRegRead, 1);
+
+// 5. Check for any reception errors
+uint32_t err = read(rxError);
+if (err != 0) {
+    // Handle error (e.g., parity or framing error)
+    // Clear errors by writing '1' to rxConfig.clearErrorDb
+    write(rxConfig.clearErrorDb, 1);
+}
+\end{verbatim}
+
+\vspace{1em}
+\noindent
+\textbf{Explanation:}  
+The RX configuration is similar to TX. After setting the baud parameters and updating the divisor, the receiver continuously samples the asynchronous RX line. When a complete frame is received without error, it is pushed into the RX FIFO. Software polls the FIFO status (e.g., via \texttt{rxFifoEmpty}) until data is available, then reads the word from \texttt{rxData} and signals the FIFO to pop that data using \texttt{rxConfig.rxDataRegRead}. If errors are detected, the RX error register will indicate the type of error, and software can clear these by writing to \texttt{rxConfig.clearErrorDb}.
+
+\subsection{Handling Parity}
+
+The following example shows how to enable parity checking (odd parity in this case) and transmit data with parity enabled. On the RX side, parity is automatically checked against the expected odd parity.
+
+\begin{verbatim}
+// Enable odd parity on both TX and RX
+write(txConfig.useParityDb, 1);
+write(txConfig.parityOddDb, 1);
+
+write(rxConfig.useParityDb, 1);
+write(rxConfig.parityOddDb, 1);
+
+// Transmit a byte with odd parity enabled
+write(txConfig.data, 0xAB);  // Load data 0xAB into TX_DATA
+write(txConfig.load, 1);       // Pulse 'load' to push the data into the TX FIFO
+
+// The transmitter computes the parity bit from the full data word.
+// On the RX side, if the parity bit does not match the computed value,
+// the error register (rxError) will be updated with a ParityError.
+\end{verbatim}
+
+\vspace{1em}
+\noindent
+\textbf{Explanation:}  
+By setting \texttt{useParityDb} to 1 and choosing odd parity with \texttt{parityOddDb}, the transmitter includes a computed parity bit after sending the data bits. The receiver, with the same settings, checks the incoming parity. A mismatch triggers a parity error, which software can detect by reading the \texttt{rxError} register.
+
+---
+
+These examples illustrate the step-by-step configuration and operation of the UART module using the updated register interface, including dynamic FIFO buffering and baud–rate updating. Adjust the register names and values to match your design specifics as needed.

@@ -9,10 +9,10 @@ class UartConfig extends ModuleConfig {
         UartParams(
           addressWidth = 32,
           dataWidth = 32,
-          maxOutputBits = 8,
+          maxOutputBits = 9,
           syncDepth = 2,
           maxBaudRate = 921_600,
-          maxClockFrequency = 25_000_000
+          maxClockFrequency = 1_000_000
         ),
         false
       )

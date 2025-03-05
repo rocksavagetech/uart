@@ -380,6 +380,7 @@ object errorTests {
             cycleCount += 1
         }
         assert(received, s"Did not receive valid data after $cycleCount cycles")
+        clk.step(1)
         val receivedData = readAPB(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("rx_data").get.U

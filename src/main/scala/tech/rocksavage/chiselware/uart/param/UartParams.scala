@@ -30,6 +30,7 @@ case class UartParams(
     syncDepth: Int = 2,
     maxBaudRate: Int = 921_600,
     maxClockFrequency: Int = 25_000_000,
+    bufferSize: Int = 8,
     parity: Boolean = false,
     verbose: Boolean = false
 ) {
