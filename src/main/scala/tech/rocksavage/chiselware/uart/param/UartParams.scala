@@ -25,6 +25,7 @@ case class UartParams(
     // Parameters for addressing
     dataWidth: Int = 32,
     addressWidth: Int = 32,
+    wordWidth: Int = 32,
     maxOutputBits: Int = 8,
     syncDepth: Int = 2,
     maxBaudRate: Int = 921_600,
