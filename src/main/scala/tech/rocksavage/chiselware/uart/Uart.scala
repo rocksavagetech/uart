@@ -12,6 +12,7 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     val dataWidth    = uartParams.dataWidth
     val addressWidth = uartParams.addressWidth
+    val wordWidth    = uartParams.wordWidth
 
     val io = IO(new Bundle {
         val apb = new ApbBundle(ApbParams(dataWidth, addressWidth))
@@ -20,7 +21,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     })
 
     // Create a register map (this example reuses one register map but differentiates TX vs RX registers by name)
-    val registerMap = new RegisterMap(dataWidth, addressWidth)
+    val registerMap = new RegisterMap(dataWidth, addressWidth, Some(wordWidth))
 
     // -------------------------------------------------------
     // TX registers (for the TX control bundle)
@@ -216,7 +217,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // ---------------------------------------------------------------
     val addrDecodeParams = registerMap.getAddrDecodeParams
     val addrDecode       = Module(new AddrDecode(addrDecodeParams))
-    addrDecode.io.addr     := io.apb.PADDR
+    addrDecode.io.addrRaw  := io.apb.PADDR
     addrDecode.io.en       := io.apb.PSEL
     addrDecode.io.selInput := true.B
 
