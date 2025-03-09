@@ -5,6 +5,7 @@ import chisel3._
 import chisel3.util._
 import tech.rocksavage.chiselware.dynamicfifo.{DynamicFifo, DynamicFifoParams}
 import tech.rocksavage.chiselware.uart.bundle.UartTxBundle
+import tech.rocksavage.chiselware.uart.error.UartTxError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 /** A UART transmitter module that handles the transmission of UART data.
@@ -64,6 +65,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val sampleParityWire = uartFsm.io.sample && state === UartState.Parity
     val completeWire     = uartFsm.io.complete
     val applyShiftReg    = sampleDataWire || sampleParityWire
+    val txErrorReg = RegInit(UartTxError.None)
 
     val active = RegInit(false.B)
     when((RegNext(state) === UartState.Idle) && (loadNext)) {
@@ -121,6 +123,30 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       formal = formal
     )
     val fifo = Module(new DynamicFifo(fifoParams))
+
+    when(io.txConfig.load) {
+        // On any cycle we assert push+full => overflow
+        when (fifo.io.full) {
+            txErrorReg := UartTxError.fifoOverflow
+            printf("[UartTx DEBUG] Setting overflow error - FIFO full\n")
+        }.elsewhen (fifo.io.empty) {
+            // If your design tries to pop when empty => underflow
+            txErrorReg := UartTxError.fifoUnderflow
+            printf("[UartTx DEBUG] Setting underflow error - FIFO empty\n")
+        }.elsewhen(uartFsm.io.complete){
+            txErrorReg := UartTxError.None
+            printf("[UartTx DEBUG] Clearing error after completion\n")
+        }
+    }
+
+    // Debug status changes
+    when(txErrorReg =/= RegNext(txErrorReg)) {
+        printf("[UartTx DEBUG] Error state changed: from %d to %d\n", 
+            RegNext(txErrorReg).asUInt, txErrorReg.asUInt)
+    }
+    //Error Output
+    io.error := txErrorReg
+  
     fifo.io.push   := RegNext(io.txConfig.txDataRegWrite)
     fifo.io.pop    := startTransaction
     fifo.io.dataIn := io.txConfig.data

@@ -516,7 +516,7 @@ object UartTestUtils {
 
                 val errorStatus = readAPB(
                   apb,
-                  uart.registerMap.getAddressOfRegister("rx_error").get.U
+                  uart.registerMap.getAddressOfRegister("error").get.U
                 )
                 assert(
                   errorStatus == 0,

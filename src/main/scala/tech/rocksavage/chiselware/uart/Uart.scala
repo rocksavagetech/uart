@@ -110,27 +110,27 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
-    val error = Wire(new UartError())
+    val reg_error = RegInit(0.U(5.W))
     registerMap.createAddressableRegister(
-      error.rxError,
-      "rx_error",
+      reg_error,
+      "error",
       readOnly = true,
       verbose = uartParams.verbose
     )
 
     val topError = RegInit(UartErrorObject.None)
     registerMap.createAddressableRegister(
-      error.topError,
+      topError,
       "top_error",
       readOnly = true,
       verbose = uartParams.verbose
     )
-    error.topError := topError
+    // error.topError := topError
 
     val clearError = RegInit(false.B)
     registerMap.createAddressableRegister(
       clearError,
-      "rx_clearError",
+      "clearError",
       readOnly = false,
       verbose = uartParams.verbose
     )
@@ -216,7 +216,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // ---------------------------------------------------------------
     val addrDecodeParams = registerMap.getAddrDecodeParams
     val addrDecode       = Module(new AddrDecode(addrDecodeParams))
-    addrDecode.io.addr     := io.apb.PADDR
+    addrDecode.io.addrRaw     := io.apb.PADDR
     addrDecode.io.en       := io.apb.PSEL
     addrDecode.io.selInput := true.B
 
@@ -246,7 +246,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // ---------------------------------------------------------------
     // Connect the control bundles using the separate configuration registers:
     //   TX: load, data, tx_baud, tx_clockFreq, tx_updateBaud, tx_numOutputBitsDb, tx_useParityDb, tx_parityOddDb
-    //   RX: rx_baud, rx_clockFreq, rx_updateBaud, rx_numOutputBitsDb, rx_useParityDb, rx_parityOddDb, rx_clearError
+    //   RX: rx_baud, rx_clockFreq, rx_updateBaud, rx_numOutputBitsDb, rx_useParityDb, rx_parityOddDb, clearError
     // ---------------------------------------------------------------
     // TX control bundle connection:
     uartInner.io.txControlBundle.load            := load
@@ -276,7 +276,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     rxClocksPerBit := uartInner.io.rxClocksPerBit
 
     // Connect error status (from inner module)
-    error := uartInner.io.error
+    reg_error := uartInner.io.error.asUnsignedInt
 
     // ---------------------------------------------------------------
     // APB read/write interface handling

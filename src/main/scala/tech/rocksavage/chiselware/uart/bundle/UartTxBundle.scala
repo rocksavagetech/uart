@@ -4,6 +4,7 @@ package tech.rocksavage.chiselware.uart.bundle
 import chisel3._
 import chisel3.util.log2Ceil
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.error.UartTxError
 
 /** Bundle defining the I/O for a UART transmitter.
   *
@@ -16,4 +17,6 @@ class UartTxBundle(params: UartParams) extends Bundle {
 
     // The UART serial output.
     val tx = Output(Bool())
+
+    val error = Output(UartTxError())
 }

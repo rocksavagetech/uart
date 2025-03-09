@@ -185,6 +185,16 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       formal = formal
     )
     val fifo = Module(new DynamicFifo(fifoParams))
+
+    // If the receiver tries to push when FIFO is full => overflow
+    when (fifo.io.push && fifo.io.full) {
+      io.error := UartRxError.fifoOverflow
+    }
+    // If software tries to read (pop) when empty => underflow
+    when (fifo.io.pop && fifo.io.empty) {
+      io.error := UartRxError.fifoUnderflow
+    }
+
     fifo.io.push   := completeWire && errorReg === UartRxError.None
     fifo.io.pop    := io.rxConfig.rxDataRegRead
     fifo.io.dataIn := dataShiftReg
