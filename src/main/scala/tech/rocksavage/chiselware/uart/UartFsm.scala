@@ -178,25 +178,15 @@ class UartFsm(params: UartParams) extends Module {
                     state := UartState.Start
                 }.elsewhen(bitCounter === 0.U) {
                     state := UartState.Start
+                }.elsewhen(bitCount > 0.U && bitCount <= numBits) {
+                    state := UartState.Data
+                }.elsewhen(parity && bitCount === numBits + 1.U) {
+                    state := UartState.Parity
+                }.elsewhen(!parity && bitCount === numBits + 1.U) {
+                    state := UartState.Stop
+                }.elsewhen(parity && bitCount === numBits + 2.U) {
+                    state := UartState.Stop
                 }
-//                    .elsewhen(bitCount === 0.U & !clockCounterOverflow) {
-//                        state := UartState.Start
-//                    }
-//                    .elsewhen(bitCount === 0.U && clockCounterOverflow) {
-//                        state := UartState.Data
-//                    }
-                    .elsewhen(bitCount > 0.U && bitCount <= numBits) {
-                        state := UartState.Data
-                    }
-                    .elsewhen(parity && bitCount === numBits + 1.U) {
-                        state := UartState.Parity
-                    }
-                    .elsewhen(!parity && bitCount === numBits + 1.U) {
-                        state := UartState.Stop
-                    }
-                    .elsewhen(parity && bitCount === numBits + 2.U) {
-                        state := UartState.Stop
-                    }
             }
         }.otherwise(state := stateInner)
         state

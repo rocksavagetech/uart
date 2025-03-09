@@ -26,8 +26,8 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     }
 
     println(s"Running test: $testName")
-    val useVerilator = System.getProperty("useVerilator", "false").toBoolean
-    val testDir      = "out/test"
+    val testDir = "out/test"
+    useVerilator = true
     val backendAnnotations = {
         var annos: Seq[Annotation] = Seq()
         if (enableVcd) annos = annos :+ WriteVcdAnnotation
@@ -41,6 +41,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
     }
+    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
 
     runTest(testName)
 
@@ -51,6 +52,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         val uartParams = UartParams(
           dataWidth = 32,
           addressWidth = 32,
+          wordWidth = 8,
           maxOutputBits = 8,
           syncDepth = 2,
           maxBaudRate = 25_000_000,
