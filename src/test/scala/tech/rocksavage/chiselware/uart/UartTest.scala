@@ -325,6 +325,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         fullDuplexTestsFull(params)
         randomTestsFull(params)
         specialCaseTestsFull(params)
+        fifoIntegrationTestsFull(params)
     }
 
     def fifoIntegrationTestsFull(params: UartParams): Unit = {

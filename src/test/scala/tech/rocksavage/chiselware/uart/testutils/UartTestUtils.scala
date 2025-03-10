@@ -367,7 +367,7 @@ object UartTestUtils {
             if (clocksPerBitActual == clocksPerBitExpected) {
                 breakLoop = true
             }
-
+            
             if (loopCount >= numLoops) {
                 throw new RuntimeException(
                   s"Failed to set baud rate after $numLoops attempts"

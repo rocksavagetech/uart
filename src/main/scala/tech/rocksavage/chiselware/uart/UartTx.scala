@@ -42,6 +42,12 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val parityOddNext = WireInit(false.B) // New NEXT signal for parity odd
     val dataNext      = WireInit(0.U(params.maxOutputBits.W))
     val loadNext      = WireInit(false.B)
+    
+    val clearErrorReg = RegInit(false.B)
+    val clearErrorDbReg = RegInit(false.B)
+    val clearErrorNext = WireInit(false.B)
+    clearErrorReg    := clearErrorNext
+    clearErrorDbReg    := io.txConfig.clearErrorDb
 
     val fifoEmptyReg = RegInit(true.B)
 
@@ -127,11 +133,11 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     when(io.txConfig.load) {
         // On any cycle we assert push+full => overflow
         when (fifo.io.full) {
-            txErrorReg := UartTxError.fifoOverflow
+            txErrorReg := UartTxError.FifoOverflow
             printf("[UartTx DEBUG] Setting overflow error - FIFO full\n")
         }.elsewhen (fifo.io.empty) {
             // If your design tries to pop when empty => underflow
-            txErrorReg := UartTxError.fifoUnderflow
+            txErrorReg := UartTxError.FifoUnderflow
             printf("[UartTx DEBUG] Setting underflow error - FIFO empty\n")
         }.elsewhen(uartFsm.io.complete){
             txErrorReg := UartTxError.None
@@ -143,6 +149,11 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     when(txErrorReg =/= RegNext(txErrorReg)) {
         printf("[UartTx DEBUG] Error state changed: from %d to %d\n", 
             RegNext(txErrorReg).asUInt, txErrorReg.asUInt)
+    }
+
+    when(clearErrorDbReg) {
+        // When clearErrorDb is set, reset
+        txErrorReg := UartTxError.None
     }
     //Error Output
     io.error := txErrorReg
