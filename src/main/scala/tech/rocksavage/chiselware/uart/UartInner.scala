@@ -26,7 +26,8 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     io.dataOut        := rxModule.io.data
     io.rxValid        := rxModule.io.valid
     io.error.rxError  := rxModule.io.error
-    io.error.topError := UartErrorObject.None
+    io.error.txError  := txModule.io.error
+    // io.error.topError := UartErrorObject.None
 
     io.rxClocksPerBit := rxModule.io.clocksPerBit
     io.txClocksPerBit := txModule.io.clocksPerBit

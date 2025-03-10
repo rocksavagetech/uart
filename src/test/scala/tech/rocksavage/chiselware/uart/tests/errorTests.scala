@@ -111,7 +111,7 @@ object errorTests {
         // Clear any existing errors.
         readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_error").get.U
+          dut.registerMap.getAddressOfRegister("error").get.U
         )
         clk.step(2)
 
@@ -143,7 +143,7 @@ object errorTests {
         while (!parityErrorDetected && cycleCount < maxCycles) {
             val errVal = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("rx_error").get.U
+              dut.registerMap.getAddressOfRegister("error").get.U
             )
             println(f"Cycle $cycleCount: Error register = 0x$errVal%02x")
             // Check for the parity error flag (here we assume bitmask 0x04 indicates a parity error).
@@ -188,7 +188,7 @@ object errorTests {
         // Clear existing errors.
         readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_error").get.U
+          dut.registerMap.getAddressOfRegister("error").get.U
         )
         clk.step(2)
 
@@ -215,7 +215,7 @@ object errorTests {
         while (!errorDetected && cycleCount < maxWaitCycles) {
             val errorVal = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("rx_error").get.U
+              dut.registerMap.getAddressOfRegister("error").get.U
             )
             println(f"Cycle $cycleCount: Error register = 0x$errorVal%02x")
             // Check for the stop bit error flag (assume bitmask 0x02 indicates a stop bit error).
@@ -238,7 +238,7 @@ object errorTests {
       * In this test the receiver is first forced to report a parity error by
       * sending a byte (0x55) with an incorrect parity bit. Once the error is
       * detected and read, the error is cleared by writing to the
-      * "rx_clearError" register. Then a normal valid frame is sent, and the
+      * "clearError" register. Then a normal valid frame is sent, and the
       * received data is verified.
       */
     def parityErrorRecoveryTest(dut: Uart, params: UartParams): Unit = {
@@ -276,7 +276,7 @@ object errorTests {
         // Clear any previous errors.
         readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_error").get.U
+          dut.registerMap.getAddressOfRegister("error").get.U
         )
         clk.step(2)
 
@@ -308,7 +308,7 @@ object errorTests {
         while (!parityErrorDetected && cycleCount < maxCycles) {
             val errVal = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("rx_error").get.U
+              dut.registerMap.getAddressOfRegister("error").get.U
             )
             if ((errVal & 0x03) == 0x03) {
                 parityErrorDetected = true
@@ -323,21 +323,21 @@ object errorTests {
         )
         val errorBeforeClear = readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_error").get.U
+          dut.registerMap.getAddressOfRegister("error").get.U
         )
         println(f"Error register before clear = 0x$errorBeforeClear%02x")
 
         // --- Clear the error ---
         val clearErrorAddr =
-            dut.registerMap.getAddressOfRegister("rx_clearError").get.U
+            dut.registerMap.getAddressOfRegister("clearError").get.U
         println(
-          s"Clearing error by writing to rx_clearError (address = $clearErrorAddr)"
+          s"Clearing error by writing to clearError (address = $clearErrorAddr)"
         )
         writeAPB(dut.io.apb, clearErrorAddr, 1.U)
         clk.step(2)
         val errorAfterClear = readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_error").get.U
+          dut.registerMap.getAddressOfRegister("error").get.U
         )
         println(f"Error register after clear = 0x$errorAfterClear%02x")
         assert(

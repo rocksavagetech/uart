@@ -214,7 +214,7 @@ object randomTests {
             writeAPB(
               dut.io.uart2Apb,
               dut.getUart2.registerMap
-                  .getAddressOfRegister("rx_clearError")
+                  .getAddressOfRegister("clearError")
                   .get
                   .U,
               true.B
@@ -223,7 +223,7 @@ object randomTests {
             writeAPB(
               dut.io.uart2Apb,
               dut.getUart2.registerMap
-                  .getAddressOfRegister("rx_clearError")
+                  .getAddressOfRegister("clearError")
                   .get
                   .U,
               false.B
@@ -256,7 +256,7 @@ object randomTests {
             writeAPB(
               dut.io.uart1Apb,
               dut.getUart1.registerMap
-                  .getAddressOfRegister("rx_clearError")
+                  .getAddressOfRegister("clearError")
                   .get
                   .U,
               true.B
@@ -264,7 +264,7 @@ object randomTests {
             writeAPB(
               dut.io.uart2Apb,
               dut.getUart2.registerMap
-                  .getAddressOfRegister("rx_clearError")
+                  .getAddressOfRegister("clearError")
                   .get
                   .U,
               true.B
@@ -273,7 +273,7 @@ object randomTests {
             writeAPB(
               dut.io.uart1Apb,
               dut.getUart1.registerMap
-                  .getAddressOfRegister("rx_clearError")
+                  .getAddressOfRegister("clearError")
                   .get
                   .U,
               false.B
@@ -281,7 +281,7 @@ object randomTests {
             writeAPB(
               dut.io.uart2Apb,
               dut.getUart2.registerMap
-                  .getAddressOfRegister("rx_clearError")
+                  .getAddressOfRegister("clearError")
                   .get
                   .U,
               false.B

@@ -483,7 +483,7 @@ object fullDuplexTests {
 //        // 2. Verify error detected
 //        var status = readAPB(
 //          dut.io.uart2Apb,
-//          dut.getUart2.registerMap.getAddressOfRegister("rx_error").get.U
+//          dut.getUart2.registerMap.getAddressOfRegister("error").get.U
 //        )
 //        assert((status & 0x02) == 0x02, "Frame error not detected")
 //

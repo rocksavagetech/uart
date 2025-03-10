@@ -367,7 +367,7 @@ object UartTestUtils {
             if (clocksPerBitActual == clocksPerBitExpected) {
                 breakLoop = true
             }
-
+            
             if (loopCount >= numLoops) {
                 throw new RuntimeException(
                   s"Failed to set baud rate after $numLoops attempts"
@@ -516,7 +516,7 @@ object UartTestUtils {
 
                 val errorStatus = readAPB(
                   apb,
-                  uart.registerMap.getAddressOfRegister("rx_error").get.U
+                  uart.registerMap.getAddressOfRegister("error").get.U
                 )
                 assert(
                   errorStatus == 0,

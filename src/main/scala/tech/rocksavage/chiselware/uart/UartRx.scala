@@ -55,6 +55,8 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val useParityReg  = RegInit(false.B)
     val parityOddReg  = RegInit(false.B)
     val clearErrorReg = RegInit(false.B)
+    val fifoOverflowFlag = RegInit(false.B)
+    val fifoUnderflowFlag = RegInit(false.B)
 
     val numOutputBitsDbReg = RegInit(
       0.U((log2Ceil(params.maxOutputBits) + 1).W)
@@ -173,7 +175,16 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     dataReg  := dataNext
     validReg := validNext
-    errorReg := errorNext
+    
+    when(clearErrorDbReg) {
+        // When clearErrorDb is set, reset all error flags
+        errorReg := UartRxError.None
+        fifoOverflowFlag := false.B
+        fifoUnderflowFlag := false.B
+        printf("[UartRx DEBUG] Clearing all error flags\n")
+    }.otherwise {
+        errorReg := errorNext
+    }
 
     // ###################
     // Fifo for reads
@@ -185,6 +196,37 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       formal = formal
     )
     val fifo = Module(new DynamicFifo(fifoParams))
+
+    val attemptingPush = completeWire && errorReg === UartRxError.None
+    val attemptingPop = io.rxConfig.rxDataRegRead
+    // If the receiver tries to push when FIFO is full => overflow
+    when(attemptingPush && fifo.io.full) {
+        fifoOverflowFlag := true.B
+        printf("[UartRx DEBUG] Setting FIFO overflow flag - push to full FIFO\n")
+    }
+
+    when(attemptingPop && fifo.io.empty) {
+        fifoUnderflowFlag := true.B
+        printf("[UartRx DEBUG] Setting FIFO underflow flag - pop from empty FIFO\n")
+    }
+
+    // Output error priority logic
+    when(fifoOverflowFlag) {
+        io.error := UartRxError.FifoOverflow
+    }.elsewhen(fifoUnderflowFlag) {
+        io.error := UartRxError.FifoUnderflow
+    }.otherwise {
+        io.error := errorReg
+    }
+
+    // Log error flag changes for debugging
+    when(fifoOverflowFlag =/= RegNext(fifoOverflowFlag)) {
+        printf("[UartRx DEBUG] FIFO overflow flag changed to %d\n", fifoOverflowFlag)
+    }
+    when(fifoUnderflowFlag =/= RegNext(fifoUnderflowFlag)) {
+        printf("[UartRx DEBUG] FIFO underflow flag changed to %d\n", fifoUnderflowFlag)
+    }
+
     fifo.io.push   := completeWire && errorReg === UartRxError.None
     fifo.io.pop    := io.rxConfig.rxDataRegRead
     fifo.io.dataIn := dataShiftReg
@@ -201,7 +243,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     io.valid := validReg
 
     /** Assign output error signal */
-    io.error := errorReg // Ensure io.error is always assigned
+    // io.error := errorReg // Ensure io.error is always assigned
 
     io.clocksPerBit := clocksPerBitReg
 

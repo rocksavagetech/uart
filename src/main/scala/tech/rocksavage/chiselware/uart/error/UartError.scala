@@ -7,5 +7,9 @@ import chisel3._
   */
 class UartError() extends Bundle {
     val rxError  = UartRxError()
-    val topError = UartErrorObject()
+    val txError = UartTxError()
+
+    // val topError = UartErrorObject()
 }
+
+
