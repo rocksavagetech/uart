@@ -77,39 +77,76 @@ jobs:
           echo "Finding PDF files in the repository:"
           find . -name "*.pdf" -type f | tee pdf_files.txt
           
+          # Check the document generation path
+          echo "Current contents of doc:"
+          ls -la doc/ || echo "No doc directory found"
+          
+          echo "Current contents of out/doc:"
+          ls -la out/doc/ || echo "No out/doc directory found"
+          
           # Copy documentation PDFs - try multiple possible locations
-          if [ -d "out/doc" ] && [ "$(ls -A out/doc/*.pdf 2>/dev/null)" ]; then
+          PDF_FOUND=0
+          if [ -d "out/doc" ] && [ "$(find out/doc -name "*.pdf" -type f | wc -l)" -gt 0 ]; then
             cp -r out/doc/*.pdf release_artifacts/
             echo "Copied PDFs from out/doc"
-          elif [ -d "doc/user-guide" ] && [ "$(ls -A doc/user-guide/*.pdf 2>/dev/null)" ]; then
-            cp -r doc/user-guide/*.pdf release_artifacts/
-            echo "Copied PDFs from doc/user-guide"
-          elif [ -d "doc" ] && [ "$(ls -A doc/*.pdf 2>/dev/null)" ]; then
-            cp -r doc/*.pdf release_artifacts/
+            PDF_FOUND=1
+          elif [ -d "doc" ] && [ "$(find doc -name "*.pdf" -type f | wc -l)" -gt 0 ]; then
+            find doc -name "*.pdf" -type f -exec cp {} release_artifacts/ \;
             echo "Copied PDFs from doc"
-          else
+            PDF_FOUND=1
+          fi
+          
+          if [ $PDF_FOUND -eq 0 ]; then
             echo "No PDF documentation found in standard locations"
             # Try to copy any PDF found in the previous find command
             if [ -s pdf_files.txt ]; then
               while IFS= read -r pdf_file; do
                 cp "$pdf_file" release_artifacts/
                 echo "Copied $pdf_file to release_artifacts/"
+                PDF_FOUND=1
               done < pdf_files.txt
             fi
+            
+            # If still no PDFs found, generate a simple one from the README
+            if [ $PDF_FOUND -eq 0 ] && [ -f "README.md" ]; then
+              echo "Generating a simple PDF from README.md"
+              if command -v pandoc &> /dev/null; then
+                pandoc README.md -o release_artifacts/README.pdf
+                echo "Generated README.pdf from README.md"
+              else
+                echo "pandoc not found, creating a simple text PDF instead"
+                echo -e "\\documentclass{article}\n\\begin{document}\n\\section{README}\n$(cat README.md)\n\\end{document}" > temp.tex
+                pdflatex -output-directory=release_artifacts temp.tex
+                mv release_artifacts/temp.pdf release_artifacts/README.pdf
+                rm temp.tex release_artifacts/temp.aux release_artifacts/temp.log 2>/dev/null || true
+              fi
+            fi
+          fi
+          
+          # Find and copy Verilog files from generated directory
+          if [ -d "generated" ] && [ "$(find generated -name "*.v" -type f | wc -l)" -gt 0 ]; then
+            find generated -name "*.v" -type f -exec cp {} release_artifacts/ \;
+            echo "Copied Verilog files from generated directory"
+          else
+            echo "No Verilog files found in generated directory"
+          fi
+          
+          # Find and copy synthesis netlists from out/synth
+          if [ -d "out/synth" ]; then
+            find out/synth -name "*.v" -type f -exec cp {} release_artifacts/ \;
+            echo "Copied synthesis netlists from out/synth"
+          else
+            echo "No synthesis netlists found in out/synth"
+          fi
+          
+          # Copy JSON and TEX result files
+          if [ -d "out/results" ]; then
+            cp -r out/results/* release_artifacts/ || echo "No result files found"
           fi
           
           # Check what we have in release_artifacts
           echo "Contents of release_artifacts directory:"
           ls -la release_artifacts/
-          
-          # Copy Verilog files
-          cp -r generated/*.v release_artifacts/ || echo "No Verilog files found"
-          
-          # Copy synthesis netlists
-          cp -r synth/*.v release_artifacts/ || echo "No synthesis netlists found"
-          
-          # Copy JSON and TEX result files
-          cp -r out/results/* release_artifacts/ || echo "No result files found"
           
           # Create a tarball of the release artifacts
           tar -czvf release_artifacts.tar.gz release_artifacts/
