@@ -1,4 +1,18 @@
-name: Generate Documentation and Publish Release
+- name: Collect artifacts for release
+        run: |
+          # Create a release directory
+          mkdir -p release_artifacts
+          
+          # Debug - find any PDF files anywhere
+          echo "Finding PDF files in the repository:"
+          find . -name "*.pdf" -type f | tee pdf_files.txt
+          
+          # Check the document generation path
+          echo "Current contents of doc:"
+          ls -la doc/ || echo "No doc directory found"
+          
+          echo "Current contents of out/doc:"
+          ls -la out/doc/ || echo "No out/doc directoryname: Generate Documentation and Publish Release
 
 on:
   push:
