@@ -3,7 +3,7 @@ name: Generate Documentation and Publish Release
 on:
   push:
     branches: ["main"]
-    
+
 jobs:
   docs-and-release:
     runs-on: ubuntu-latest
@@ -13,7 +13,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -31,59 +31,57 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra
 
-      - name: Replace static table in syn.tex with dynamic results
+      - name: Inject dynamic table into syn.tex
         run: |
           SYN_TEX="doc/user-guide/syn.tex"
           RESULTS_TEX="out/results/synth_results.tex"
 
           if [ -f "$RESULTS_TEX" ] && [ -f "$SYN_TEX" ]; then
-            # 1) Backup
+            echo "Backing up $SYN_TEX"
             cp "$SYN_TEX" "${SYN_TEX}.bak"
 
-            # 2) Remove the old example table from \begin{longtable} to \end{longtable}
+            echo "Removing old table from $SYN_TEX"
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
-            # 3) Insert our new table snippet after the \subsection{Area and Gate Count} line
+            echo "Inserting dynamic snippet"
             sed -i '/\\subsection{Area and Gate Count}/a \\input{../../out/results/synth_results.tex}' "$SYN_TEX"
-
-            echo "Updated $SYN_TEX to \input the new dynamic table"
           else
-            echo "No $RESULTS_TEX or no $SYN_TEX, skipping table injection"
-
+            echo "No $RESULTS_TEX or no $SYN_TEX. Skipping table injection."
+      
       - name: Build Documentation
-        run: nix develop --command make docs
+        run: |
+          nix develop --command make docs
 
-      - name: Generate Verilog
-        run: nix develop --command make verilog
-        
-      - name: Collect artifacts for release
+      - name: Collect artifacts
         run: |
           mkdir -p release_artifacts
           
-          # Copy PDFs from out/doc if present
+          # PDFs
           if [ -d "out/doc" ]; then
             find out/doc -name "*.pdf" -exec cp {} release_artifacts/ \;
           fi
           
-          # Copy Verilog from generated/ if present
+          # Verilog
           if [ -d "generated" ]; then
             find generated -name "*.v" -exec cp {} release_artifacts/ \;
           fi
           
-          # Copy netlists from out/synth
+          # Netlists
           if [ -d "out/synth" ]; then
             find out/synth -name "*.v" -exec cp {} release_artifacts/ \;
           fi
           
-          # Copy JSON & TEX results
+          # JSON / TEX
           if [ -d "out/results" ]; then
             cp -r out/results/* release_artifacts/ || true
           fi
 
+          echo "Listing release_artifacts..."
           ls -la release_artifacts
+          
           tar -czvf release_artifacts.tar.gz release_artifacts/
 
-      - name: Create GitHub Release
+      - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
@@ -96,6 +94,6 @@ jobs:
           tag_name: v${{ github.run_number }}
           name: "Release ${{ github.run_number }}"
           body: |
-            Automated release from GitHub Actions
+            Automated Release
           draft: false
           prerelease: false
