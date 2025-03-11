@@ -41,7 +41,10 @@ bin/
 *.class
 
 # build output
-out
+# Ignore out directory
+out/*
+# But don't ignore results
+!out/results/
 generated/
 /test_run_dir/
 
