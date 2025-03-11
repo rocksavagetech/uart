@@ -1,11 +1,12 @@
 {
   "module": "",
+  "config_name": "9bits_32sync_900000baud",
   "config_class": "tech.rocksavage.chiselware.uart.UartConfig"",
-  "commit_hash": "d7df085",
+  "commit_hash": "a355868",
   "synthesis_date": "2025-03-11",
   "synthesis": {
-    "cell_count": ,
-    "area": ,
+    "cell_count": "11264.411",
+    "area": "'\Uart':",
     "combinational_cells": "",
     "sequential_cells": "",
     "buffer_inverter_cells": ""
