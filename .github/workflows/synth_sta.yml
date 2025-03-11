@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -117,3 +119,4 @@ jobs:
           message: '[gh-bot] Update synthesis and timing results'
           committer_name: GitHub Actions
           committer_email: actions@github.com
+          pull: '--rebase'  # Rebase before pushing
