@@ -50,8 +50,20 @@ jobs:
             echo "Warning: synth_results.tex not found, skipping TeX update"
           fi
 
-      - name: Generate documentation
-        run: nix develop --command make docs
+      - name: Debug documentation output
+        if: always()
+        run: |
+          echo "Contents of out directory:"
+          ls -la out/ || echo "out directory not found"
+          
+          echo "Contents of out/doc directory:"
+          ls -la out/doc/ || echo "out/doc directory not found"
+          
+          echo "Make docs command output:"
+          nix develop --command make docs --debug
+          
+          echo "Contents after make docs:"
+          ls -la out/doc/ || echo "out/doc directory not found"
 
       - name: Generate Verilog
         run: nix develop --command make verilog
@@ -61,8 +73,34 @@ jobs:
           # Create a release directory
           mkdir -p release_artifacts
           
-          # Copy documentation PDFs
-          cp -r out/doc/*.pdf release_artifacts/ || echo "No PDF documentation found"
+          # Debug - find any PDF files anywhere
+          echo "Finding PDF files in the repository:"
+          find . -name "*.pdf" -type f | tee pdf_files.txt
+          
+          # Copy documentation PDFs - try multiple possible locations
+          if [ -d "out/doc" ] && [ "$(ls -A out/doc/*.pdf 2>/dev/null)" ]; then
+            cp -r out/doc/*.pdf release_artifacts/
+            echo "Copied PDFs from out/doc"
+          elif [ -d "doc/user-guide" ] && [ "$(ls -A doc/user-guide/*.pdf 2>/dev/null)" ]; then
+            cp -r doc/user-guide/*.pdf release_artifacts/
+            echo "Copied PDFs from doc/user-guide"
+          elif [ -d "doc" ] && [ "$(ls -A doc/*.pdf 2>/dev/null)" ]; then
+            cp -r doc/*.pdf release_artifacts/
+            echo "Copied PDFs from doc"
+          else
+            echo "No PDF documentation found in standard locations"
+            # Try to copy any PDF found in the previous find command
+            if [ -s pdf_files.txt ]; then
+              while IFS= read -r pdf_file; do
+                cp "$pdf_file" release_artifacts/
+                echo "Copied $pdf_file to release_artifacts/"
+              done < pdf_files.txt
+            fi
+          fi
+          
+          # Check what we have in release_artifacts
+          echo "Contents of release_artifacts directory:"
+          ls -la release_artifacts/
           
           # Copy Verilog files
           cp -r generated/*.v release_artifacts/ || echo "No Verilog files found"

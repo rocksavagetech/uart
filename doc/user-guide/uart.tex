@@ -13,6 +13,7 @@
 \usepackage{amsmath}
 \usepackage{enumitem}
 \usepackage{parskip}
+\usepackage{listing}
 \usepackage[table]{xcolor}
 \usepackage{longtable}
 \usepackage{colortbl}
@@ -23,7 +24,6 @@
 
 % Choose paper size
 \geometry{letterpaper, top=25.4mm, bottom=25.4mm, left=25.4mm, right=25.4mm}
-%\geometry{a4paper, top=25.4mm, bottom=25.4mm, left=25.4mm, right=25.4mm}
 
 \color{black}
 \fancyhf{}
@@ -57,29 +57,29 @@
 \pagenumbering{arabic}
 
 \title{
-  \includegraphics[width=8cm]{images/Rocksavage_Tech_RGB_300.png}\vspace{50pt} \\
-  \vspace{10pt} \\
-  \textbf{UART \\
+\includegraphics[width=8cm] {images/Rocksavage_Tech_RGB_300.png}\vspace{50pt}
+\vspace{10pt} \\
+\textbf{UART \\
   Product User Guide} \\
-  {\small{\textcolor{slate-grey}{rocksavagetech.chiselWare.UART}}} \\
-  \vspace{20pt} IPF certified to level:
-  \textbf{\textcolor{cert-level-0}{0} } of 5 \\
-  \vspace{5pt}
-  \includegraphics[width=4cm]{images/uncertified.png}
+{\small{\textcolor{slate-grey}{rocksavagetech.chiselWare.UART}}} \\
+\vspace{20pt} IPF certified to level:
+\textbf{\textcolor{cert-level-0}{0} }of 5 \\
+\vspace{5pt}
+\includegraphics[width=4cm] {images/uncertified.png}
 }
 
-\author{Your Team / Company Name}
+\author{Warren Savage}
 
 \fancyhead[L]{UART Users Guide}
 \fancyhead[R]{\leftmark}
-\fancyfoot[C]{Your Company, Inc.~\copyright~2023}
+\fancyfoot[C]{Rocksavage Technology, Inc.~\copyright~2023}
 \fancyfoot[R]{Page \thepage}
 
 \begin{document}
+
 \maketitle
 \newpage
 \tableofcontents
-\newpage
 
 % -- Include subfiles, in parallel to how your I2C doc is structured
 \include{errata}
