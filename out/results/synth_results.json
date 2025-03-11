@@ -2,7 +2,7 @@
   "module": "",
   "config_name": "9bits_32sync_900000baud",
   "config_class": "tech.rocksavage.chiselware.uart.UartConfig"",
-  "commit_hash": "8f00fcd",
+  "commit_hash": "dc2b7f6",
   "synthesis_date": "2025-03-11",
   "synthesis": {
     "cell_count": "11264.411",
