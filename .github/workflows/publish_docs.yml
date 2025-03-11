@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          fetch-depth: 0
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -32,123 +32,67 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra
 
-      - name: Update TeX files to use generated results
+      - name: Replace static table in syn.tex with dynamic results
         run: |
-          # Check if results exist
-          if [ -f "out/results/synth_results.tex" ]; then
-            # Find all .tex files in the doc directory
-            for texfile in $(find doc -name "*.tex"); do
-              # Create a backup of the original file
-              cp "$texfile" "${texfile}.bak"
-              
-              # Add the input command at the beginning of the document environment
-              sed -i '/\\begin{document}/a \\input{../../out/results/synth_results.tex}' "$texfile"
-              
-              echo "Updated $texfile to use generated results"
-            done
-          else
-            echo "Warning: synth_results.tex not found, skipping TeX update"
+          SYN_TEX="doc/syn.tex"
+          RESULTS_TEX="out/results/synth_results.tex"
+
+          if [ ! -f "$RESULTS_TEX" ]; then
+            echo "Warning: $RESULTS_TEX not found, skipping table replacement."
+            exit 0
           fi
 
-      - name: Debug documentation output
-        if: always()
+          if [ -f "$SYN_TEX" ]; then
+            # 1) Backup original
+            cp "$SYN_TEX" "${SYN_TEX}.bak"
+
+            # 2) Remove the old example table lines (from \begin{longtable} to \end{longtable})
+            #    We can do a block delete in sed:
+            sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
+
+            # 3) Insert our new table after the \subsection{Area and Gate Count} line, for instance:
+            sed -i '/\\subsection{Area and Gate Count}/a \\input{../../out/results/synth_results.tex}' "$SYN_TEX"
+
+            echo "Replaced static table in $SYN_TEX with an \\input statement."
+          else
+            echo "syn.tex not found at $SYN_TEX; skipping."
+          fi
+
+      - name: Build Documentation
         run: |
-          echo "Contents of out directory:"
-          ls -la out/ || echo "out directory not found"
-          
-          echo "Contents of out/doc directory:"
-          ls -la out/doc/ || echo "out/doc directory not found"
-          
-          echo "Make docs command output:"
-          nix develop --command make docs --debug
-          
-          echo "Contents after make docs:"
-          ls -la out/doc/ || echo "out/doc directory not found"
+          # Run 'make docs' which should compile LaTeX
+          nix develop --command make docs
 
       - name: Generate Verilog
         run: nix develop --command make verilog
         
       - name: Collect artifacts for release
         run: |
-          # Create a release directory
           mkdir -p release_artifacts
           
-          # Debug - find any PDF files anywhere
-          echo "Finding PDF files in the repository:"
-          find . -name "*.pdf" -type f | tee pdf_files.txt
-          
-          # Check the document generation path
-          echo "Current contents of doc:"
-          ls -la doc/ || echo "No doc directory found"
-          
-          echo "Current contents of out/doc:"
-          ls -la out/doc/ || echo "No out/doc directory found"
-          
-          # Copy documentation PDFs - try multiple possible locations
-          PDF_FOUND=0
+          # Copy PDFs from out/doc if present
           if [ -d "out/doc" ] && [ "$(find out/doc -name "*.pdf" -type f | wc -l)" -gt 0 ]; then
             cp -r out/doc/*.pdf release_artifacts/
-            echo "Copied PDFs from out/doc"
-            PDF_FOUND=1
-          elif [ -d "doc" ] && [ "$(find doc -name "*.pdf" -type f | wc -l)" -gt 0 ]; then
-            find doc -name "*.pdf" -type f -exec cp {} release_artifacts/ \;
-            echo "Copied PDFs from doc"
-            PDF_FOUND=1
           fi
           
-          if [ $PDF_FOUND -eq 0 ]; then
-            echo "No PDF documentation found in standard locations"
-            # Try to copy any PDF found in the previous find command
-            if [ -s pdf_files.txt ]; then
-              while IFS= read -r pdf_file; do
-                cp "$pdf_file" release_artifacts/
-                echo "Copied $pdf_file to release_artifacts/"
-                PDF_FOUND=1
-              done < pdf_files.txt
-            fi
-            
-            # If still no PDFs found, generate a simple one from the README
-            if [ $PDF_FOUND -eq 0 ] && [ -f "README.md" ]; then
-              echo "Generating a simple PDF from README.md"
-              if command -v pandoc &> /dev/null; then
-                pandoc README.md -o release_artifacts/README.pdf
-                echo "Generated README.pdf from README.md"
-              else
-                echo "pandoc not found, creating a simple text PDF instead"
-                echo -e "\\documentclass{article}\n\\begin{document}\n\\section{README}\n$(cat README.md)\n\\end{document}" > temp.tex
-                pdflatex -output-directory=release_artifacts temp.tex
-                mv release_artifacts/temp.pdf release_artifacts/README.pdf
-                rm temp.tex release_artifacts/temp.aux release_artifacts/temp.log 2>/dev/null || true
-              fi
-            fi
+          # Copy generated Verilog from generated/ if present
+          if [ -d "generated" ]; then
+            find generated -name "*.v" -exec cp {} release_artifacts/ \;
           fi
           
-          # Find and copy Verilog files from generated directory
-          if [ -d "generated" ] && [ "$(find generated -name "*.v" -type f | wc -l)" -gt 0 ]; then
-            find generated -name "*.v" -type f -exec cp {} release_artifacts/ \;
-            echo "Copied Verilog files from generated directory"
-          else
-            echo "No Verilog files found in generated directory"
-          fi
-          
-          # Find and copy synthesis netlists from out/synth
+          # Copy synthesized netlists from out/synth
           if [ -d "out/synth" ]; then
-            find out/synth -name "*.v" -type f -exec cp {} release_artifacts/ \;
-            echo "Copied synthesis netlists from out/synth"
-          else
-            echo "No synthesis netlists found in out/synth"
+            find out/synth -name "*.v" -exec cp {} release_artifacts/ \;
           fi
           
           # Copy JSON and TEX result files
           if [ -d "out/results" ]; then
-            cp -r out/results/* release_artifacts/ || echo "No result files found"
+            cp -r out/results/* release_artifacts/ || true
           fi
           
-          # Check what we have in release_artifacts
-          echo "Contents of release_artifacts directory:"
-          ls -la release_artifacts/
+          echo "Contents of release_artifacts:"
+          ls -la release_artifacts
           
-          # Create a tarball of the release artifacts
           tar -czvf release_artifacts.tar.gz release_artifacts/
 
       - name: Create GitHub Release
@@ -159,11 +103,13 @@ jobs:
             release_artifacts.tar.gz
             release_artifacts/*.pdf
             release_artifacts/*.v
+            release_artifacts/*.json
+            release_artifacts/*.tex
           tag_name: v${{ github.run_number }}
           name: Release ${{ github.run_number }}
           body: |
             Automated release from GitHub Actions
-            
+
             This release includes:
             - Documentation (PDF)
             - Verilog files
