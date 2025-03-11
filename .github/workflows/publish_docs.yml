@@ -47,6 +47,7 @@ jobs:
             sed -i '/\\subsection{Area and Gate Count}/a \\input{../../out/results/synth_results.tex}' "$SYN_TEX"
           else
             echo "No $RESULTS_TEX or no $SYN_TEX. Skipping table injection."
+          fi
       
       - name: Build Documentation
         run: |
