@@ -1,0 +1,96 @@
+name: Generate Documentation and Publish Release
+
+on:
+  push:
+    branches: ["main"]
+    
+# Ensures actions don't run on bot commits
+if: ${{ !contains(github.event.head_commit.message, '[gh-bot]') }}
+
+permissions:
+  contents: write  # Needed for creating releases
+
+jobs:
+  docs-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Run Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
+        
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra
+
+      - name: Update TeX files to use generated results
+        run: |
+          # Check if results exist
+          if [ -f "out/results/synth_results.tex" ]; then
+            # Find all .tex files in the doc directory
+            for texfile in $(find doc -name "*.tex"); do
+              # Create a backup of the original file
+              cp "$texfile" "${texfile}.bak"
+              
+              # Add the input command at the beginning of the document environment
+              sed -i '/\\begin{document}/a \\input{../../out/results/synth_results.tex}' "$texfile"
+              
+              echo "Updated $texfile to use generated results"
+            done
+          else
+            echo "Warning: synth_results.tex not found, skipping TeX update"
+          fi
+
+      - name: Generate documentation
+        run: nix develop --command make docs
+
+      - name: Generate Verilog
+        run: nix develop --command make verilog
+        
+      - name: Collect artifacts for release
+        run: |
+          # Create a release directory
+          mkdir -p release_artifacts
+          
+          # Copy documentation PDFs
+          cp -r out/doc/*.pdf release_artifacts/ || echo "No PDF documentation found"
+          
+          # Copy Verilog files
+          cp -r generated/*.v release_artifacts/ || echo "No Verilog files found"
+          
+          # Copy synthesis netlists
+          cp -r synth/*.v release_artifacts/ || echo "No synthesis netlists found"
+          
+          # Copy JSON and TEX result files
+          cp -r out/results/* release_artifacts/ || echo "No result files found"
+          
+          # Create a tarball of the release artifacts
+          tar -czvf release_artifacts.tar.gz release_artifacts/
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release_artifacts.tar.gz
+            release_artifacts/*.pdf
+            release_artifacts/*.v
+          tag_name: v${{ github.run_number }}
+          name: Release ${{ github.run_number }}
+          body: |
+            Automated release from GitHub Actions
+            
+            This release includes:
+            - Documentation (PDF)
+            - Verilog files
+            - Synthesized netlists
+            - JSON and TEX result files
+          draft: false
+          prerelease: false
