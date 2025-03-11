@@ -1,0 +1,82 @@
+[
+  {
+    "config_name": "8bits_2sync_900000baud",
+    "gates": "10652.882",
+    "area": "'\\Uart':",
+    "combinational_cells": "",
+    "sequential_cells": "",
+    "buffer_inverter_cells": "",
+    "data_bits": "8",
+    "fifo_depth": "2",
+    "baud": "900000",
+    "timing": {
+      "clock_period": "5.0",
+      "slack": "0.0",
+      "critical_path": "N/A",
+      "setup_time": "N/A",
+      "hold_time": "N/A",
+      "max_frequency_mhz": "200.00",
+      "sta_passes": "Yes"
+    }
+  },
+  {
+    "config_name": "9bits_2sync_115000baud",
+    "gates": "11003.76",
+    "area": "'\\Uart':",
+    "combinational_cells": "",
+    "sequential_cells": "",
+    "buffer_inverter_cells": "",
+    "data_bits": "9",
+    "fifo_depth": "2",
+    "baud": "115000",
+    "timing": {
+      "clock_period": "5.0",
+      "slack": "0.0",
+      "critical_path": "N/A",
+      "setup_time": "N/A",
+      "hold_time": "N/A",
+      "max_frequency_mhz": "200.00",
+      "sta_passes": "Yes"
+    }
+  },
+  {
+    "config_name": "9bits_2sync_900000baud",
+    "gates": "10988.722",
+    "area": "'\\Uart':",
+    "combinational_cells": "",
+    "sequential_cells": "",
+    "buffer_inverter_cells": "",
+    "data_bits": "9",
+    "fifo_depth": "2",
+    "baud": "900000",
+    "timing": {
+      "clock_period": "5.0",
+      "slack": "0.0",
+      "critical_path": "N/A",
+      "setup_time": "N/A",
+      "hold_time": "N/A",
+      "max_frequency_mhz": "200.00",
+      "sta_passes": "Yes"
+    }
+  },
+  {
+    "config_name": "9bits_32sync_900000baud",
+    "gates": "11264.411",
+    "area": "'\\Uart':",
+    "combinational_cells": "",
+    "sequential_cells": "",
+    "buffer_inverter_cells": "",
+    "data_bits": "9",
+    "fifo_depth": "32",
+    "baud": "900000",
+    "timing": {
+      "clock_period": "5.0",
+      "slack": "0.0",
+      "critical_path": "N/A",
+      "setup_time": "N/A",
+      "hold_time": "N/A",
+      "max_frequency_mhz": "200.00",
+      "sta_passes": "Yes"
+    }
+  }
+]
