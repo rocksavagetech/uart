@@ -19,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          fetch-depth: 0
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -37,16 +37,15 @@ jobs:
         
       - name: Create output directory
         run: mkdir -p out/results
-      
-      - name: Extract synthesis results (for ALL configs)
+
+      - name: Parse all config directories under out/synth
         run: |
-          # Prepare an empty JSON array to accumulate config results
+          # We will store an array of config objects in this JSON:
           echo "[]" > out/results/synth_results.json
 
-          # Prepare a file to accumulate table rows
-          echo "" > out/results/synth_table_rows.tex
+          # Also create/overwrite a LaTeX snippet that we’ll append rows to:
+          echo "% Auto-generated table rows" > out/results/synth_table_rows.tex
 
-          # Find all config directories under out/synth
           CONFIG_DIRS=$(find out/synth -type d -name "*bits*sync*baud*" | sort)
           if [ -z "$CONFIG_DIRS" ]; then
             echo "Error: No synthesis results found in out/synth"
@@ -54,82 +53,116 @@ jobs:
           fi
 
           for d in $CONFIG_DIRS; do
-            echo "Parsing synthesis results in: $d"
-
+            echo "Processing directory: $d"
             CONFIG_NAME=$(basename "$d")
-            
-            # Example: parse gate count from gates.txt
-            # If gates.txt doesn't exist, fallback to "N/A"
-            if [ -f "$d/gates.txt" ]; then
-              CELL_COUNT=$(cat "$d/gates.txt")
-            else
-              CELL_COUNT="N/A"
-            fi
 
-            # Parse area from log.txt if it exists
+            # Example: parse gate count, area, etc.
+            GATES="N/A"
+            [ -f "$d/gates.txt" ] && GATES=$(cat "$d/gates.txt")
+
+            AREA="N/A"
+            COMBO_CELLS="N/A"
+            SEQ_CELLS="N/A"
+            BUF_INV_CELLS="N/A"
             if [ -f "$d/log.txt" ]; then
-              AREA=$(grep "Chip area" "$d/log.txt" | awk '{print $5}')
-              COMBO_CELLS=$(grep "Combinational cells:" "$d/log.txt" | awk '{print $3}')
-              SEQ_CELLS=$(grep "Sequential cells:" "$d/log.txt" | awk '{print $3}')
-              BUF_INV_CELLS=$(grep "Buf/Inv cells:" "$d/log.txt" | awk '{print $3}')
+              AREA=$(grep "Chip area" "$d/log.txt" | awk '{print $5}' || echo "N/A")
+              COMBO_CELLS=$(grep "Combinational cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
+              SEQ_CELLS=$(grep "Sequential cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
+              BUF_INV_CELLS=$(grep "Buf/Inv cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
             fi
 
-            # Fallback if any are empty
-            AREA="${AREA:-N/A}"
-            COMBO_CELLS="${COMBO_CELLS:-N/A}"
-            SEQ_CELLS="${SEQ_CELLS:-N/A}"
-            BUF_INV_CELLS="${BUF_INV_CELLS:-N/A}"
+            # Basic parsing from directory name, e.g. "8bits_2sync_900000baud"
+            DATA_BITS=$(echo "$CONFIG_NAME" | grep -oE '^[0-9]+bits' | sed 's/bits//')
+            FIFO_DEPTH=$(echo "$CONFIG_NAME" | grep -oE '_[0-9]+sync_' | tr -dc '0-9')
+            BAUD=$(echo "$CONFIG_NAME" | grep -oE '[0-9]+baud' | sed 's/baud//')
 
-            # If you want to parse FIFO depth or data bits from the directory name,
-            # you can do something like:
-            #   e.g. 8bits_2sync_900000baud -> dataBits=8, fifoDepth=2, baud=900000
-            # This is just an example; adapt to your naming scheme.
-            dataBits=$(echo "$CONFIG_NAME" | grep -oE '^[0-9]+bits' | sed 's/bits//')
-            fifoDepth=$(echo "$CONFIG_NAME" | grep -oE '_[0-9]+sync_' | tr -dc '0-9')
-            baud=$(echo "$CONFIG_NAME" | grep -oE '[0-9]+baud' | sed 's/baud//')
+            DATA_BITS="${DATA_BITS:-N/A}"
+            FIFO_DEPTH="${FIFO_DEPTH:-N/A}"
+            BAUD="${BAUD:-N/A}"
 
-            dataBits="${dataBits:-N/A}"
-            fifoDepth="${fifoDepth:-N/A}"
-            baud="${baud:-N/A}"
+            # STA metrics (clock period, slack, etc.)
+            CLOCK_PERIOD="5.0"
+            SLACK="0.0"
+            CRITICAL_PATH="N/A"
+            SETUP_TIME="N/A"
+            HOLD_TIME="N/A"
+            MAX_FREQ="200.00"
 
-            # For demonstration, let's define a module name
-            MODULE_NAME="tech.rocksavage.chiselware.uart.Uart"
+            if [ -f "$d/log.txt" ]; then
+              tmp_clock=$(grep "Clock period:" "$d/log.txt" | awk '{print $3}')
+              tmp_slack=$(grep "Slack:" "$d/log.txt" | head -1 | awk '{print $2}')
+              tmp_cp=$(grep -A 1 "Critical path" "$d/log.txt" | grep -v "Critical path" | head -1 | tr -s ' ' | cut -d' ' -f2-)
+              tmp_setup=$(grep "Setup time:" "$d/log.txt" | awk '{print $3}')
+              tmp_hold=$(grep "Hold time:" "$d/log.txt" | awk '{print $3}')
 
-            # Add an object to the global JSON array
+              [ -n "$tmp_clock" ] && CLOCK_PERIOD=$tmp_clock
+              [ -n "$tmp_slack" ] && SLACK=$tmp_slack
+              [ -n "$tmp_cp" ] && CRITICAL_PATH=$tmp_cp
+              [ -n "$tmp_setup" ] && SETUP_TIME=$tmp_setup
+              [ -n "$tmp_hold" ] && HOLD_TIME=$tmp_hold
+
+              # Calculate max frequency from clock period
+              freq_calc=$(awk "BEGIN {print 1000/$CLOCK_PERIOD}" 2>/dev/null)
+              [ -n "$freq_calc" ] && MAX_FREQ=$(printf "%.2f" "$freq_calc")
+            fi
+
+            # Convert Slack to Pass/Fail
+            STA_PASSES="Yes"
+            # If Slack < 0 => "No"
+            SLACK_SIGN=$(awk "BEGIN {print ($SLACK < 0) ? 1 : 0}")
+            if [ "$SLACK_SIGN" -eq 1 ]; then
+              STA_PASSES="No"
+            fi
+
+            # Append to global JSON array
             newObj=$(jq -n \
-              --arg cfg  "$CONFIG_NAME" \
-              --arg db   "$dataBits" \
-              --arg fd   "$fifoDepth" \
-              --arg bd   "$baud" \
-              --arg gates "$CELL_COUNT" \
+              --arg cfg   "$CONFIG_NAME" \
+              --arg gates "$GATES" \
               --arg area  "$AREA" \
-              --arg combo "$COMBO_CELLS" \
-              --arg seq   "$SEQ_CELLS" \
-              --arg buf   "$BUF_INV_CELLS" \
-              --arg module "$MODULE_NAME" \
+              --arg ccomb "$COMBO_CELLS" \
+              --arg cseq  "$SEQ_CELLS" \
+              --arg cbuf  "$BUF_INV_CELLS" \
+              --arg bits  "$DATA_BITS" \
+              --arg depth "$FIFO_DEPTH" \
+              --arg bps   "$BAUD" \
+              --arg cper  "$CLOCK_PERIOD" \
+              --arg slk   "$SLACK" \
+              --arg cpath "$CRITICAL_PATH" \
+              --arg stime "$SETUP_TIME" \
+              --arg htime "$HOLD_TIME" \
+              --arg freq  "$MAX_FREQ" \
+              --arg pass  "$STA_PASSES" \
               '{
                 config_name: $cfg,
-                data_bits: $db,
-                fifo_depth: $fd,
-                baud: $bd,
-                cell_count: $gates,
+                gates: $gates,
                 area: $area,
-                combinational_cells: $combo,
-                sequential_cells: $seq,
-                buffer_inverter_cells: $buf,
-                module: $module
+                combinational_cells: $ccomb,
+                sequential_cells: $cseq,
+                buffer_inverter_cells: $cbuf,
+                data_bits: $bits,
+                fifo_depth: $depth,
+                baud: $bps,
+                timing: {
+                  clock_period: $cper,
+                  slack: $slk,
+                  critical_path: $cpath,
+                  setup_time: $stime,
+                  hold_time: $htime,
+                  max_frequency_mhz: $freq,
+                  sta_passes: $pass
+                }
               }'
             )
-            tmp=$(mktemp)
-            jq ". + [ $newObj ]" out/results/synth_results.json > "$tmp"
-            mv "$tmp" out/results/synth_results.json
+            tmpfile=$(mktemp)
+            jq ". + [ $newObj ]" out/results/synth_results.json > "$tmpfile"
+            mv "$tmpfile" out/results/synth_results.json
 
-            # Append a row to the table snippet
-            # Example table row:  configName | fifoDepth | dataBits | gateCount
-            echo "\\texttt{$CONFIG_NAME} & $fifoDepth & $dataBits & $CELL_COUNT \\\\ \\hline" >> out/results/synth_table_rows.tex
+            # Append a row to the table snippet for this config
+            echo "\\texttt{$CONFIG_NAME} & $FIFO_DEPTH & $DATA_BITS & $GATES \\\\ \\hline" >> out/results/synth_table_rows.tex
           done
 
-          # Now build a final .tex that wraps the rows in a table environment
+          # Finally, create a full table environment in out/results/synth_results.tex
+          # so you can \input this into syn.tex
           cat <<EOF > out/results/synth_results.tex
 % Auto-generated table of all configs
 \\renewcommand*{\\arraystretch}{1.3}
@@ -140,7 +173,7 @@ jobs:
 \\textcolor{white}{\\textbf{Config}} &
 \\textcolor{white}{\\textbf{FIFO Depth}} &
 \\textcolor{white}{\\textbf{Data Bits}} &
-\\textcolor{white}{\\textbf{Gate Count}} \\\\ 
+\\textcolor{white}{\\textbf{Gate Count}} \\\\
 \\hline
 \\endfirsthead
 
@@ -149,7 +182,7 @@ jobs:
 \\textcolor{white}{\\textbf{Config}} &
 \\textcolor{white}{\\textbf{FIFO Depth}} &
 \\textcolor{white}{\\textbf{Data Bits}} &
-\\textcolor{white}{\\textbf{Gate Count}} \\\\ 
+\\textcolor{white}{\\textbf{Gate Count}} \\\\
 \\hline
 \\endhead
 
@@ -157,59 +190,14 @@ jobs:
 \\endfoot
 EOF
 
-          # Insert all the rows we built
+          # Insert all of our table rows
           cat out/results/synth_table_rows.tex >> out/results/synth_results.tex
 
           # Close the table
           cat <<EOF >> out/results/synth_results.tex
-\\caption{Synthesis Results for All UART Configs}
+\\caption{Synthesis Results for All Configs}
 \\end{longtable}
 EOF
-
-      - name: Extract STA results (optional, single or multiple)
-        run: |
-          # If you want to gather timing data for each config as well, do a similar loop:
-          CONFIG_DIRS=$(find out/synth -type d -name "*bits*sync*baud*" | sort)
-          if [ -z "$CONFIG_DIRS" ]; then
-            echo "Error: No synthesis directories found for STA parsing."
-            exit 1
-          fi
-
-          # For simplicity, let's just update the JSON array with a "timing" field
-          for d in $CONFIG_DIRS; do
-            CONFIG_NAME=$(basename "$d")
-
-            # Attempt to parse timing from log.txt
-            if [ -f "$d/log.txt" ]; then
-              CLOCK_PERIOD=$(grep "Clock period:" "$d/log.txt" | awk '{print $3}')
-              SLACK=$(grep "Slack:" "$d/log.txt" | head -1 | awk '{print $2}')
-            fi
-
-            CLOCK_PERIOD="${CLOCK_PERIOD:-5.0}"
-            SLACK="${SLACK:-0.0}"
-
-            MAX_FREQ=$(awk "BEGIN {print 1000/$CLOCK_PERIOD}" | xargs printf "%.2f")
-
-            # Update the JSON object for this config
-            tmp=$(mktemp)
-            jq --arg cfg "$CONFIG_NAME" \
-               --arg cp "$CLOCK_PERIOD" \
-               --arg sl "$SLACK" \
-               --arg mf "$MAX_FREQ" \
-               'map(
-                  if .config_name == $cfg then
-                    .timing = {
-                      "clock_period": $cp,
-                      "slack": $sl,
-                      "max_frequency_mhz": $mf
-                    }
-                  else
-                    .
-                  end
-                )' out/results/synth_results.json > "$tmp"
-
-            mv "$tmp" out/results/synth_results.json
-          done
 
       - name: Generate Verilog
         run: nix develop --command make verilog
@@ -222,9 +210,9 @@ EOF
           git add --force out/results
 
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes to commit."
           else
-            git commit -m "[gh-bot] Update synthesis and timing results"
+            git commit -m "[gh-bot] Update synthesis/STA results (multi-config)"
             git pull --rebase origin main
             git push origin main
           fi

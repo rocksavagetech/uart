@@ -7,11 +7,10 @@ on:
 jobs:
   docs-and-release:
     runs-on: ubuntu-latest
-    # Ensures actions don't run on bot commits
     if: ${{ !contains(github.event.head_commit.message, '[gh-bot]') }}
     
     permissions:
-      contents: write  # Needed for creating releases
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -34,34 +33,25 @@ jobs:
 
       - name: Replace static table in syn.tex with dynamic results
         run: |
-          SYN_TEX="doc/syn.tex"
+          SYN_TEX="doc/user-guide/syn.tex"
           RESULTS_TEX="out/results/synth_results.tex"
 
-          if [ ! -f "$RESULTS_TEX" ]; then
-            echo "Warning: $RESULTS_TEX not found, skipping table replacement."
-            exit 0
-          fi
-
-          if [ -f "$SYN_TEX" ]; then
-            # 1) Backup original
+          if [ -f "$RESULTS_TEX" ] && [ -f "$SYN_TEX" ]; then
+            # 1) Backup
             cp "$SYN_TEX" "${SYN_TEX}.bak"
 
-            # 2) Remove the old example table lines (from \begin{longtable} to \end{longtable})
-            #    We can do a block delete in sed:
+            # 2) Remove the old example table from \begin{longtable} to \end{longtable}
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
-            # 3) Insert our new table after the \subsection{Area and Gate Count} line, for instance:
+            # 3) Insert our new table snippet after the \subsection{Area and Gate Count} line
             sed -i '/\\subsection{Area and Gate Count}/a \\input{../../out/results/synth_results.tex}' "$SYN_TEX"
 
-            echo "Replaced static table in $SYN_TEX with an \\input statement."
+            echo "Updated $SYN_TEX to \input the new dynamic table"
           else
-            echo "syn.tex not found at $SYN_TEX; skipping."
-          fi
+            echo "No $RESULTS_TEX or no $SYN_TEX, skipping table injection"
 
       - name: Build Documentation
-        run: |
-          # Run 'make docs' which should compile LaTeX
-          nix develop --command make docs
+        run: nix develop --command make docs
 
       - name: Generate Verilog
         run: nix develop --command make verilog
@@ -71,28 +61,26 @@ jobs:
           mkdir -p release_artifacts
           
           # Copy PDFs from out/doc if present
-          if [ -d "out/doc" ] && [ "$(find out/doc -name "*.pdf" -type f | wc -l)" -gt 0 ]; then
-            cp -r out/doc/*.pdf release_artifacts/
+          if [ -d "out/doc" ]; then
+            find out/doc -name "*.pdf" -exec cp {} release_artifacts/ \;
           fi
           
-          # Copy generated Verilog from generated/ if present
+          # Copy Verilog from generated/ if present
           if [ -d "generated" ]; then
             find generated -name "*.v" -exec cp {} release_artifacts/ \;
           fi
           
-          # Copy synthesized netlists from out/synth
+          # Copy netlists from out/synth
           if [ -d "out/synth" ]; then
             find out/synth -name "*.v" -exec cp {} release_artifacts/ \;
           fi
           
-          # Copy JSON and TEX result files
+          # Copy JSON & TEX results
           if [ -d "out/results" ]; then
             cp -r out/results/* release_artifacts/ || true
           fi
-          
-          echo "Contents of release_artifacts:"
+
           ls -la release_artifacts
-          
           tar -czvf release_artifacts.tar.gz release_artifacts/
 
       - name: Create GitHub Release
@@ -106,14 +94,8 @@ jobs:
             release_artifacts/*.json
             release_artifacts/*.tex
           tag_name: v${{ github.run_number }}
-          name: Release ${{ github.run_number }}
+          name: "Release ${{ github.run_number }}"
           body: |
             Automated release from GitHub Actions
-
-            This release includes:
-            - Documentation (PDF)
-            - Verilog files
-            - Synthesized netlists
-            - JSON and TEX result files
           draft: false
           prerelease: false
