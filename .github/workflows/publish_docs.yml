@@ -1,8 +1,9 @@
-name: Generate Documentation and Publish Release
+name: "Generate Documentation and Publish Release"
 
 on:
-  push:
-    branches: ["main"]
+  workflow_run:
+    workflows: ["Synthesis and Results"]  # The exact name from synth_sta.yml
+    types: [completed]
 
 jobs:
   docs-and-release:

@@ -1,4 +1,4 @@
-name: Synthesis and Results
+name: "Synthesis and Results" 
 
 on:
   push:
