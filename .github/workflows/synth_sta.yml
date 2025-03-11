@@ -85,13 +85,13 @@ jobs:
       - name: Extract STA results
         run: |
           # Extract timing metrics from STA reports
-          clock_period=$(grep "Clock period:" syn/*.rpt | awk '{print $3}')
-          slack=$(grep "Slack:" syn/*.rpt | head -1 | awk '{print $2}')
+          clock_period=$(grep "Clock period:" synth/*.rpt | awk '{print $3}')
+          slack=$(grep "Slack:" synth/*.rpt | head -1 | awk '{print $2}')
           
           # Extract additional timing metrics if available
-          critical_path=$(grep -A 1 "Critical path" syn/*.rpt | grep -v "Critical path" | head -1 | tr -s ' ' | cut -d' ' -f2- || echo "N/A")
-          setup_time=$(grep "Setup time:" syn/*.rpt | awk '{print $3}' || echo "N/A")
-          hold_time=$(grep "Hold time:" syn/*.rpt | awk '{print $3}' || echo "N/A")
+          critical_path=$(grep -A 1 "Critical path" synth/*.rpt | grep -v "Critical path" | head -1 | tr -s ' ' | cut -d' ' -f2- || echo "N/A")
+          setup_time=$(grep "Setup time:" synth/*.rpt | awk '{print $3}' || echo "N/A")
+          hold_time=$(grep "Hold time:" synth/*.rpt | awk '{print $3}' || echo "N/A")
           
           # Update JSON file with STA results
           jq --arg clock "$clock_period" --arg slack "$slack" --arg critical "$critical_path" --arg setup "$setup_time" --arg hold "$hold_time" --arg max_freq "$(awk "BEGIN {print 1000/$clock_period}" | xargs printf "%.2f")" '.timing = {"clock_period": $clock, "slack": $slack, "critical_path": $critical, "setup_time": $setup, "hold_time": $hold, "max_frequency_mhz": $max_freq}' out/results/synth_results.json > temp.json && mv temp.json out/results/synth_results.json
