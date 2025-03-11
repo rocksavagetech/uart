@@ -1,0 +1,119 @@
+name: Synthesis and Results
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+    
+# Ensures actions don't run on bot commits
+if: ${{ !contains(github.event.head_commit.message, '[gh-bot]') }}
+
+permissions:
+  contents: write  # Needed to write back results
+
+jobs:
+  synth-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Run Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
+
+      - name: Run Synthesis
+        run: nix develop --command make synth
+
+      - name: Run Static Timing Analysis
+        run: nix develop --command make sta
+        
+      - name: Create output directory
+        run: mkdir -p out/results
+      
+      - name: Extract synthesis results
+        run: |
+          # Extract key metrics from synthesis reports
+          module_name=$(grep -o "module tech\.rocksavage\.chiselware\.[^ ]*" synth/*.rpt | head -1 | cut -d' ' -f2)
+          cell_count=$(grep "Total cell count:" synth/*.rpt | awk '{print $4}')
+          area=$(grep "Total area:" synth/*.rpt | awk '{print $3}')
+          
+          # Extract additional metrics
+          combo_cells=$(grep "Combinational cells:" synth/*.rpt | awk '{print $3}' || echo "N/A")
+          seq_cells=$(grep "Sequential cells:" synth/*.rpt | awk '{print $3}' || echo "N/A")
+          buf_inv_cells=$(grep "Buf/Inv cells:" synth/*.rpt | awk '{print $3}' || echo "N/A")
+          
+          # Extract config parameters
+          config_class=$(grep "config-class" Makefile | head -1 | awk -F'--config-class' '{print $2}' | tr -d ' ')
+          
+          # Create JSON file with results
+          cat > out/results/synth_results.json << EOF
+          {
+            "module": "$module_name",
+            "config_class": "$config_class",
+            "commit_hash": "$(git rev-parse --short HEAD)",
+            "synthesis_date": "$(date +'%Y-%m-%d')",
+            "synthesis": {
+              "cell_count": $cell_count,
+              "area": $area,
+              "combinational_cells": "$combo_cells",
+              "sequential_cells": "$seq_cells",
+              "buffer_inverter_cells": "$buf_inv_cells"
+            }
+          }
+          EOF
+          
+          # Create TEX file with variables
+          cat > out/results/synth_results.tex << EOF
+          % Synthesis Results Variables
+          \\newcommand{\\moduleNameVar}{$module_name}
+          \\newcommand{\\configClassVar}{$config_class}
+          \\newcommand{\\cellCountVar}{$cell_count}
+          \\newcommand{\\areaVar}{$area}
+          \\newcommand{\\synthesisDate}{$(date +'%Y-%m-%d')}
+          \\newcommand{\\commitHash}{$(git rev-parse --short HEAD)}
+          \\newcommand{\\combiCellsVar}{$combo_cells}
+          \\newcommand{\\seqCellsVar}{$seq_cells}
+          \\newcommand{\\bufInvCellsVar}{$buf_inv_cells}
+          EOF
+
+      - name: Extract STA results
+        run: |
+          # Extract timing metrics from STA reports
+          clock_period=$(grep "Clock period:" syn/*.rpt | awk '{print $3}')
+          slack=$(grep "Slack:" syn/*.rpt | head -1 | awk '{print $2}')
+          
+          # Extract additional timing metrics if available
+          critical_path=$(grep -A 1 "Critical path" syn/*.rpt | grep -v "Critical path" | head -1 | tr -s ' ' | cut -d' ' -f2- || echo "N/A")
+          setup_time=$(grep "Setup time:" syn/*.rpt | awk '{print $3}' || echo "N/A")
+          hold_time=$(grep "Hold time:" syn/*.rpt | awk '{print $3}' || echo "N/A")
+          
+          # Update JSON file with STA results
+          jq --arg clock "$clock_period" --arg slack "$slack" --arg critical "$critical_path" --arg setup "$setup_time" --arg hold "$hold_time" --arg max_freq "$(awk "BEGIN {print 1000/$clock_period}" | xargs printf "%.2f")" '.timing = {"clock_period": $clock, "slack": $slack, "critical_path": $critical, "setup_time": $setup, "hold_time": $hold, "max_frequency_mhz": $max_freq}' out/results/synth_results.json > temp.json && mv temp.json out/results/synth_results.json
+          
+          # Update TEX file with STA variables
+          cat >> out/results/synth_results.tex << EOF
+          \\newcommand{\\clockPeriodVar}{$clock_period}
+          \\newcommand{\\slackVar}{$slack}
+          \\newcommand{\\maxFreqVar}{$(awk "BEGIN {print 1000/$clock_period}" | xargs printf "%.2f")}
+          \\newcommand{\\staPassesVar}{$(if (( $(echo "$slack >= 0" | bc -l) )); then echo "Yes"; else echo "No"; fi)}
+          \\newcommand{\\criticalPathVar}{$critical_path}
+          \\newcommand{\\setupTimeVar}{$setup_time}
+          \\newcommand{\\holdTimeVar}{$hold_time}
+          EOF
+
+      - name: Generate Verilog
+        run: nix develop --command make verilog
+        
+      - name: Commit results
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: 'out/results'
+          message: '[gh-bot] Update synthesis and timing results'
+          committer_name: GitHub Actions
+          committer_email: actions@github.com
