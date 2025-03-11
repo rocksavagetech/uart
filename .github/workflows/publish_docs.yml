@@ -51,6 +51,7 @@ jobs:
             sed -i "/\\subsection{Area and Gate Count}/a \\include{../../out/results/${SNIPPET_NOEXT}}" "$SYN_TEX"
           else
             echo "Missing $SYN_TEX or $SNIPPET_PATH; skipping injection."
+          fi
 
       - name: Build Documentation
         run: |
