@@ -13,13 +13,13 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[gh-bot]') }}
     
     permissions:
-      contents: write  # Needed to write back results
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all history
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -35,15 +35,15 @@ jobs:
       - name: Run Static Timing Analysis
         run: nix develop --command make sta
         
-      - name: Create output directory
+      - name: Prepare output directory
         run: mkdir -p out/results
 
-      - name: Parse all config directories under out/synth
+      - name: Parse all config directories
         run: |
           # We will store an array of config objects in this JSON:
           echo "[]" > out/results/synth_results.json
 
-          # Also create/overwrite a LaTeX snippet that we’ll append rows to:
+          # Also create/overwrite a LaTeX snippet that we'll append rows to:
           echo "% Auto-generated table rows" > out/results/synth_table_rows.tex
 
           CONFIG_DIRS=$(find out/synth -type d -name "*bits*sync*baud*" | sort)
@@ -53,34 +53,18 @@ jobs:
           fi
 
           for d in $CONFIG_DIRS; do
-            echo "Processing directory: $d"
+            echo "Processing: $d"
             CONFIG_NAME=$(basename "$d")
 
-            # Example: parse gate count, area, etc.
+            # gates.txt
             GATES="N/A"
             [ -f "$d/gates.txt" ] && GATES=$(cat "$d/gates.txt")
 
+            # Metrics from log.txt
             AREA="N/A"
             COMBO_CELLS="N/A"
             SEQ_CELLS="N/A"
             BUF_INV_CELLS="N/A"
-            if [ -f "$d/log.txt" ]; then
-              AREA=$(grep "Chip area" "$d/log.txt" | awk '{print $5}' || echo "N/A")
-              COMBO_CELLS=$(grep "Combinational cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
-              SEQ_CELLS=$(grep "Sequential cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
-              BUF_INV_CELLS=$(grep "Buf/Inv cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
-            fi
-
-            # Basic parsing from directory name, e.g. "8bits_2sync_900000baud"
-            DATA_BITS=$(echo "$CONFIG_NAME" | grep -oE '^[0-9]+bits' | sed 's/bits//')
-            FIFO_DEPTH=$(echo "$CONFIG_NAME" | grep -oE '_[0-9]+sync_' | tr -dc '0-9')
-            BAUD=$(echo "$CONFIG_NAME" | grep -oE '[0-9]+baud' | sed 's/baud//')
-
-            DATA_BITS="${DATA_BITS:-N/A}"
-            FIFO_DEPTH="${FIFO_DEPTH:-N/A}"
-            BAUD="${BAUD:-N/A}"
-
-            # STA metrics (clock period, slack, etc.)
             CLOCK_PERIOD="5.0"
             SLACK="0.0"
             CRITICAL_PATH="N/A"
@@ -89,6 +73,11 @@ jobs:
             MAX_FREQ="200.00"
 
             if [ -f "$d/log.txt" ]; then
+              AREA=$(grep "Chip area" "$d/log.txt" | awk '{print $5}' || echo "N/A")
+              COMBO_CELLS=$(grep "Combinational cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
+              SEQ_CELLS=$(grep "Sequential cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
+              BUF_INV_CELLS=$(grep "Buf/Inv cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
+
               tmp_clock=$(grep "Clock period:" "$d/log.txt" | awk '{print $3}')
               tmp_slack=$(grep "Slack:" "$d/log.txt" | head -1 | awk '{print $2}')
               tmp_cp=$(grep -A 1 "Critical path" "$d/log.txt" | grep -v "Critical path" | head -1 | tr -s ' ' | cut -d' ' -f2-)
@@ -101,30 +90,38 @@ jobs:
               [ -n "$tmp_setup" ] && SETUP_TIME=$tmp_setup
               [ -n "$tmp_hold" ] && HOLD_TIME=$tmp_hold
 
-              # Calculate max frequency from clock period
+              # Calculate frequency
               freq_calc=$(awk "BEGIN {print 1000/$CLOCK_PERIOD}" 2>/dev/null)
               [ -n "$freq_calc" ] && MAX_FREQ=$(printf "%.2f" "$freq_calc")
             fi
 
-            # Convert Slack to Pass/Fail
+            # Mark if Slack >= 0 => STA passes
             STA_PASSES="Yes"
-            # If Slack < 0 => "No"
             SLACK_SIGN=$(awk "BEGIN {print ($SLACK < 0) ? 1 : 0}")
             if [ "$SLACK_SIGN" -eq 1 ]; then
               STA_PASSES="No"
             fi
 
-            # Append to global JSON array
+            # Basic parsing from directory name "8bits_2sync_900000baud"
+            DATA_BITS=$(echo "$CONFIG_NAME" | grep -oE '^[0-9]+bits' | sed 's/bits//')
+            FIFO_DEPTH=$(echo "$CONFIG_NAME" | grep -oE '_[0-9]+sync_' | tr -dc '0-9')
+            BAUD=$(echo "$CONFIG_NAME" | grep -oE '[0-9]+baud' | sed 's/baud//')
+
+            DATA_BITS="${DATA_BITS:-N/A}"
+            FIFO_DEPTH="${FIFO_DEPTH:-N/A}"
+            BAUD="${BAUD:-N/A}"
+
+            # Construct a JSON object, then append it to the array in synth_results.json
             newObj=$(jq -n \
               --arg cfg   "$CONFIG_NAME" \
               --arg gates "$GATES" \
               --arg area  "$AREA" \
-              --arg ccomb "$COMBO_CELLS" \
-              --arg cseq  "$SEQ_CELLS" \
-              --arg cbuf  "$BUF_INV_CELLS" \
+              --arg combo "$COMBO_CELLS" \
+              --arg seq   "$SEQ_CELLS" \
+              --arg buf   "$BUF_INV_CELLS" \
               --arg bits  "$DATA_BITS" \
               --arg depth "$FIFO_DEPTH" \
-              --arg bps   "$BAUD" \
+              --arg baud  "$BAUD" \
               --arg cper  "$CLOCK_PERIOD" \
               --arg slk   "$SLACK" \
               --arg cpath "$CRITICAL_PATH" \
@@ -136,12 +133,12 @@ jobs:
                 config_name: $cfg,
                 gates: $gates,
                 area: $area,
-                combinational_cells: $ccomb,
-                sequential_cells: $cseq,
-                buffer_inverter_cells: $cbuf,
+                combinational_cells: $combo,
+                sequential_cells: $seq,
+                buffer_inverter_cells: $buf,
                 data_bits: $bits,
                 fifo_depth: $depth,
-                baud: $bps,
+                baud: $baud,
                 timing: {
                   clock_period: $cper,
                   slack: $slk,
@@ -153,16 +150,17 @@ jobs:
                 }
               }'
             )
+
             tmpfile=$(mktemp)
             jq ". + [ $newObj ]" out/results/synth_results.json > "$tmpfile"
             mv "$tmpfile" out/results/synth_results.json
 
-            # Append a row to the table snippet for this config
+            # Append a row to the table snippet
             echo "\\texttt{$CONFIG_NAME} & $FIFO_DEPTH & $DATA_BITS & $GATES \\\\ \\hline" >> out/results/synth_table_rows.tex
+
           done
 
-          # Finally, create a full table environment in out/results/synth_results.tex
-          # so you can \input this into syn.tex
+          # Now create a final .tex that wraps the rows in a table
           cat <<EOF > out/results/synth_results.tex
 % Auto-generated table of all configs
 \\renewcommand*{\\arraystretch}{1.3}
@@ -190,10 +188,8 @@ jobs:
 \\endfoot
 EOF
 
-          # Insert all of our table rows
           cat out/results/synth_table_rows.tex >> out/results/synth_results.tex
 
-          # Close the table
           cat <<EOF >> out/results/synth_results.tex
 \\caption{Synthesis Results for All Configs}
 \\end{longtable}
@@ -212,7 +208,7 @@ EOF
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "[gh-bot] Update synthesis/STA results (multi-config)"
+            git commit -m "[gh-bot] Update synthesis/STA results"
             git pull --rebase origin main
             git push origin main
           fi
