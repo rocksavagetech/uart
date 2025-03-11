@@ -45,6 +45,7 @@ jobs:
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
             echo "Inserting dynamic snippet"
+            pwd 
             sed -i '/\\subsection{Area and Gate Count}/a \\input{../../out/results/synth-results.tex}' "$SYN_TEX"
           else
             echo "No $RESULTS_TEX or no $SYN_TEX. Skipping table injection."
