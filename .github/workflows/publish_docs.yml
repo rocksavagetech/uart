@@ -34,7 +34,7 @@ jobs:
       - name: Inject dynamic table into syn.tex
         run: |
           SYN_TEX="doc/user-guide/syn.tex"
-          RESULTS_TEX="out/results/synth_results.tex"
+          RESULTS_TEX="out/results/synth-results.tex"
 
           if [ -f "$RESULTS_TEX" ] && [ -f "$SYN_TEX" ]; then
             echo "Backing up $SYN_TEX"
@@ -44,7 +44,7 @@ jobs:
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
             echo "Inserting dynamic snippet"
-            sed -i '/\\subsection{Area and Gate Count}/a \\input{../../out/results/synth_results.tex}' "$SYN_TEX"
+            sed -i '/\\subsection{Area and Gate Count}/a \\input{../../out/results/synth-results.tex}' "$SYN_TEX"
           else
             echo "No $RESULTS_TEX or no $SYN_TEX. Skipping table injection."
           fi

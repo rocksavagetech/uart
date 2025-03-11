@@ -49,7 +49,7 @@ jobs:
       - name: Parse all config directories
         run: |
           # 1) Initialize a JSON array
-          echo "[]" > out/results/synth_results.json
+          echo "[]" > out/results/synth-results.json
 
           # 2) Prepare an empty file for LaTeX table rows
           echo "% Auto-generated table rows" > out/results/synth_table_rows.tex
@@ -163,40 +163,40 @@ jobs:
             )
 
             tmp_file=$(mktemp)
-            jq ". + [ $newObj ]" out/results/synth_results.json > "$tmp_file"
-            mv "$tmp_file" out/results/synth_results.json
+            jq ". + [ $newObj ]" out/results/synth-results.json > "$tmp_file"
+            mv "$tmp_file" out/results/synth-results.json
 
             # Append a row to the table snippet
             echo "\\texttt{$CONFIG_NAME} & $FIFO_DEPTH & $DATA_BITS & $GATES \\\\ \\hline" >> out/results/synth_table_rows.tex
           done
 
-          # Build out/results/synth_results.tex line by line (to avoid heredocs)
-          echo "% Auto-generated table of all configs" > out/results/synth_results.tex
-          echo "\\renewcommand*{\\arraystretch}{1.3}" >> out/results/synth_results.tex
-          echo "\\rowcolors{2}{gray!30}{gray!10}" >> out/results/synth_results.tex
-          echo "\\begin{longtable}[H]{| p{0.22\\textwidth} | p{0.18\\textwidth} | p{0.20\\textwidth} | p{0.30\\textwidth} |}" >> out/results/synth_results.tex
-          echo "\\hline" >> out/results/synth_results.tex
-          echo "\\rowcolor{gray}" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{Config}} &" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{FIFO Depth}} &" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{Data Bits}} &" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{Gate Count}} \\\\ \\hline" >> out/results/synth_results.tex
-          echo "\\endfirsthead" >> out/results/synth_results.tex
-          echo "" >> out/results/synth_results.tex
-          echo "\\hline" >> out/results/synth_results.tex
-          echo "\\rowcolor{gray}" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{Config}} &" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{FIFO Depth}} &" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{Data Bits}} &" >> out/results/synth_results.tex
-          echo "\\textcolor{white}{\\textbf{Gate Count}} \\\\ \\hline" >> out/results/synth_results.tex
-          echo "\\endhead" >> out/results/synth_results.tex
-          echo "" >> out/results/synth_results.tex
-          echo "\\hline" >> out/results/synth_results.tex
-          echo "\\endfoot" >> out/results/synth_results.tex
+          # Build out/results/synth-results.tex line by line (to avoid heredocs)
+          echo "% Auto-generated table of all configs" > out/results/synth-results.tex
+          echo "\\renewcommand*{\\arraystretch}{1.3}" >> out/results/synth-results.tex
+          echo "\\rowcolors{2}{gray!30}{gray!10}" >> out/results/synth-results.tex
+          echo "\\begin{longtable}[H]{| p{0.22\\textwidth} | p{0.18\\textwidth} | p{0.20\\textwidth} | p{0.30\\textwidth} |}" >> out/results/synth-results.tex
+          echo "\\hline" >> out/results/synth-results.tex
+          echo "\\rowcolor{gray}" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{Config}} &" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{FIFO Depth}} &" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{Data Bits}} &" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{Gate Count}} \\\\ \\hline" >> out/results/synth-results.tex
+          echo "\\endfirsthead" >> out/results/synth-results.tex
+          echo "" >> out/results/synth-results.tex
+          echo "\\hline" >> out/results/synth-results.tex
+          echo "\\rowcolor{gray}" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{Config}} &" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{FIFO Depth}} &" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{Data Bits}} &" >> out/results/synth-results.tex
+          echo "\\textcolor{white}{\\textbf{Gate Count}} \\\\ \\hline" >> out/results/synth-results.tex
+          echo "\\endhead" >> out/results/synth-results.tex
+          echo "" >> out/results/synth-results.tex
+          echo "\\hline" >> out/results/synth-results.tex
+          echo "\\endfoot" >> out/results/synth-results.tex
 
-          cat out/results/synth_table_rows.tex >> out/results/synth_results.tex
-          echo "\\caption{Synthesis Results for All Configs}" >> out/results/synth_results.tex
-          echo "\\end{longtable}" >> out/results/synth_results.tex
+          cat out/results/synth_table_rows.tex >> out/results/synth-results.tex
+          echo "\\caption{Synthesis Results for All Configs}" >> out/results/synth-results.tex
+          echo "\\end{longtable}" >> out/results/synth-results.tex
 
       - name: Generate Verilog
         run: |
