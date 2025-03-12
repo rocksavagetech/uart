@@ -165,7 +165,9 @@ jobs:
             mv "$tmpf" out/results/synth_results.json
 
             # Append a row to the table snippet
-            echo "\\texttt{$CONFIG_NAME} & $FIFO_DEPTH & $DATA_BITS & $GATES \\\\ \\hline" >> out/results/synth_table_rows.tex
+            escapedCfg=$(echo "$CONFIG_NAME" | sed 's/_/\\_/g')
+            echo "\\texttt{$escapedCfg} & $FIFO_DEPTH & $DATA_BITS & $GATES \\\\ \\hline" >> out/results/synth_table_rows.tex
+
           done
 
           # Build a final snippet file named "synthResultsSnippet.tex" (no underscores!)

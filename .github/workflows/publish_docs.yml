@@ -33,7 +33,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra
 
-      - name: Remove old table & use \include
+      - name: Remove old table & use \input
         run: |
           SYN_TEX="doc/user-guide/syn.tex"
           SNIPPET_NOEXT="synthResultsSnippet"  # We'll do \include{../../out/results/synthResultsSnippet} (no .tex extension)
@@ -46,9 +46,10 @@ jobs:
             echo "Removing old static table..."
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
-            echo "Inserting a \\include statement"
-            # We must double backslash in sed to get a single backslash in the final .tex
-            sed -i "/\\subsection{Area and Gate Count}/a \\include{../../out/results/${SNIPPET_NOEXT}}" "$SYN_TEX"
+            echo "Inserting a \\input statement in $SYN_TEX"
+            # Double backslash so that we end up with a single '\' in the final .tex
+            sed -i '/\\rowcolors{2}{gray!30}{gray!10}/a \\\input{../../out/results/synthResultsSnippet}' doc/user-guide/syn.tex
+
           else
             echo "Missing $SYN_TEX or $SNIPPET_PATH; skipping injection."
           fi
