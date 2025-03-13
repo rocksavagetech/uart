@@ -6,7 +6,12 @@ import chisel3.util._
 import tech.rocksavage.chiselware.addrdecode.{AddrDecode, AddrDecodeError}
 import tech.rocksavage.chiselware.addressable.RegisterMap
 import tech.rocksavage.chiselware.apb.{ApbBundle, ApbParams}
-import tech.rocksavage.chiselware.uart.error.{UartError, UartErrorObject, UartRxError, UartTxError}
+import tech.rocksavage.chiselware.uart.error.{
+    UartError,
+    UartErrorObject,
+    UartRxError,
+    UartTxError
+}
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
@@ -209,6 +214,9 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
+    registerMap.prettyPrint()
+    registerMap.printHeaderFile()
+
     // ---------------------------------------------------------------
     // APB address decode
     // ---------------------------------------------------------------
@@ -280,18 +288,24 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // Debug logging for error tracking
     val prevRxError = RegNext(uartInner.io.error.rxError)
     val prevTxError = RegNext(uartInner.io.error.txError)
-    
-    when (uartInner.io.error.rxError =/= prevRxError || uartInner.io.error.txError =/= prevTxError) {
-        printf("[Uart.scala DEBUG] Error changed: RX from %d to %d, TX from %d to %d\n", 
-            prevRxError.asUInt, reg_error.rxError.asUInt,
-            prevTxError.asUInt, reg_error.txError.asUInt)
+
+    when(
+      uartInner.io.error.rxError =/= prevRxError || uartInner.io.error.txError =/= prevTxError
+    ) {
+        printf(
+          "[Uart.scala DEBUG] Error changed: RX from %d to %d, TX from %d to %d\n",
+          prevRxError.asUInt,
+          reg_error.rxError.asUInt,
+          prevTxError.asUInt,
+          reg_error.txError.asUInt
+        )
     }
 
     // Connect directly from inner module when not clearing errors
-    when (clearError) {
+    when(clearError) {
         reg_error.rxError := UartRxError.None
         reg_error.txError := UartTxError.None
-    }.otherwise{
+    }.otherwise {
         reg_error := uartInner.io.error
     }
 
@@ -380,8 +394,8 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     when(clearError) {
         // Clear errors by connecting directly to None values
         clearError := false.B
-        topError := UartErrorObject.None
-        
+        topError   := UartErrorObject.None
+
         // Print debug message
         printf("[Uart.scala DEBUG] Clearing error registers\n")
     }
