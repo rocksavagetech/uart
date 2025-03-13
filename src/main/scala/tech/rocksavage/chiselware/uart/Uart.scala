@@ -6,6 +6,7 @@ import chisel3.util._
 import tech.rocksavage.chiselware.addrdecode.{AddrDecode, AddrDecodeError}
 import tech.rocksavage.chiselware.addressable.RegisterMap
 import tech.rocksavage.chiselware.apb.{ApbBundle, ApbParams}
+import tech.rocksavage.chiselware.uart.bundle.FifoStatusBundle
 import tech.rocksavage.chiselware.uart.error.{
     UartError,
     UartErrorObject,
@@ -27,6 +28,9 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
 
     // Create a register map (this example reuses one register map but differentiates TX vs RX registers by name)
     val registerMap = new RegisterMap(dataWidth, addressWidth, Some(wordWidth))
+
+    val fifoStatusRx = Wire(new FifoStatusBundle(uartParams))
+    val fifoStatusTx = Wire(new FifoStatusBundle(uartParams))
 
     // -------------------------------------------------------
     // TX registers (for the TX control bundle)
@@ -102,7 +106,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // RX registers (for the RX control bundle and RX data/status)
     // -------------------------------------------------------
     val rxData          = WireInit(0.U(uartParams.maxOutputBits.W))
-    val rxDataAvailable = RegInit(false.B)
+    val rxDataAvailable = !fifoStatusRx.empty
     registerMap.createAddressableRegister(
       rxData,
       "rx_data",
@@ -112,7 +116,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     registerMap.createAddressableRegister(
       rxDataAvailable,
       "rx_dataAvailable",
-      readOnly = false,
+      readOnly = true,
       verbose = uartParams.verbose
     )
 
@@ -244,9 +248,9 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // Capture RX data when the inner module asserts valid.
     val prevRxValid = RegNext(uartInner.io.rxValid)
     rxData := uartInner.io.dataOut
-    when(uartInner.io.rxValid & !prevRxValid) {
-        rxDataAvailable := true.B
-    }
+//    when(uartInner.io.rxValid & !prevRxValid) {
+//        rxDataAvailable := true.B
+//    }
 
     // ---------------------------------------------------------------
     // Connect the control bundles using the separate configuration registers:
@@ -274,6 +278,9 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.rxControlBundle.parityOddDb     := rx_parityOddDb
     uartInner.io.rxControlBundle.clearErrorDb    := clearError
     uartInner.io.rxControlBundle.rxDataRegRead   := rxDataRegRead
+
+    fifoStatusRx := uartInner.io.rxFifoStatus
+    fifoStatusTx := uartInner.io.txFifoStatus
 
     // ---------------------------------------------------------------
     // Connect clocks per bit outputs from inner module to our registers
@@ -336,8 +343,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     when(!io.apb.PWRITE) {
         for (reg <- registerMap.getRegisters if reg.name == "rx_data") {
             when(addrDecode.io.sel(reg.id) && rxDataAvailable) {
-                rxDataRegRead   := true.B
-                rxDataAvailable := false.B
+                rxDataRegRead := true.B
             }
         }
     }

@@ -52,10 +52,10 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val numOutputBitsReg = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
 
     /** Parity usage register */
-    val useParityReg  = RegInit(false.B)
-    val parityOddReg  = RegInit(false.B)
-    val clearErrorReg = RegInit(false.B)
-    val fifoOverflowFlag = RegInit(false.B)
+    val useParityReg      = RegInit(false.B)
+    val parityOddReg      = RegInit(false.B)
+    val clearErrorReg     = RegInit(false.B)
+    val fifoOverflowFlag  = RegInit(false.B)
     val fifoUnderflowFlag = RegInit(false.B)
 
     val numOutputBitsDbReg = RegInit(
@@ -175,11 +175,11 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     dataReg  := dataNext
     validReg := validNext
-    
+
     when(clearErrorDbReg) {
         // When clearErrorDb is set, reset all error flags
-        errorReg := UartRxError.None
-        fifoOverflowFlag := false.B
+        errorReg          := UartRxError.None
+        fifoOverflowFlag  := false.B
         fifoUnderflowFlag := false.B
         printf("[UartRx DEBUG] Clearing all error flags\n")
     }.otherwise {
@@ -196,18 +196,31 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       formal = formal
     )
     val fifo = Module(new DynamicFifo(fifoParams))
+//    val full        = Output(Bool())
+//    val empty       = Output(Bool())
+//    val count       = Output(UInt(params.bufferSize.W))
+//    val almostEmpty = Output(Bool())
+//    val almostFull  = Output(Bool())
+    io.fifoBundle.full        := fifo.io.full
+    io.fifoBundle.empty       := fifo.io.empty
+    io.fifoBundle.almostFull  := fifo.io.almostFull
+    io.fifoBundle.almostEmpty := fifo.io.almostEmpty
 
     val attemptingPush = completeWire && errorReg === UartRxError.None
-    val attemptingPop = io.rxConfig.rxDataRegRead
+    val attemptingPop  = io.rxConfig.rxDataRegRead
     // If the receiver tries to push when FIFO is full => overflow
     when(attemptingPush && fifo.io.full) {
         fifoOverflowFlag := true.B
-        printf("[UartRx DEBUG] Setting FIFO overflow flag - push to full FIFO\n")
+        printf(
+          "[UartRx DEBUG] Setting FIFO overflow flag - push to full FIFO\n"
+        )
     }
 
     when(attemptingPop && fifo.io.empty) {
         fifoUnderflowFlag := true.B
-        printf("[UartRx DEBUG] Setting FIFO underflow flag - pop from empty FIFO\n")
+        printf(
+          "[UartRx DEBUG] Setting FIFO underflow flag - pop from empty FIFO\n"
+        )
     }
 
     // Output error priority logic
@@ -221,10 +234,16 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     // Log error flag changes for debugging
     when(fifoOverflowFlag =/= RegNext(fifoOverflowFlag)) {
-        printf("[UartRx DEBUG] FIFO overflow flag changed to %d\n", fifoOverflowFlag)
+        printf(
+          "[UartRx DEBUG] FIFO overflow flag changed to %d\n",
+          fifoOverflowFlag
+        )
     }
     when(fifoUnderflowFlag =/= RegNext(fifoUnderflowFlag)) {
-        printf("[UartRx DEBUG] FIFO underflow flag changed to %d\n", fifoUnderflowFlag)
+        printf(
+          "[UartRx DEBUG] FIFO underflow flag changed to %d\n",
+          fifoUnderflowFlag
+        )
     }
 
     fifo.io.push   := completeWire && errorReg === UartRxError.None

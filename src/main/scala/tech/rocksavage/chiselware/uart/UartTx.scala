@@ -42,12 +42,12 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val parityOddNext = WireInit(false.B) // New NEXT signal for parity odd
     val dataNext      = WireInit(0.U(params.maxOutputBits.W))
     val loadNext      = WireInit(false.B)
-    
-    val clearErrorReg = RegInit(false.B)
+
+    val clearErrorReg   = RegInit(false.B)
     val clearErrorDbReg = RegInit(false.B)
-    val clearErrorNext = WireInit(false.B)
-    clearErrorReg    := clearErrorNext
-    clearErrorDbReg    := io.txConfig.clearErrorDb
+    val clearErrorNext  = WireInit(false.B)
+    clearErrorReg   := clearErrorNext
+    clearErrorDbReg := io.txConfig.clearErrorDb
 
     val fifoEmptyReg = RegInit(true.B)
 
@@ -71,7 +71,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val sampleParityWire = uartFsm.io.sample && state === UartState.Parity
     val completeWire     = uartFsm.io.complete
     val applyShiftReg    = sampleDataWire || sampleParityWire
-    val txErrorReg = RegInit(UartTxError.None)
+    val txErrorReg       = RegInit(UartTxError.None)
 
     val active = RegInit(false.B)
     when((RegNext(state) === UartState.Idle) && (loadNext)) {
@@ -129,17 +129,21 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       formal = formal
     )
     val fifo = Module(new DynamicFifo(fifoParams))
+    io.fifoBundle.full        := fifo.io.full
+    io.fifoBundle.empty       := fifo.io.empty
+    io.fifoBundle.almostFull  := fifo.io.almostFull
+    io.fifoBundle.almostEmpty := fifo.io.almostEmpty
 
     when(io.txConfig.load) {
         // On any cycle we assert push+full => overflow
-        when (fifo.io.full) {
+        when(fifo.io.full) {
             txErrorReg := UartTxError.FifoOverflow
             printf("[UartTx DEBUG] Setting overflow error - FIFO full\n")
-        }.elsewhen (fifo.io.empty) {
+        }.elsewhen(fifo.io.empty) {
             // If your design tries to pop when empty => underflow
             txErrorReg := UartTxError.FifoUnderflow
             printf("[UartTx DEBUG] Setting underflow error - FIFO empty\n")
-        }.elsewhen(uartFsm.io.complete){
+        }.elsewhen(uartFsm.io.complete) {
             txErrorReg := UartTxError.None
             printf("[UartTx DEBUG] Clearing error after completion\n")
         }
@@ -147,17 +151,20 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     // Debug status changes
     when(txErrorReg =/= RegNext(txErrorReg)) {
-        printf("[UartTx DEBUG] Error state changed: from %d to %d\n", 
-            RegNext(txErrorReg).asUInt, txErrorReg.asUInt)
+        printf(
+          "[UartTx DEBUG] Error state changed: from %d to %d\n",
+          RegNext(txErrorReg).asUInt,
+          txErrorReg.asUInt
+        )
     }
 
     when(clearErrorDbReg) {
         // When clearErrorDb is set, reset
         txErrorReg := UartTxError.None
     }
-    //Error Output
+    // Error Output
     io.error := txErrorReg
-  
+
     fifo.io.push   := RegNext(io.txConfig.txDataRegWrite)
     fifo.io.pop    := startTransaction
     fifo.io.dataIn := io.txConfig.data

@@ -24,6 +24,9 @@ class UartBundle(params: UartParams) extends Bundle {
     val txControlBundle = new UartTxControlBundle(params)
     val rxControlBundle = new UartRxControlBundle(params)
 
+    val rxFifoStatus = new FifoStatusBundle(params)
+    val txFifoStatus = new FifoStatusBundle(params)
+
     // UART serial output
     val tx = Output(Bool())
 }

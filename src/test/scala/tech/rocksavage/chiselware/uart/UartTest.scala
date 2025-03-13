@@ -27,7 +27,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
 
     println(s"Running test: $testName")
     val testDir = "out/test"
-    useVerilator = true
+    useVerilator = false
     val backendAnnotations = {
         var annos: Seq[Annotation] = Seq()
         if (enableVcd) annos = annos :+ WriteVcdAnnotation
@@ -42,7 +42,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         annos
     }
     var useVerilator = System.getProperty("useVerilator", "false").toBoolean
-
     runTest(testName)
 
     def runTest(name: String): Unit = {
@@ -70,39 +69,54 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 it should "detect TX FIFO overflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.txFifoOverflowTest(dut, uartParams)
+                            fifoIntegrationTests.txFifoOverflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
+
             case "rxFifoOverflow" =>
                 it should "detect RX FIFO overflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.rxFifoOverflowTest(dut, uartParams)
+                            fifoIntegrationTests.rxFifoOverflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
+
             case "txFifoUnderflow" =>
                 it should "detect TX FIFO underflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.txFifoUnderflowTest(dut, uartParams)
+                            fifoIntegrationTests.txFifoUnderflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
+
             case "rxFifoUnderflow" =>
                 it should "detect RX FIFO underflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.rxFifoUnderflowTest(dut, uartParams)
+                            fifoIntegrationTests.rxFifoUnderflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
+
             case "fifoErrorClearing" =>
                 it should "clear FIFO errors correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.errorClearingTest(dut, uartParams)
+                            fifoIntegrationTests.errorClearingTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
 
@@ -335,28 +349,28 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     fifoIntegrationTests.txFifoOverflowTest(dut, params)
                 }
         }
-        
+
         it should "detect RX FIFO overflow correctly" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     fifoIntegrationTests.rxFifoOverflowTest(dut, params)
                 }
         }
-        
+
         it should "detect TX FIFO underflow correctly" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     fifoIntegrationTests.txFifoUnderflowTest(dut, params)
                 }
         }
-        
+
         it should "detect RX FIFO underflow correctly" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     fifoIntegrationTests.rxFifoUnderflowTest(dut, params)
                 }
         }
-        
+
         it should "clear FIFO errors correctly" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
