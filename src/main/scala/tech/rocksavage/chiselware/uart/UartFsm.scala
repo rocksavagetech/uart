@@ -172,20 +172,20 @@ class UartFsm(params: UartParams) extends Module {
         prevState: UartState.Type
     ): UartState.Type = {
 
-        val state        = WireDefault(UartState.Idle)
-        val baudUpdating = WireDefault(UartState.BaudUpdating)
+        val state      = WireDefault(UartState.Idle)
+        val stateInner = WireDefault(UartState.Idle)
 
         when(prevState === UartState.Idle && updateBaud) {
-            baudUpdating := UartState.BaudUpdating
+            stateInner := UartState.BaudUpdating
         }
         when(prevState === UartState.BaudUpdating && baudValid) {
-            baudUpdating := UartState.Idle
+            stateInner := UartState.Idle
         }
         when(prevState === UartState.BaudUpdating && !baudValid) {
-            baudUpdating := UartState.BaudUpdating
+            stateInner := UartState.BaudUpdating
         }
 
-        when(baudUpdating =/= UartState.BaudUpdating) {
+        when(stateInner =/= UartState.BaudUpdating) {
             when(active) {
                 when(startTransaction) {
                     state := UartState.Start
