@@ -65,18 +65,20 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     val uartFsm = Module(new UartFsm(params))
 
-    val state            = uartFsm.io.state
-    val sampleStartWire  = uartFsm.io.sample && state === UartState.Start
-    val sampleDataWire   = uartFsm.io.sample && state === UartState.Data
-    val sampleParityWire = uartFsm.io.sample && state === UartState.Parity
-    val completeWire     = uartFsm.io.complete
-    val applyShiftReg    = sampleDataWire || sampleParityWire
-    val txErrorReg       = RegInit(UartTxError.None)
+    val state              = uartFsm.io.state
+    val transmitStartWire  = uartFsm.io.transmit && state === UartState.Start
+    val transmitDataWire   = uartFsm.io.transmit && state === UartState.Data
+    val transmitParityWire = uartFsm.io.transmit && state === UartState.Parity
+    val completeWire       = uartFsm.io.complete
+    val applyShiftReg      = transmitDataWire || transmitParityWire
+    val txErrorReg         = RegInit(UartTxError.None)
+
+    val emptywire = WireInit(false.B)
 
     val active = RegInit(false.B)
     when((RegNext(state) === UartState.Idle) && (loadNext)) {
         active := true.B
-    }.elsewhen(fifo.io.empty) {
+    }.elsewhen(emptywire && (RegNext(state) === UartState.Idle)) {
         active := false.B
     }
     val startTransaction =
@@ -133,6 +135,8 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     io.fifoBundle.empty       := fifo.io.empty
     io.fifoBundle.almostFull  := fifo.io.almostFull
     io.fifoBundle.almostEmpty := fifo.io.almostEmpty
+
+    emptywire := fifo.io.empty
 
     when(io.txConfig.load) {
         // On any cycle we assert push+full => overflow

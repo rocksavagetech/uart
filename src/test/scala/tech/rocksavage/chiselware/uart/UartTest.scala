@@ -21,7 +21,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "regression"
+        case true  => "basicBufferedTransmit"
         case false => testNameArg
     }
 
@@ -220,6 +220,13 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     test(new UartTx(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             transmissionTests.basicTxTest(dut, uartParams)
+                        }
+                }
+            case "basicBufferedTransmit" =>
+                it should "transmit buffered data correctly" in {
+                    test(new UartTx(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            transmissionTests.bufferedTxTest(dut, uartParams)
                         }
                 }
 
