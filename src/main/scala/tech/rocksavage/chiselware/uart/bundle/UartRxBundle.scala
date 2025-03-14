@@ -11,7 +11,6 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 class UartRxBundle(params: UartParams) extends Bundle {
     val rx    = Input(Bool())
     val data  = Output(UInt(params.maxOutputBits.W))
-    val valid = Output(Bool())
     val error = Output(UartRxError())
 
     // configuration inputs

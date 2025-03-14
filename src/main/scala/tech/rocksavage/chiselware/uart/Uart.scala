@@ -238,7 +238,6 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     io.tx           := uartInner.io.tx
 
     // Capture RX data when the inner module asserts valid.
-    val prevRxValid = RegNext(uartInner.io.rxValid)
     rxData := uartInner.io.dataOut
 
     // ---------------------------------------------------------------

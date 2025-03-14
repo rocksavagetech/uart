@@ -23,7 +23,6 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     // Connect the RX side
     rxModule.io.rx   := io.rx
     io.dataOut       := rxModule.io.data
-    io.rxValid       := rxModule.io.valid
     io.error.rxError := rxModule.io.error
     io.error.txError := txModule.io.error
     // io.error.topError := UartErrorObject.None

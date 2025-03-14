@@ -29,11 +29,12 @@ class UartFsm(params: UartParams) extends Module {
         val baudValid  = Input(Bool())
 
         // ############# output signals
-        val state         = Output(UartState())
-        val transmit      = Output(Bool())
-        val sample        = Output(Bool())
-        val complete      = Output(Bool())
-        val shiftRegister = Output(Bool())
+        val state          = Output(UartState())
+        val transmit       = Output(Bool())
+        val sample         = Output(Bool())
+        val complete       = Output(Bool())
+        val completeSample = Output(Bool())
+        val shiftRegister  = Output(Bool())
     })
 
     val startTransaction = WireDefault(io.startTransaction)
@@ -121,6 +122,7 @@ class UartFsm(params: UartParams) extends Module {
 
     // Outputs
     io.sample := (state =/= UartState.Idle) && (state =/= UartState.BaudUpdating) && (clockCounter === (io.clocksPerBit >> 1.U))
+    io.completeSample := (state === UartState.Stop) && (clockCounter === (io.clocksPerBit >> 1.U))
     io.transmit := (prevState =/= UartState.Start) && (prevState =/= UartState.Idle) && (prevState =/= UartState.BaudUpdating) && (clockCounter === 0.U)
     io.complete := (state === UartState.Stop) && (clockCounter === clockCounterMax - 1.U)
     io.shiftRegister := state === UartState.Data || state === UartState.Parity

@@ -104,7 +104,8 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         uartFsm.io.sample && uartFsm.io.state === UartState.Data
     val sampleParityWire =
         uartFsm.io.sample && uartFsm.io.state === UartState.Parity
-    val completeWire = uartFsm.io.complete
+    val completeWire       = uartFsm.io.complete
+    val completeSampleWire = uartFsm.io.completeSample
 
     val startTransaction =
         (rxSync === false.B) && (RegNext(state) === UartState.Idle)
@@ -156,25 +157,18 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     /** Data output register */
     val dataReg = RegInit(0.U(params.maxOutputBits.W))
 
-    /** Valid output register */
-    val validReg = RegInit(false.B)
-
     /** Error output register */
     val errorReg = RegInit(UartRxError.None)
 
     /** Next Data output register */
     val dataNext = WireInit(0.U(params.maxOutputBits.W))
 
-    /** Next Valid output register */
-    val validNext = WireInit(false.B)
-
     /** Next Error output register */
     val errorNext = WireInit(UartRxError.None)
 
     val sampledRxSync = RegInit(true.B)
 
-    dataReg  := dataNext
-    validReg := validNext
+    dataReg := dataNext
 
     when(clearErrorDbReg) {
         // When clearErrorDb is set, reset all error flags
@@ -254,9 +248,6 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     // Output Assignments
     // ###################
 
-    /** Assign output valid signal */
-    io.valid := validReg
-
     /** Assign output error signal */
     // io.error := errorReg // Ensure io.error is always assigned
 
@@ -312,12 +303,6 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       completeWire
     )
 
-    validNext := calculateValidNext(
-      validReg,
-      completeWire && errorReg === UartRxError.None,
-      startTransaction
-    )
-
     errorNext := calculateErrorNext(
       stateReg = state,
       rxSync = rxSync,
@@ -326,7 +311,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       dataShiftReg = dataShiftReg,
       errorReg = errorReg,
       clearError = clearErrorReg,
-      completeWire = completeWire,
+      completeSampleWire = completeSampleWire,
       sampleParityWire = sampleParityWire
     )
 
@@ -386,26 +371,6 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         dataNext
     }
 
-    /** Computes the next valid value.
-      *
-      * @return
-      *   The next valid value.
-      */
-    def calculateValidNext(
-        validReg: Bool,
-        completeWire: Bool,
-        startTransaction: Bool
-    ): Bool = {
-        val validNext = WireDefault(validReg)
-        when(completeWire) {
-            validNext := true.B
-        }
-        when(startTransaction) {
-            validNext := false.B
-        }
-        validNext
-    }
-
     /** Computes the next error value.
       *
       * @return
@@ -419,7 +384,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         dataShiftReg: UInt,
         errorReg: UartRxError.Type,
         clearError: Bool,
-        completeWire: Bool,
+        completeSampleWire: Bool,
         sampleParityWire: Bool
     ): UartRxError.Type = {
         val errorNext = WireDefault(errorReg)
@@ -435,7 +400,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
         switch(stateReg) {
             is(UartState.Stop) {
-                when(completeWire) {
+                when(completeSampleWire) {
                     when(rxSync =/= true.B) {
                         errorNext := UartRxError.StopBitError
                     }
