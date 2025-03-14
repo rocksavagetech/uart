@@ -196,11 +196,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       formal = formal
     )
     val fifo = Module(new DynamicFifo(fifoParams))
-//    val full        = Output(Bool())
-//    val empty       = Output(Bool())
-//    val count       = Output(UInt(params.bufferSize.W))
-//    val almostEmpty = Output(Bool())
-//    val almostFull  = Output(Bool())
+
     io.fifoBundle.full        := fifo.io.full
     io.fifoBundle.empty       := fifo.io.empty
     io.fifoBundle.almostFull  := fifo.io.almostFull
