@@ -76,7 +76,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val active = RegInit(false.B)
     when((RegNext(state) === UartState.Idle) && (loadNext)) {
         active := true.B
-    }.elsewhen(fifoEmptyReg) {
+    }.elsewhen(fifo.io.empty) {
         active := false.B
     }
     val startTransaction =

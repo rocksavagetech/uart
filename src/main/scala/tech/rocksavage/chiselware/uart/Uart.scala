@@ -8,9 +8,9 @@ import tech.rocksavage.chiselware.addressable.RegisterMap
 import tech.rocksavage.chiselware.apb.{ApbBundle, ApbParams}
 import tech.rocksavage.chiselware.uart.bundle.FifoStatusBundle
 import tech.rocksavage.chiselware.uart.error.{
-    UartError,
-    UartErrorObject,
+    UartErrorBundle,
     UartRxError,
+    UartTopError,
     UartTxError
 }
 import tech.rocksavage.chiselware.uart.param.UartParams
@@ -121,18 +121,10 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     )
 
     // Create a wire for the error output
-    val reg_error = Wire(new UartError())
+    val error = Wire(new UartErrorBundle())
     registerMap.createAddressableRegister(
-      reg_error,
+      error,
       "error",
-      readOnly = true,
-      verbose = uartParams.verbose
-    )
-
-    val topError = RegInit(UartErrorObject.None)
-    registerMap.createAddressableRegister(
-      topError,
-      "top_error",
       readOnly = true,
       verbose = uartParams.verbose
     )
@@ -248,9 +240,6 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // Capture RX data when the inner module asserts valid.
     val prevRxValid = RegNext(uartInner.io.rxValid)
     rxData := uartInner.io.dataOut
-//    when(uartInner.io.rxValid & !prevRxValid) {
-//        rxDataAvailable := true.B
-//    }
 
     // ---------------------------------------------------------------
     // Connect the control bundles using the separate configuration registers:
@@ -282,39 +271,15 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     fifoStatusRx := uartInner.io.rxFifoStatus
     fifoStatusTx := uartInner.io.txFifoStatus
 
+    error.rxError         := uartInner.io.error.rxError
+    error.txError         := uartInner.io.error.txError
+    error.addrDecodeError := addrDecode.io.errorCode
+
     // ---------------------------------------------------------------
     // Connect clocks per bit outputs from inner module to our registers
     // ---------------------------------------------------------------
     txClocksPerBit := uartInner.io.txClocksPerBit
     rxClocksPerBit := uartInner.io.rxClocksPerBit
-
-    // ---------------------------------------------------------------
-    // Error handling - track errors from inner module
-    // ---------------------------------------------------------------
-    // Update error status based on inner module errors
-    // Debug logging for error tracking
-    val prevRxError = RegNext(uartInner.io.error.rxError)
-    val prevTxError = RegNext(uartInner.io.error.txError)
-
-    when(
-      uartInner.io.error.rxError =/= prevRxError || uartInner.io.error.txError =/= prevTxError
-    ) {
-        printf(
-          "[Uart.scala DEBUG] Error changed: RX from %d to %d, TX from %d to %d\n",
-          prevRxError.asUInt,
-          reg_error.rxError.asUInt,
-          prevTxError.asUInt,
-          reg_error.txError.asUInt
-        )
-    }
-
-    // Connect directly from inner module when not clearing errors
-    when(clearError) {
-        reg_error.rxError := UartRxError.None
-        reg_error.txError := UartTxError.None
-    }.otherwise {
-        reg_error := uartInner.io.error
-    }
 
     // ---------------------------------------------------------------
     // APB read/write interface handling
@@ -358,32 +323,26 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // Error Checks
     // Add error checking for invalid register values
     when(io.apb.PSEL && io.apb.PENABLE) {
-        val registerProgrammingError = WireDefault(false.B)
         for (reg <- registerMap.getRegisters) {
             when(addrDecode.io.sel(reg.id)) {
                 // Check for invalid values in configuration registers
                 when(reg.name.contains("numOutputBitsDb").B) {
                     val maxBits = uartParams.maxOutputBits.U
                     when(io.apb.PWDATA > maxBits) {
-                        registerProgrammingError := true.B
+                        error.topError := UartTopError.InvalidRegisterProgramming
                     }
                 }.elsewhen(reg.name.contains("_baudRate").B) {
                     val maxBaud = uartParams.maxBaudRate.U
                     when(io.apb.PWDATA > maxBaud) {
-                        registerProgrammingError := true.B
+                        error.topError := UartTopError.InvalidRegisterProgramming
                     }
                 }.elsewhen(reg.name.contains("clockFreq").B) {
                     val maxFreq = uartParams.maxClockFrequency.U
                     when(io.apb.PWDATA > maxFreq) {
-                        registerProgrammingError := true.B
+                        error.topError := UartTopError.InvalidRegisterProgramming
                     }
                 }
             }
-        }
-
-        // Set top-level error if any invalid values detected
-        when(registerProgrammingError) {
-            topError := UartErrorObject.InvalidRegisterProgramming
         }
     }
 
@@ -399,8 +358,10 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     }
     when(clearError) {
         // Clear errors by connecting directly to None values
-        clearError := false.B
-        topError   := UartErrorObject.None
+        clearError     := false.B
+        error.rxError  := UartRxError.None
+        error.txError  := UartTxError.None
+        error.topError := UartTopError.None
 
         // Print debug message
         printf("[Uart.scala DEBUG] Clearing error registers\n")
