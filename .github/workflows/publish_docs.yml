@@ -2,13 +2,14 @@ name: "Generate Documentation and Publish Release"
 
 on:
   workflow_run:
-    workflows: ["Synthesis and Results"]  # The exact name from synth_sta.yml
+    workflows: ["Synthesis and Results"]  # Must match the name in synth_sta.yml
     types: [completed]
 
 jobs:
   docs-and-release:
+    # Only run if the first workflow ended successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    if: ${{ !contains(github.event.head_commit.message, '[gh-bot]') }}
     
     permissions:
       contents: write
@@ -32,24 +33,27 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra
 
-      - name: Inject dynamic table into syn.tex
+      - name: Remove old table & use \input
         run: |
           SYN_TEX="doc/user-guide/syn.tex"
-          RESULTS_TEX="out/results/synth-results.tex"
+          SNIPPET_NOEXT="synthResultsSnippet"  # We'll do \include{../../out/results/synthResultsSnippet} (no .tex extension)
+          SNIPPET_PATH="out/results/${SNIPPET_NOEXT}.tex"
 
-          if [ -f "$RESULTS_TEX" ] && [ -f "$SYN_TEX" ]; then
+          if [ -f "$SYN_TEX" ] && [ -f "$SNIPPET_PATH" ]; then
             echo "Backing up $SYN_TEX"
-            cp "$SYN_TEX" "${SYN_TEX}.bak"
+            cp "$SYN_TEX" "$SYN_TEX.bak"
 
-            echo "Removing old table from $SYN_TEX"
+            echo "Removing old static table..."
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
-            echo "Inserting dynamic snippet"
-            sed -i '/\\subsection{Area and Gate Count}/a \\input{out/results/synth-results.tex}' "$SYN_TEX"
+            echo "Inserting a \\input statement in $SYN_TEX"
+            # Double backslash so that we end up with a single '\' in the final .tex
+            sed -i '/\\rowcolors{2}{gray!30}{gray!10}/a \\\input{../../out/results/synthResultsSnippet}' doc/user-guide/syn.tex
+
           else
-            echo "No $RESULTS_TEX or no $SYN_TEX. Skipping table injection."
+            echo "Missing $SYN_TEX or $SNIPPET_PATH; skipping injection."
           fi
-      
+
       - name: Build Documentation
         run: |
           nix develop --command make docs
@@ -57,33 +61,33 @@ jobs:
       - name: Collect artifacts
         run: |
           mkdir -p release_artifacts
-          
-          # PDFs
-          if [ -d "out/doc" ]; then
+
+          # Copy PDF(s) from out/doc
+          if [ -d out/doc ]; then
             find out/doc -name "*.pdf" -exec cp {} release_artifacts/ \;
           fi
-          
-          # Verilog
-          if [ -d "generated" ]; then
+
+          # Copy Verilog
+          if [ -d generated ]; then
             find generated -name "*.v" -exec cp {} release_artifacts/ \;
           fi
-          
-          # Netlists
-          if [ -d "out/synth" ]; then
+
+          # Copy Netlists
+          if [ -d out/synth ]; then
             find out/synth -name "*.v" -exec cp {} release_artifacts/ \;
           fi
-          
-          # JSON / TEX
-          if [ -d "out/results" ]; then
+
+          # Copy JSON + snippet .tex files
+          if [ -d out/results ]; then
             cp -r out/results/* release_artifacts/ || true
           fi
 
-          echo "Listing release_artifacts..."
+          echo "Artifacts in release_artifacts:"
           ls -la release_artifacts
-          
+
           tar -czvf release_artifacts.tar.gz release_artifacts/
 
-      - name: Create Release
+      - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
@@ -95,7 +99,5 @@ jobs:
             release_artifacts/*.tex
           tag_name: v${{ github.run_number }}
           name: "Release ${{ github.run_number }}"
-          body: |
-            Automated Release
           draft: false
           prerelease: false

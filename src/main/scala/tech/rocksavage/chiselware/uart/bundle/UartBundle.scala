@@ -1,7 +1,7 @@
 package tech.rocksavage.chiselware.uart.bundle
 
 import chisel3._
-import tech.rocksavage.chiselware.uart.error.UartError
+import tech.rocksavage.chiselware.uart.error.UartErrorBundle
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 /** Combined I/O bundle for both UART receiver and transmitter.
@@ -18,11 +18,14 @@ class UartBundle(params: UartParams) extends Bundle {
     // Indicates that the received data is valid.
     val rxValid = Output(Bool())
     // Error signal from the receiver.
-    val error = Output(new UartError())
+    val error = Output(new UartErrorBundle())
 
     // Config Signals
     val txControlBundle = new UartTxControlBundle(params)
     val rxControlBundle = new UartRxControlBundle(params)
+
+    val rxFifoStatus = new FifoStatusBundle(params)
+    val txFifoStatus = new FifoStatusBundle(params)
 
     // UART serial output
     val tx = Output(Bool())
