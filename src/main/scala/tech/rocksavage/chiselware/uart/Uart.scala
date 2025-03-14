@@ -121,7 +121,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     )
 
     // Create a wire for the error output
-    val error = Wire(new UartErrorBundle())
+    val error = RegInit(0.U.asTypeOf(new UartErrorBundle()))
     registerMap.createAddressableRegister(
       error,
       "error",
@@ -270,8 +270,9 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     fifoStatusRx := uartInner.io.rxFifoStatus
     fifoStatusTx := uartInner.io.txFifoStatus
 
-    error.rxError         := uartInner.io.error.rxError
-    error.txError         := uartInner.io.error.txError
+    error.rxError := uartInner.io.error.rxError
+    error.txError := uartInner.io.error.txError
+//    error.topError        := uartInner.io.error.topError
     error.addrDecodeError := addrDecode.io.errorCode
 
     // ---------------------------------------------------------------

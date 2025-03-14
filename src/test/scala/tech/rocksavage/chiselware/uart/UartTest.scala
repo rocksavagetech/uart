@@ -21,7 +21,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "invalidRegisterProgrammingError"
+        case true  => "regression"
         case false => testNameArg
     }
 
@@ -32,12 +32,12 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         var annos: Seq[Annotation] = Seq()
         if (enableVcd) annos = annos :+ WriteVcdAnnotation
         if (enableFst) annos = annos :+ WriteFstAnnotation
-        if (useVerilator) {
-            annos = annos :+ VerilatorBackendAnnotation
-            annos = annos :+ VerilatorCFlags(
-              Seq("--std=c++17", "-O3", "-march=native")
-            )
-        }
+//        if (useVerilator) {
+        annos = annos :+ VerilatorBackendAnnotation
+        annos = annos :+ VerilatorCFlags(
+          Seq("--std=c++17", "-O3", "-march=native")
+        )
+//        }
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
     }
