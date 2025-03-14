@@ -109,7 +109,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     // Latch incoming data and capture txData for parity calculation.
     // (txDataReg holds the unshifted data for parity computation.)
-    val txData = WireInit(0.U(params.maxOutputBits.W))
+    val txParityData = RegInit(0.U(params.maxOutputBits.W))
     dataNext := io.txConfig.data
     loadNext := io.txConfig.load
 
@@ -177,7 +177,9 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     fifo.io.almostEmptyLevel := 0.U
     fifoEmptyReg             := fifo.io.empty
 
-    txData := fifo.io.dataOut
+    when(io.txConfig.load) {
+        txParityData := fifo.io.dataOut
+    }
 
     // ###################
     // Output Register
@@ -185,7 +187,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     // The TX output should be high in idle.
     val txNext = WireInit(true.B)
     // The calculateTxOut now also has a branch for the Parity state.
-    txNext := calculateTxOut(state, dataShiftReg, txData, parityOddReg)
+    txNext := calculateTxOut(state, dataShiftNext, txParityData, parityOddReg)
     io.tx  := txNext
 
     io.clocksPerBit := clocksPerBitReg
@@ -273,7 +275,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     // For parity state we compute the parity bit from the full (latched) data.
     def calculateTxOut(
         stateReg: UartState.Type,
-        dataShiftReg: UInt,
+        dataShiftNext: UInt,
         txData: UInt,
         parityOddReg: Bool
     ): Bool = {
@@ -289,7 +291,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
                 txOut := false.B
             }
             is(UartState.Data) {
-                txOut := dataShiftReg(0)
+                txOut := dataShiftNext(0)
             }
             is(UartState.Parity) {
                 txOut := UartParity.parityChisel(txData, parityOddReg)

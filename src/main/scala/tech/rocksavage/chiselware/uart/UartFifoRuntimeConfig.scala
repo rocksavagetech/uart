@@ -11,6 +11,7 @@ class UartData(
     val direction: UartFifoDataDirection.UartFifoDataDirection
 ) {
     require(data >= 0, "Data must be greater than or equal to 0")
+    override def toString = s"UartData(data=$data, direction=$direction)"
 }
 
 case class UartTestConfig(
@@ -74,5 +75,5 @@ case class UartFifoRuntimeConfig(
     }
 
     override def toString =
-        s"UartFifoRuntimeConfig(useAsserts=$useAsserts, config=$config, data=$data)"
+        s"UartFifoRuntimeConfig(useAsserts=$useAsserts, config=$config, data=${data.toString()})"
 }
