@@ -49,6 +49,10 @@ object UartRxTestUtils {
         }
         // Transmit the stop bit
         UartRxTestUtils.transmitBitRx(dut, true, clocksPerBit)
+
+        // One extra clock to allow for the receiver to process the stop bit
+        dut.clock.setTimeout(clocksPerBit + 1)
+        dut.clock.step(3)
     }
 
     def transmitBitRx(dut: UartRx, bit: Boolean, clocksPerBit: Int): Unit = {

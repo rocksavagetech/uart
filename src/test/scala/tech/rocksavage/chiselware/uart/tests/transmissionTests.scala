@@ -29,7 +29,7 @@ object transmissionTests {
         dut.io.rxConfig.useParityDb.poke(false.B)
         dut.io.rxConfig.parityOddDb.poke(false.B) // Explicitly set parity mode
 
-        val chars = Seq('s', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
+        val chars = Seq('s', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K')
         for (char <- chars) {
             println(s"Testing character: $char")
             UartRxTestUtils.transactionCharRx(dut, char, clocksPerBit)
@@ -39,7 +39,7 @@ object transmissionTests {
 //            dut.clock.setTimeout(clocksPerBit * 12 + 1)
             dut.clock.setTimeout(20000)
             while (
-              !dut.io.fifoBundle.empty
+              dut.io.fifoBundle.empty
                   .peek()
                   .litToBoolean && timeout < clocksPerBit * 12
             ) {
