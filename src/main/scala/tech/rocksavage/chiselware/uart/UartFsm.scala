@@ -73,7 +73,6 @@ class UartFsm(params: UartParams) extends Module {
     active := activeFsm.io.active
 
     // #### Counter - Active
-
     counter.io.clockCounterIncrement := active
 
     // #### State Machine
