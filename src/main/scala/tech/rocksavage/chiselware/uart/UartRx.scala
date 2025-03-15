@@ -97,15 +97,16 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     val uartFsm = Module(new UartFsm(params))
 
-    val state = uartFsm.io.state
-    val sampleStartWire =
-        uartFsm.io.sample && uartFsm.io.state === UartState.Start
-    val sampleDataWire =
-        uartFsm.io.sample && uartFsm.io.state === UartState.Data
-    val sampleParityWire =
-        uartFsm.io.sample && uartFsm.io.state === UartState.Parity
+    // true for RX so it samples at the middle of the bit
+    uartFsm.io.shiftOffset := true.B
+
+    val state              = uartFsm.io.state
+    val shiftStart         = uartFsm.io.shift && state === UartState.Start
+    val shiftData          = uartFsm.io.shift && state === UartState.Data
+    val shiftParity        = uartFsm.io.shift && state === UartState.Parity
+    val shiftStop          = uartFsm.io.shift && state === UartState.Stop
     val completeWire       = uartFsm.io.complete
-    val completeSampleWire = uartFsm.io.completeSample
+    val completeSampleWire = shiftStop
 
     val startTransaction =
         (rxSync === false.B) && (RegNext(state) === UartState.Idle)
@@ -286,14 +287,14 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       io.rx
     )
 
-    when(sampleStartWire) {
+    when(shiftStart) {
         sampledRxSync := rxSync
     }
 
     dataShiftNext := calculateDataShiftNext(
       rxSync,
       dataShiftReg,
-      sampleDataWire,
+      shiftData,
       completeWire
     )
 
@@ -312,7 +313,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       errorReg = errorReg,
       clearError = clearErrorReg,
       completeSampleWire = completeSampleWire,
-      sampleParityWire = sampleParityWire
+      sampleParityWire = shiftParity
     )
 
     /** Computes the next rxSync value.

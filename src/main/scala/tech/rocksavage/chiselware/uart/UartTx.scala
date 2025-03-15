@@ -65,13 +65,16 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     val uartFsm = Module(new UartFsm(params))
 
-    val state              = uartFsm.io.state
-    val transmitStartWire  = uartFsm.io.transmit && state === UartState.Start
-    val transmitDataWire   = uartFsm.io.transmit && state === UartState.Data
-    val transmitParityWire = uartFsm.io.transmit && state === UartState.Parity
-    val completeWire       = uartFsm.io.complete
-    val applyShiftReg      = transmitDataWire || transmitParityWire
-    val txErrorReg         = RegInit(UartTxError.None)
+    // false for TX so it transmits at the start of the bit
+    uartFsm.io.shiftOffset := false.B
+
+    val state         = uartFsm.io.state
+    val shiftStart    = uartFsm.io.shift && state === UartState.Start
+    val shiftData     = uartFsm.io.shift && state === UartState.Data
+    val shiftParity   = uartFsm.io.shift && state === UartState.Parity
+    val completeWire  = uartFsm.io.complete
+    val applyShiftReg = shiftData || shiftParity
+    val txErrorReg    = RegInit(UartTxError.None)
 
     val emptywire = WireInit(false.B)
 
@@ -81,8 +84,10 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     }.elsewhen(emptywire && (RegNext(state) === UartState.Idle)) {
         active := false.B
     }
-    val startTransaction =
-        (RegNext(state) === UartState.Idle) && (loadNext || active)
+    val startTransaction = WireInit(false.B)
+    startTransaction := (RegNext(
+      state
+    ) === UartState.Idle) && (loadNext || active)
 
     uartFsm.io.startTransaction := startTransaction
     uartFsm.io.clocksPerBit     := clocksPerBitReg

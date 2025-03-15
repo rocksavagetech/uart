@@ -19,22 +19,26 @@ class UartFsm(params: UartParams) extends Module {
     val io = IO(new Bundle {
 
         // ############# input signals
+
+        // #### Control Signals ####
         val startTransaction = Input(Bool())
+        val shiftOffset      = Input(Bool())
+
+        // #### Settings Signals ####
         val clocksPerBit =
             Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
         val numOutputBits =
             Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
-        val useParity  = Input(Bool())
+        val useParity = Input(Bool())
+
+        // #### Baud Settings ####
         val updateBaud = Input(Bool())
         val baudValid  = Input(Bool())
 
         // ############# output signals
-        val state          = Output(UartState())
-        val transmit       = Output(Bool())
-        val sample         = Output(Bool())
-        val complete       = Output(Bool())
-        val completeSample = Output(Bool())
-        val shiftRegister  = Output(Bool())
+        val state    = Output(UartState())
+        val shift    = Output(Bool())
+        val complete = Output(Bool())
     })
 
     val startTransaction = WireDefault(io.startTransaction)
@@ -113,16 +117,24 @@ class UartFsm(params: UartParams) extends Module {
     io.state  := state
 
     // Outputs
-    io.sample := (state =/= UartState.Idle) && (state =/= UartState.BaudUpdating) && (clockCounter === (io.clocksPerBit >> 1.U))
-    io.completeSample := (state === UartState.Stop) && (clockCounter === (io.clocksPerBit >> 1.U))
-    io.transmit :=
-        (prevState =/= UartState.Start) &&
-            (prevState =/= UartState.Idle) &&
-            (prevState =/= UartState.BaudUpdating) &&
-            (clockCounter === clockCounterMax - 1.U) &&
+
+    val whenShift = WireInit(false.B)
+    when(io.shiftOffset) {
+        // RX
+        whenShift := (clockCounter === (io.clocksPerBit >> 1.U))
+    }.otherwise {
+        // TX
+        whenShift := (clockCounter === clockCounterMax - 1.U) &&
             ((bitCounter =/= io.numOutputBits) || (io.clocksPerBit === 1.U))
+    }
+
+//    io.sample := (state =/= UartState.Idle) && (state =/= UartState.BaudUpdating) && (clockCounter === (io.clocksPerBit >> 1.U))
+//    io.completeSample := (state === UartState.Stop) && (clockCounter === (io.clocksPerBit >> 1.U))
+    io.shift := whenShift && (prevState =/= UartState.Start) &&
+        (prevState =/= UartState.Idle) &&
+        (prevState =/= UartState.BaudUpdating)
     io.complete := (state === UartState.Stop) && (clockCounter === clockCounterMax - 1.U)
-    io.shiftRegister := state === UartState.Data || state === UartState.Parity
+//    io.shiftRegister := state === UartState.Data || state === UartState.Parity
 
     when(io.complete) {
         activePrev := false.B
