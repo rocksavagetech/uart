@@ -122,7 +122,7 @@ object fullDuplexTests {
         clock.setTimeout(5000)
 
         val clockFrequency = 25_000_000
-        val baudRate       = 115_200
+        val baudRate       = 2_500_000
 
         val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
