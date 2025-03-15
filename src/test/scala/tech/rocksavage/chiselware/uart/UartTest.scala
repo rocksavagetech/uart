@@ -1,7 +1,11 @@
 package tech.rocksavage.chiselware.uart
 
 import chiseltest._
-import chiseltest.simulator.{WriteFstAnnotation, WriteVcdAnnotation}
+import chiseltest.simulator.{
+    VerilatorCFlags,
+    WriteFstAnnotation,
+    WriteVcdAnnotation
+}
 import firrtl2.annotations.Annotation
 import firrtl2.options.TargetDirAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
@@ -13,10 +17,11 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val numTests    = 2
     val testNameArg = System.getProperty("testName")
     // Command-line toggles
-    val enableVcd = System.getProperty("enableVcd", "true").toBoolean
-    val enableFst = System.getProperty("enableFst", "false").toBoolean
+    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
+    val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
+    val enableFst    = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "stopBitError"
+        case true  => "longTransmission"
         case false => testNameArg
     }
 
@@ -27,16 +32,15 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         var annos: Seq[Annotation] = Seq()
         if (enableVcd) annos = annos :+ WriteVcdAnnotation
         if (enableFst) annos = annos :+ WriteFstAnnotation
-//        if (useVerilator) {
-//        annos = annos :+ VerilatorBackendAnnotation
-//        annos = annos :+ VerilatorCFlags(
-//          Seq("--std=c++17", "-O3", "-march=native")
-//        )
-//        }
+        if (useVerilator) {
+            annos = annos :+ VerilatorBackendAnnotation
+            annos = annos :+ VerilatorCFlags(
+              Seq("--std=c++17", "-O3", "-march=native")
+            )
+        }
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
     }
-    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
     runTest(testName)
 
     def runTest(name: String): Unit = {

@@ -97,9 +97,6 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     uartFsm.io.useParity        := useParityReg
     uartFsm.io.updateBaud       := io.txConfig.updateBaud
 
-//    val nextTransaction =
-//        (startTransaction) || (uartFsm.io.complete && !fifoEmptyReg)
-
     // ###################
     // Baud Rate Calculation
     // ###################

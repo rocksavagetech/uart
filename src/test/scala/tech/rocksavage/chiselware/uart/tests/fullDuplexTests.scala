@@ -437,8 +437,8 @@ object fullDuplexTests {
         implicit val clock: Clock = dut.clock
         clock.setTimeout(0)
 
-        val clockFrequency = 25_000_000
-        val baudRate       = 115_200
+        val clockFrequency = 1_000_000
+        val baudRate       = 100_000
 
         val clocksPerBit  = clockFrequency / baudRate
         val numOutputBits = 8
@@ -451,13 +451,28 @@ object fullDuplexTests {
         var receivedData = new StringBuilder
 
         for (char <- testData) {
+            println(s"Sending character: $char")
             sendChar(dut.io.uart1Apb, dut.getUart1, char, clocksPerBit)
-            receivedData.append(readChar(dut.io.uart2Apb, dut.getUart2))
+//            clock.setTimeout(10000)
+//            clock.step(
+//              2 * clocksPerBit
+//            )
+            val received = readChar(dut.io.uart2Apb, dut.getUart2)
+            receivedData.append(received)
+            println(s"Received character: $received")
+            println(s"Received data so far: ${receivedData.toString}")
         }
+
+        clock.setTimeout(10000)
+        clock.step(
+          2 * clocksPerBit
+        ) // Extra delay to ensure all data is received
 
         assert(
           receivedData.toString == testData,
-          "Data mismatch in long transmission"
+          "Data mismatch in long transmission\n" +
+              s"Received: ${receivedData.toString}\n" +
+              s"Expected: $testData"
         )
     }
 
