@@ -8,9 +8,10 @@ import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.{
     setupUart,
     waitForDataAndVerify
 }
+import tech.rocksavage.chiselware.uart.testutils.fifo._
 import tech.rocksavage.chiselware.uart.testutils.{
-    UartFifoTestUtils,
-    UartTestUtils
+    UartTestUtils,
+    UartTxFifoTestUtils
 }
 import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
 
@@ -78,19 +79,20 @@ object randomTests {
         Random.setSeed(seed)
 
         for (_ <- 1 to 10) { // Test 10 random configurations
-            val config = UartFifoTestUtils.generateNextValidRandomConfig(
-              validClockFrequencies,
-              validBaudRates,
-              validDataBits,
-              fifoSize = 8
-            )
+            val config =
+                UartFifoConfigTestUtils.generateNextValidTxRandomConfig(
+                  validClockFrequencies,
+                  validBaudRates,
+                  validDataBits,
+                  fifoSize = 8
+                )
 
             println(
               s"Random tramsit transaction with configuration: \n$config"
             )
 
             // does all assertions that the behavior is correct
-            UartFifoTestUtils.transmit(dut, config)
+            UartTxFifoTestUtils.transmit(dut, config)
         }
     }
 
@@ -125,6 +127,43 @@ object randomTests {
 
             // does all assertions that the behavior is correct
             UartTestUtils.receive(dut, config)
+        }
+    }
+
+    def randomFifoReceiveTest(dut: Uart, params: UartParams): Unit = {
+        implicit val clk: Clock = dut.clock
+        dut.io.rx.poke(1.U)
+
+        /** 2 exp 13, 2 exp 14, ... */
+        val validClockFrequencies = Seq(
+          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+        ).map(iexp(2, _))
+        val validBaudRates = Seq(
+          9600, 19_200, 38_400, 57_600, 115_200, 230_400, 460_800, 921_600
+        )
+        val validDataBits = Seq(5, 6, 7, 8)
+
+        val seed = Random.nextLong()
+
+        //        val seed = -706700778016793525L
+        println(s"Random test seed: $seed")
+        Random.setSeed(seed)
+
+        for (_ <- 1 to 10) { // Test 10 random configurations
+            val config =
+                UartFifoConfigTestUtils.generateNextValidRxRandomConfig(
+                  validClockFrequencies,
+                  validBaudRates,
+                  validDataBits,
+                  fifoSize = 8
+                )
+
+            println(
+              s"Random tramsit transaction with configuration: \n$config"
+            )
+
+            // does all assertions that the behavior is correct
+            UartRxFifoTestUtils.receive(dut, config)
         }
     }
 

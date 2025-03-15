@@ -219,7 +219,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     val addrDecodeParams = registerMap.getAddrDecodeParams
     val addrDecode       = Module(new AddrDecode(addrDecodeParams))
     addrDecode.io.addrRaw  := io.apb.PADDR
-    addrDecode.io.en       := io.apb.PSEL
+    addrDecode.io.en       := io.apb.PSEL && io.apb.PENABLE
     addrDecode.io.selInput := true.B
 
     // ---------------------------------------------------------------

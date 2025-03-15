@@ -16,7 +16,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd = System.getProperty("enableVcd", "true").toBoolean
     val enableFst = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "specialCaseFifoTransmit"
+        case true  => "specialCaseFifoReceive"
         case false => testNameArg
     }
 
@@ -164,6 +164,16 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             specialCaseTests.specialCaseReceiveTests(
+                              dut,
+                              uartParams
+                            )
+                        }
+                }
+            case "specialCaseFifoReceive" =>
+                it should "handle special receive cases" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            specialCaseTests.specialCaseFifoReceiveTests(
                               dut,
                               uartParams
                             )

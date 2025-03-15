@@ -99,7 +99,6 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     // true for RX so it samples at the middle of the bit
     uartFsm.io.shiftOffset := true.B
-    uartFsm.io.waiting     := false.B
 
     val state              = uartFsm.io.state
     val shiftStart         = uartFsm.io.shift && state === UartState.Start
@@ -108,6 +107,10 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val shiftStop          = uartFsm.io.shift && state === UartState.Stop
     val completeWire       = uartFsm.io.complete
     val completeSampleWire = shiftStop
+
+    uartFsm.io.waiting := RegNext(
+      state
+    ) === UartState.Stop && rxSync === false.B
 
     val startTransaction =
         (rxSync === false.B) && (RegNext(state) === UartState.Idle)
@@ -239,9 +242,38 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     }
 
     fifo.io.push   := completeWire && errorReg === UartRxError.None
-    fifo.io.pop    := io.rxConfig.rxDataRegRead
     fifo.io.dataIn := dataShiftReg
-    io.data        := fifo.io.dataOut
+
+    // a new read indicates that someone is trying to read from the fifo
+    val newFifoDataRead = RegInit(false.B)
+    newFifoDataRead := io.rxConfig.rxDataRegRead && !RegNext(
+      io.rxConfig.rxDataRegRead
+    )
+
+    // newFifoDataReadOver indicates that the read has been completed,
+    // only once the read has been completed, the fifo can be popped
+    val newFifoDataReadOver = RegInit(false.B)
+    newFifoDataReadOver := !newFifoDataRead && RegNext(newFifoDataRead)
+    fifo.io.pop         := newFifoDataReadOver && !fifo.io.empty
+
+    when(newFifoDataRead) {
+        printf("[UartRx DEBUG] New read from FIFO\n")
+    }
+
+    when(newFifoDataReadOver) {
+        printf("[UartRx DEBUG] Read from FIFO completed\n")
+    }
+
+    val dataReadWire = WireInit(0.U(params.maxOutputBits.W))
+    val dataReadReg  = RegInit(0.U(params.maxOutputBits.W))
+    when(fifo.io.pop) {
+        dataReadWire := fifo.io.dataOut
+    }.otherwise {
+        dataReadWire := dataReadReg
+    }
+    dataReadReg := dataReadWire
+
+    io.data := fifo.io.dataOut
 
     fifo.io.almostFullLevel  := 0.U
     fifo.io.almostEmptyLevel := 0.U
@@ -305,12 +337,18 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       completeWire
     )
 
+    val parityData = WireDefault(0.U(params.maxOutputBits.W))
+    val expectedParity =
+        shiftParity && UartParity.parityChisel(parityData, parityOddReg)
+    when(shiftParity) {
+        parityData := dataShiftNext
+    }
+
     errorNext := calculateErrorNext(
       stateReg = state,
       rxSync = rxSync,
       useParityReg = useParityReg,
-      parityOddReg = parityOddReg,
-      dataShiftReg = dataShiftReg,
+      expectedParity = expectedParity,
       errorReg = errorReg,
       clearError = clearErrorReg,
       completeSampleWire = completeSampleWire,
@@ -382,8 +420,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         stateReg: UartState.Type,
         rxSync: Bool,
         useParityReg: Bool,
-        parityOddReg: Bool,
-        dataShiftReg: UInt,
+        expectedParity: Bool,
         errorReg: UartRxError.Type,
         clearError: Bool,
         completeSampleWire: Bool,
@@ -393,8 +430,6 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         // -----------------------
         //  Detect NEW errors
         // -----------------------
-
-        val rxSyncDelay = RegNext(rxSync)
 
         when(clearError) {
             errorNext := UartRxError.None
@@ -410,10 +445,8 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
             }
             is(UartState.Parity) {
                 when(sampleParityWire) {
-                    val expectedParity =
-                        UartParity.parityChisel(dataShiftReg, parityOddReg)
                     when(useParityReg === true.B) {
-                        when(rxSyncDelay =/= expectedParity) {
+                        when(rxSync =/= expectedParity) {
                             errorNext := UartRxError.ParityError
                         }
                     }
