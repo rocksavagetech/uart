@@ -34,7 +34,8 @@ object UartFifoTestUtils {
                 } else if (fifoHeight == fifoSize) {
                     UartFifoDataDirection.Pop
                 } else {
-                    val boolValue = scala.util.Random.nextBoolean()
+                    val randomInt = scala.util.Random.nextInt(16)
+                    val boolValue = randomInt >= 15 // 1/16 chance of popping
                     boolToPushPop(boolValue)
                 }
             }
@@ -42,7 +43,7 @@ object UartFifoTestUtils {
             if (pushOrPop == UartFifoDataDirection.Push) {
                 fifoHeight += 1
             } else {
-                fifoHeight -= 1
+                fifoHeight = 0
             }
             datas = datas :+ new UartData(
               scala.util.Random
@@ -89,16 +90,21 @@ object UartFifoTestUtils {
     def transmit(dut: Uart, config: UartFifoRuntimeConfig)(implicit
         clock: Clock
     ): Unit = {
-
+        println("Preparing to transmit data")
         transmit_setup(dut, config)
+        println(s"Transmitting data: ${config.data}\n")
         val testFifo = scala.collection.mutable.Queue[(Int)]()
         for (data <- config.data) {
+            clock.setTimeout(1000)
+            println(s"Next Data Operation: $data")
             if (data.direction == UartFifoDataDirection.Push) {
                 testFifo.enqueue(data.data)
-                transmit_push(dut, config, data.data)
                 println(s"Data ($data) queued to Fifo: $testFifo")
+                transmit_push(dut, config, data.data)
             } else {
+                println(s"Popping all data from Fifo: $testFifo")
                 transmit_pop(dut, config, testFifo)
+                println(s"Data popped from Fifo Successfully")
             }
         }
     }
@@ -211,15 +217,6 @@ object UartFifoTestUtils {
                 (0 until config.config.numOutputBits).map { i =>
                     ((dataDequeued >> i) & 1) == 1
                 }.reverse
-
-            // concatenate the data bits
-//            val expectedSequenceIndividual =
-//                if (config.config.useParity) {
-//                    val parityBit = dataBits.count(identity) % 2 == 0
-//                    Seq(false) ++ dataBits ++ Seq(parityBit) ++ Seq(true)
-//                } else {
-//                    Seq(false) ++ dataBits ++ Seq(true)
-//                }
             val expectedSequenceIndividual: Seq[(Boolean, UartState.Type)] =
                 if (config.config.useParity) {
                     val parityBit = dataBits.count(identity) % 2 == 0
@@ -260,20 +257,23 @@ object UartFifoTestUtils {
             clock.step(1)
             dut.io.apb.PSEL.poke(0.U)
             dut.io.apb.PENABLE.poke(0.U)
-        }
+            dut.io.apb.PWRITE.poke(0.U)
+            dut.io.apb.PADDR.poke(0.U)
+            dut.io.apb.PWDATA.poke(0.U)
+        }.fork {
+            val clockFrequency = config.config.clockFrequency
+            val baudRate       = config.config.baudRate
 
-        val clockFrequency = config.config.clockFrequency
-        val baudRate       = config.config.baudRate
+            val clocksPerBit = clockFrequency / baudRate
 
-        val clocksPerBit = clockFrequency / baudRate
-
-        // #####################
-        for ((expectedBit, index) <- expectedBits.zipWithIndex) {
-            println(
-              s"Checking bit $index: expected ${expectedBit._1} in state ${expectedBit._2}"
-            )
-            expectConstantTx(expectedBit._1, clocksPerBit)
-        }
+            // #####################
+            for ((expectedBit, index) <- expectedBits.zipWithIndex) {
+                println(
+                  s"Checking bit $index: expected ${expectedBit._1} in state ${expectedBit._2}"
+                )
+                expectConstantTx(expectedBit._1, clocksPerBit)
+            }
+        }.join()
     }
 
     def receive(dut: Uart, config: UartFifoRuntimeConfig)(implicit
@@ -426,8 +426,10 @@ object UartFifoTestUtils {
 
         val clocksPerBitExpected = clockFrequency / baudRate
 
-        clock.setTimeout(1000)
+//        clock.setTimeout(40)
         var breakLoop = false
+        var count     = 0
+        val maxCount  = 50
         while (!breakLoop) {
             val clocksPerBitActual = readAPB(
               dut.io.apb,
@@ -436,6 +438,12 @@ object UartFifoTestUtils {
             if (clocksPerBitActual == clocksPerBitExpected) {
                 breakLoop = true
             }
+            if (count >= maxCount) {
+                throw new RuntimeException(
+                  s"Failed to set baud rate after $maxCount attempts"
+                )
+            }
+            count = count + 1
             clock.step(1)
         }
     }
@@ -460,8 +468,24 @@ object UartFifoTestUtils {
 
         clock.setTimeout(1000)
         var breakLoop = false
-        val numLoops  = 30
-        var loopCount = 0
+        var count     = 0
+        val maxCount  = 50
+        while (!breakLoop) {
+            val clocksPerBitActual = readAPB(
+              dut.io.apb,
+              rxClocksPerBitAddr.U
+            )
+            if (clocksPerBitActual == clocksPerBitExpected) {
+                breakLoop = true
+            }
+            if (count >= maxCount) {
+                throw new RuntimeException(
+                  s"Failed to set baud rate after $maxCount attempts"
+                )
+            }
+            count = count + 1
+            clock.step(1)
+        }
         while (!breakLoop) {
             val clocksPerBitActual = readAPB(
               dut.io.apb,
@@ -471,13 +495,13 @@ object UartFifoTestUtils {
                 breakLoop = true
             }
 
-            if (loopCount >= numLoops) {
+            if (count >= maxCount) {
                 throw new RuntimeException(
-                  s"Failed to set baud rate after $numLoops attempts"
+                  s"Failed to set baud rate after $count attempts"
                 )
             }
 
-            loopCount += 1
+            count += 1
             clock.step(1)
         }
     }

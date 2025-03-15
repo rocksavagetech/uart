@@ -98,18 +98,16 @@ object specialCaseTests {
               new UartData(data = 196, direction = Push),
               new UartData(data = 115, direction = Push),
               new UartData(data = 67, direction = Pop),
-              new UartData(data = 102, direction = Pop),
-              new UartData(data = 169, direction = Pop),
               new UartData(data = 196, direction = Push),
               new UartData(data = 207, direction = Push),
               new UartData(data = 137, direction = Push),
               new UartData(data = 19, direction = Pop),
-              new UartData(data = 230, direction = Pop),
               new UartData(data = 17, direction = Push),
               new UartData(data = 95, direction = Push),
               new UartData(data = 116, direction = Push),
               new UartData(data = 140, direction = Pop),
-              new UartData(data = 202, direction = Push)
+              new UartData(data = 202, direction = Push),
+              new UartData(data = 255, direction = Pop)
             )
           ),
           UartFifoRuntimeConfig(
@@ -120,18 +118,16 @@ object specialCaseTests {
               new UartData(data = 196, direction = Push),
               new UartData(data = 115, direction = Push),
               new UartData(data = 67, direction = Pop),
-              new UartData(data = 102, direction = Pop),
-              new UartData(data = 169, direction = Pop),
               new UartData(data = 196, direction = Push),
               new UartData(data = 207, direction = Push),
               new UartData(data = 137, direction = Push),
               new UartData(data = 19, direction = Pop),
-              new UartData(data = 230, direction = Pop),
               new UartData(data = 17, direction = Push),
               new UartData(data = 95, direction = Push),
               new UartData(data = 116, direction = Push),
               new UartData(data = 140, direction = Pop),
-              new UartData(data = 202, direction = Push)
+              new UartData(data = 202, direction = Push),
+              new UartData(data = 255, direction = Pop)
             )
           )
         )

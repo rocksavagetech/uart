@@ -99,6 +99,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     // true for RX so it samples at the middle of the bit
     uartFsm.io.shiftOffset := true.B
+    uartFsm.io.waiting     := false.B
 
     val state              = uartFsm.io.state
     val shiftStart         = uartFsm.io.shift && state === UartState.Start

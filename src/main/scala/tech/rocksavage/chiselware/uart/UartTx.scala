@@ -18,6 +18,13 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     val io = IO(new UartTxBundle(params))
 
+    when(io.txConfig.load) {
+        printf(
+          "[UartTx DEBUG] Loading data: %d\n",
+          io.txConfig.data.asUInt
+        )
+    }
+
     // ###################
     // Input Control State Registers
     // ###################
@@ -78,22 +85,20 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     val emptywire = WireInit(false.B)
 
-    val active = RegInit(false.B)
-    when((RegNext(state) === UartState.Idle) && (loadNext)) {
-        active := true.B
-    }.elsewhen(emptywire && (RegNext(state) === UartState.Idle)) {
-        active := false.B
-    }
     val startTransaction = WireInit(false.B)
     startTransaction := (RegNext(
       state
-    ) === UartState.Idle) && (loadNext || active)
+    ) === UartState.Idle) && (loadNext)
 
+    uartFsm.io.waiting          := !emptywire
     uartFsm.io.startTransaction := startTransaction
     uartFsm.io.clocksPerBit     := clocksPerBitReg
     uartFsm.io.numOutputBits    := numOutputBitsReg
     uartFsm.io.useParity        := useParityReg
     uartFsm.io.updateBaud       := io.txConfig.updateBaud
+
+//    val nextTransaction =
+//        (startTransaction) || (uartFsm.io.complete && !fifoEmptyReg)
 
     // ###################
     // Baud Rate Calculation
@@ -175,15 +180,26 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     io.error := txErrorReg
 
     fifo.io.push   := RegNext(io.txConfig.txDataRegWrite)
-    fifo.io.pop    := startTransaction
+    fifo.io.pop    := uartFsm.io.nextTransaction
     fifo.io.dataIn := io.txConfig.data
 
     fifo.io.almostFullLevel  := 0.U
     fifo.io.almostEmptyLevel := 0.U
     fifoEmptyReg             := fifo.io.empty
 
-    when(io.txConfig.load) {
+    when(uartFsm.io.nextTransaction) {
         txParityData := fifo.io.dataOut
+    }
+
+    when(fifo.io.full && fifo.io.push) {
+        txErrorReg := UartTxError.FifoOverflow
+        printf("[UartTx DEBUG] Setting overflow error - FIFO full\n")
+    }.elsewhen(fifo.io.empty && fifo.io.pop) {
+        txErrorReg := UartTxError.FifoUnderflow
+        printf("[UartTx DEBUG] Setting underflow error - FIFO empty\n")
+    }.elsewhen(io.txConfig.clearErrorDb) {
+        txErrorReg := UartTxError.None
+        printf("[UartTx DEBUG] Clearing error after completion\n")
     }
 
     // ###################
@@ -192,7 +208,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     // The TX output should be high in idle.
     val txNext = WireInit(true.B)
     // The calculateTxOut now also has a branch for the Parity state.
-    txNext := calculateTxOut(state, dataShiftNext, txParityData, parityOddReg)
+    txNext := calculateTxOut(state, dataShiftReg, txParityData, parityOddReg)
     io.tx  := txNext
 
     io.clocksPerBit := clocksPerBitReg
@@ -221,11 +237,11 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     )
 
     dataShiftNext := calculateDataShiftNext(
-      dataShiftReg,
-      fifo.io.dataOut,
-      startTransaction,
-      applyShiftReg,
-      numOutputBitsReg
+      dataShiftReg = dataShiftReg,
+      loadData = fifo.io.dataOut,
+      nextTransaction = uartFsm.io.nextTransaction,
+      applyShiftReg = applyShiftReg,
+      numOutputBits = numOutputBitsReg
     )
 
     // -------------------------
@@ -235,13 +251,13 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     def calculateDataShiftNext(
         dataShiftReg: UInt,
         loadData: UInt,
-        startTransaction: Bool,
+        nextTransaction: Bool,
         applyShiftReg: Bool,
         numOutputBits: UInt
     ): UInt = {
         val dataShiftNext = WireDefault(dataShiftReg)
 
-        when(startTransaction) {
+        when(nextTransaction) {
             dataShiftNext := reverse(loadData, numOutputBits)
         }
         when(applyShiftReg) {
