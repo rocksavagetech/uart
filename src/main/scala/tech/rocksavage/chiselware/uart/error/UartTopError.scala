@@ -5,5 +5,5 @@ package tech.rocksavage.chiselware.uart.error
 import chisel3._
 
 object UartTopError extends ChiselEnum {
-    val InvalidRegisterProgramming, None = Value
+    val None, InvalidRegisterProgramming = Value
 }
