@@ -147,7 +147,7 @@ object errorTests {
             )
             println(f"Cycle $cycleCount: Error register = 0x$errVal%02x")
             // Check for the parity error flag (here we assume bitmask 0x04 indicates a parity error).
-            if ((errVal & 0x03) == 0x03) {
+            if (errVal == 0x30) {
                 parityErrorDetected = true
                 println("Parity error detected!")
             }
