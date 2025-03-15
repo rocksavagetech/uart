@@ -310,7 +310,7 @@ object errorTests {
               dut.io.apb,
               dut.registerMap.getAddressOfRegister("error").get.U
             )
-            if ((errVal & 0x03) == 0x03) {
+            if (errVal == 0x30) {
                 parityErrorDetected = true
                 println("Parity error detected!")
             }
