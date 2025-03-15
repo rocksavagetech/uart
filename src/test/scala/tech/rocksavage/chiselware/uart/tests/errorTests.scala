@@ -219,7 +219,7 @@ object errorTests {
             )
             println(f"Cycle $cycleCount: Error register = 0x$errorVal%02x")
             // Check for the stop bit error flag (assume bitmask 0x02 indicates a stop bit error).
-            if ((errorVal & 0x02) == 0x02) {
+            if (errorVal == 0x20) {
                 errorDetected = true
                 println("Stop bit error detected!")
             }
