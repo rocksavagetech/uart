@@ -45,5 +45,5 @@ bin/
 out/*
 generated/
 /test_run_dir/
-
+generated/*
 
