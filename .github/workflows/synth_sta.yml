@@ -187,7 +187,7 @@ jobs:
           echo "Verilog generation complete."
 
       - name: Upload results artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: synthesis-results
           path: |
