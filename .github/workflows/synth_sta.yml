@@ -196,9 +196,25 @@ jobs:
       - name: Create results archive
         run: |
           mkdir -p artifacts
+          # Copy results directory
           cp -r out/results artifacts/
-          find out/synth -name "*.v" -exec cp {} artifacts/ \;
-          find generated -name "*.v" -exec cp {} artifacts/ \;
+          
+          # Copy synthesis netlists if they exist (handle case where directory doesn't exist)
+          if [ -d out/synth ]; then
+            find out/synth -name "*.v" -exec cp {} artifacts/ \; || echo "No Verilog files in out/synth"
+          else
+            echo "No out/synth directory found"
+          fi
+          
+          # Copy generated Verilog files if they exist (handle case where directory doesn't exist)
+          if [ -d generated ]; then
+            find generated -name "*.v" -exec cp {} artifacts/ \; || echo "No Verilog files in generated"
+          else
+            echo "No generated directory found"
+          fi
+          
+          # Create the tarball, ensuring it exists
+          touch synthesis-results.tar.gz  # Create empty file if doesn't exist
           tar -czvf synthesis-results.tar.gz artifacts/
 
       # Upload the artifacts using GitHub Actions
