@@ -2,18 +2,17 @@ name: "Generate Documentation and Publish Release"
 
 on:
   workflow_run:
-    workflows: ["Synthesis and Results"]  # Must match the name in synth_sta.yml
+    workflows: ["Synthesis and Results"]
     types: [completed]
 
 jobs:
   docs-and-release:
-    # Only run if the first workflow ended successfully
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
-      actions: read  # This is needed to download artifacts from other workflows
+      actions: read
 
     steps:
       - name: Check out repository
@@ -21,21 +20,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Download the "synthesis-results" artifact from the completed Synthesis workflow
       - name: Download artifacts from synthesis workflow
         uses: dawidd6/action-download-artifact@v2
         with:
           workflow: "Synthesis and Results"
           workflow_conclusion: success
           run_id: ${{ github.event.workflow_run.id }}
+          # By default, it will download them into a folder named after the artifact (synthesis-results/).
 
-      - name: Extract synthesis results
+      - name: Inspect downloaded artifacts
         run: |
-          ls -la
-          tar -xzvf synthesis-results.tar.gz
-          mkdir -p out
-          cp -r artifacts/results out/
-          find artifacts -name "*.v" -exec cp {} out/ \;
-          ls -la out/results/
+          echo "Files downloaded from the synthesis workflow:"
+          ls -R
+
+      - name: Move results into out/ folder
+        run: |
+          mkdir -p out/results
+          # The downloaded folder is "synthesis-results" by default
+          cp -r synthesis-results/results out/
+          # Also copy any .v files
+          find synthesis-results -name "*.v" -exec cp {} out/ \;
+
+          echo "Now out/results has..."
+          ls -la out/results
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -53,7 +61,7 @@ jobs:
       - name: Remove old table & use \input
         run: |
           SYN_TEX="doc/user-guide/syn.tex"
-          SNIPPET_NOEXT="synthResultsSnippet"  # We'll do \include{../../out/results/synthResultsSnippet} (no .tex extension)
+          SNIPPET_NOEXT="synthResultsSnippet"
           SNIPPET_PATH="out/results/${SNIPPET_NOEXT}.tex"
 
           if [ -f "$SYN_TEX" ] && [ -f "$SNIPPET_PATH" ]; then
@@ -63,34 +71,29 @@ jobs:
             echo "Removing old static table..."
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
-            echo "Inserting a \\input statement in $SYN_TEX"
-            # Double backslash so that we end up with a single '\' in the final .tex
-            sed -i '/\\rowcolors{2}{gray!30}{gray!10}/a \\\input{../../out/results/synthResultsSnippet}' doc/user-guide/syn.tex
-
+            echo "Inserting a \\input statement"
+            sed -i "/\\subsection{Area and Gate Count}/a \\input{../../out/results/${SNIPPET_NOEXT}}" "$SYN_TEX"
           else
             echo "Missing $SYN_TEX or $SNIPPET_PATH; skipping injection."
-          fi
 
       - name: Build Documentation
         run: |
           nix develop --command make docs
 
-      - name: Collect artifacts
+      - name: Collect artifacts for release
         run: |
           mkdir -p release_artifacts
 
-          # Copy PDF(s) from out/doc
+          # PDF(s)
           if [ -d out/doc ]; then
             find out/doc -name "*.pdf" -exec cp {} release_artifacts/ \;
           fi
-
-          # Copy Verilog
-          find artifacts -name "*.v" -exec cp {} release_artifacts/ \;
-
-          # Copy JSON + snippet .tex files
+          # Verilog netlists
+          find synthesis-results -name "*.v" -exec cp {} release_artifacts/ \;
+          # JSON / snippet .tex
           cp -r out/results/* release_artifacts/ || true
 
-          echo "Artifacts in release_artifacts:"
+          echo "Listing release_artifacts:"
           ls -la release_artifacts
 
           tar -czvf release_artifacts.tar.gz release_artifacts/

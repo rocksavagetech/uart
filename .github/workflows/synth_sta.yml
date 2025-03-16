@@ -9,7 +9,6 @@ on:
 jobs:
   synth-and-publish:
     runs-on: ubuntu-latest
-    # Skip if commit message has [gh-bot]
     if: ${{ !contains(github.event.head_commit.message, '[gh-bot]') }}
 
     steps:
@@ -45,13 +44,9 @@ jobs:
 
       - name: Parse all config directories
         run: |
-          # 1) Initialize a JSON array for storing config results
           echo "[]" > out/results/synth_results.json
-
-          # 2) Create an empty file for the table rows
           echo "% Auto-generated table rows" > out/results/synth_table_rows.tex
 
-          # 3) Find directories in out/synth that match *bits*sync*baud*
           CONFIG_DIRS=$(find out/synth -type d -name "*bits*sync*baud*" | sort)
           if [ -z "$CONFIG_DIRS" ]; then
             echo "Error: No synthesis results found in out/synth"
@@ -62,6 +57,7 @@ jobs:
             echo "Processing: $d"
             CONFIG_NAME=$(basename "$d")
 
+            # default placeholders
             GATES="N/A"
             AREA="N/A"
             COMBO_CELLS="N/A"
@@ -74,12 +70,10 @@ jobs:
             HOLD_TIME="N/A"
             MAX_FREQ="200.00"
 
-            # gates.txt
             if [ -f "$d/gates.txt" ]; then
               GATES=$(cat "$d/gates.txt")
             fi
 
-            # log.txt
             if [ -f "$d/log.txt" ]; then
               AREA=$(grep "Chip area" "$d/log.txt" | awk '{print $5}' || echo "N/A")
               COMBO_CELLS=$(grep "Combinational cells:" "$d/log.txt" | awk '{print $3}' || echo "N/A")
@@ -102,14 +96,12 @@ jobs:
               [ -n "$freq_calc" ] && MAX_FREQ=$(printf "%.2f" "$freq_calc")
             fi
 
-            # Slack >= 0 => pass
             STA_PASSES="Yes"
             SLACK_SIGN=$(awk "BEGIN {print ($SLACK < 0) ? 1 : 0}")
             if [ "$SLACK_SIGN" -eq 1 ]; then
               STA_PASSES="No"
             fi
 
-            # Parse directory name e.g. 8bits_2sync_900000baud
             DATA_BITS=$(echo "$CONFIG_NAME" | grep -oE '^[0-9]+bits' | sed 's/bits//')
             FIFO_DEPTH=$(echo "$CONFIG_NAME" | grep -oE '_[0-9]+sync_' | tr -dc '0-9')
             BAUD=$(echo "$CONFIG_NAME" | grep -oE '[0-9]+baud' | sed 's/baud//')
@@ -118,7 +110,7 @@ jobs:
             FIFO_DEPTH="${FIFO_DEPTH:-N/A}"
             BAUD="${BAUD:-N/A}"
 
-            # Build a JSON object
+            # Build JSON
             newObj=$(jq -n \
               --arg cfg "$CONFIG_NAME" \
               --arg gates "$GATES" \
@@ -161,13 +153,11 @@ jobs:
             jq ". + [ $newObj ]" out/results/synth_results.json > "$tmpf"
             mv "$tmpf" out/results/synth_results.json
 
-            # Append a row to the table snippet
             escapedCfg=$(echo "$CONFIG_NAME" | sed 's/_/\\_/g')
             echo "\\texttt{$escapedCfg} & $FIFO_DEPTH & $DATA_BITS & $GATES \\\\ \\hline" >> out/results/synth_table_rows.tex
-
           done
 
-          # Build a final snippet file named "synthResultsSnippet.tex" (no underscores!)
+          # Build final snippet
           echo "\\renewcommand*{\\arraystretch}{1.3}" > out/results/synthResultsSnippet.tex
           echo "\\rowcolors{2}{gray!30}{gray!10}" >> out/results/synthResultsSnippet.tex
           echo "\\begin{longtable}[H]{| p{0.22\\textwidth} | p{0.18\\textwidth} | p{0.20\\textwidth} | p{0.30\\textwidth} |}" >> out/results/synthResultsSnippet.tex
@@ -192,35 +182,19 @@ jobs:
           nix develop --command make verilog
           echo "Verilog generation complete."
 
-      # Create a tar file of the results to make downloading easier
-      - name: Create results archive
+      - name: Prepare artifacts folder
         run: |
           mkdir -p artifacts
-          # Copy results directory
           cp -r out/results artifacts/
-          
-          # Copy synthesis netlists if they exist (handle case where directory doesn't exist)
-          if [ -d out/synth ]; then
-            find out/synth -name "*.v" -exec cp {} artifacts/ \; || echo "No Verilog files in out/synth"
-          else
-            echo "No out/synth directory found"
+          # Copy netlists from out/synth
+          find out/synth -name "*.v" -exec cp {} artifacts/ \;
+          # Copy any verilog from generated/ if needed
+          if [ -d "generated" ]; then
+            find generated -name "*.v" -exec cp {} artifacts/ \;
           fi
-          
-          # Copy generated Verilog files if they exist (handle case where directory doesn't exist)
-          if [ -d generated ]; then
-            find generated -name "*.v" -exec cp {} artifacts/ \; || echo "No Verilog files in generated"
-          else
-            echo "No generated directory found"
-          fi
-          
-          # Create the tarball, ensuring it exists
-          touch synthesis-results.tar.gz  # Create empty file if doesn't exist
-          tar -czvf synthesis-results.tar.gz artifacts/
 
-      # Upload the artifacts using GitHub Actions
       - name: Upload synthesis results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v2
         with:
           name: synthesis-results
-          path: synthesis-results.tar.gz
-          retention-days: 5
+          path: artifacts
