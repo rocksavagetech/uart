@@ -26,7 +26,7 @@ class UartTest
     val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
     val enableFst    = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "regression"
+        case true  => "rxFifoOverflow"
         case false => testNameArg
     }
 

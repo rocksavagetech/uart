@@ -356,6 +356,42 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     }
 
     // Generate one‐cycle pulses for the load and updateBaud signals.
+
+//    when(
+//      error.rxError =/= UartRxError.None || error.txError =/= UartTxError.None || error.topError =/= UartTopError.None || error.addrDecodeError =/= AddrDecodeError.None
+//    ) {
+//        // Print debug message
+//        printf(
+//          "[Uart.scala DEBUG] Error detected Bits: %b\n",
+//          error.asUInt
+//        )
+//        when(error.rxError =/= UartRxError.None) {
+//            printf(
+//              "[Uart.scala DEBUG] RX Error detected: %b\n",
+//              error.rxError.asUInt
+//            )
+//        }
+//        when(error.txError =/= UartTxError.None) {
+//            printf(
+//              "[Uart.scala DEBUG] TX Error detected: %b\n",
+//              error.txError.asUInt
+//            )
+//        }
+//        when(error.topError =/= UartTopError.None) {
+//            printf(
+//              "[Uart.scala DEBUG] Top Error detected: %b\n",
+//              error.topError.asUInt
+//            )
+//        }
+//        when(error.addrDecodeError =/= AddrDecodeError.None) {
+//            printf(
+//              "[Uart.scala DEBUG] AddrDecode Error detected: %b\n",
+//              error.addrDecodeError.asUInt
+//            )
+//        }
+//
+//    }
+
     when(load) {
         load := false.B
     }

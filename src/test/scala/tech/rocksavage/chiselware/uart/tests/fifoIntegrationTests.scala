@@ -82,7 +82,7 @@ object fifoIntegrationTests {
         implicit val clock = dut.clock
         clock.setTimeout(10000)
 
-        val clockFreq    = 25000000
+        val clockFreq    = 1_000_000
         val baudRate     = 115200
         val clocksPerBit = clockFreq / baudRate
 
