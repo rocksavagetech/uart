@@ -58,8 +58,6 @@ lazy val root = (project in file("."))
 val chiselVersion   = "6.6.0"
 val scalafmtVersion = "2.5.0"
 
-testOptions in Test += Tests.Argument("-P")
-
 // Scala coverage settings
 coverageDataDir            := target.value / "../generated/scalaCoverage"
 coverageFailOnMinimum      := true
