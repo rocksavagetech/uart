@@ -20,14 +20,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Download the "synthesis-results" artifact from the completed Synthesis workflow
       - name: Download artifacts from synthesis workflow
         uses: dawidd6/action-download-artifact@v2
         with:
           workflow: "Synthesis and Results"
           workflow_conclusion: success
           run_id: ${{ github.event.workflow_run.id }}
-          # By default, it will download them into a folder named after the artifact (synthesis-results/).
 
       - name: Inspect downloaded artifacts
         run: |
@@ -71,8 +69,8 @@ jobs:
             echo "Removing old static table..."
             sed -i '/\\begin{longtable}/,/\\end{longtable}/d' "$SYN_TEX"
 
-            echo "Inserting a \\input statement"
-            sed -i "/\\subsection{Area and Gate Count}/a \\input{../../out/results/${SNIPPET_NOEXT}}" "$SYN_TEX"
+            echo "Inserting a \\\input statement"
+            sed -i "/\\subsection{Area and Gate Count}/a \\\input{../../out/results/${SNIPPET_NOEXT}}" "$SYN_TEX"
           else
             echo "Missing $SYN_TEX or $SNIPPET_PATH; skipping injection."
           fi
@@ -84,18 +82,23 @@ jobs:
       - name: Collect artifacts for release
         run: |
           mkdir -p release_artifacts
-
-          # PDF(s)
+          
+          # 1) PDFs:
           if [ -d out/doc ]; then
             find out/doc -name "*.pdf" -exec cp {} release_artifacts/ \;
           fi
-          # Verilog netlists
-          find synthesis-results -name "*.v" -exec cp {} release_artifacts/ \;
-          # JSON / snippet .tex
+
+          # 2) Verilog: place in a verilog/ subfolder
+          mkdir -p release_artifacts/verilog
+          find synthesis-results -name "*.v" -exec cp {} release_artifacts/verilog/ \;
+
+          # 3) JSON / snippet .tex from out/results
           cp -r out/results/* release_artifacts/ || true
 
           echo "Listing release_artifacts:"
           ls -la release_artifacts
+          echo "Listing release_artifacts/verilog:"
+          ls -la release_artifacts/verilog
 
           tar -czvf release_artifacts.tar.gz release_artifacts/
 
@@ -106,7 +109,7 @@ jobs:
           files: |
             release_artifacts.tar.gz
             release_artifacts/*.pdf
-            release_artifacts/*.v
+            release_artifacts/verilog/*.v
             release_artifacts/*.json
             release_artifacts/*.tex
           tag_name: v${{ github.run_number }}
