@@ -25,8 +25,10 @@ object UartTxFifoTestUtils {
         println(s"Transmitting data: ${config.data}\n")
         val testFifo = scala.collection.mutable.Queue[(Int)]()
         for (data <- config.data) {
+
             clock.setTimeout(1000)
             println(s"Next Data Operation: $data")
+
             if (data.direction == UartFifoDataDirection.Push) {
                 testFifo.enqueue(data.data)
                 println(s"Data ($data) queued to Fifo: $testFifo")
@@ -36,6 +38,7 @@ object UartTxFifoTestUtils {
                 transmitPop(dut, config, testFifo)
                 println(s"Data popped from Fifo Successfully")
             }
+
         }
     }
 
@@ -91,7 +94,7 @@ object UartTxFifoTestUtils {
           "useParityDb register not set correctly"
         )
         assert(
-          (foundParityOdd == 1) == config.config.useParity,
+          (foundParityOdd == 1) == config.config.parityOdd,
           "parityOddDb register not set correctly"
         )
     }
@@ -146,7 +149,10 @@ object UartTxFifoTestUtils {
                 }.reverse
             val expectedSequenceIndividual: Seq[(Boolean, UartState.Type)] =
                 if (config.config.useParity) {
-                    val parityBit = dataBits.count(identity) % 2 == 0
+                    val parityBit = UartParity.parity(
+                      dataDequeued,
+                      config.config.parityOdd
+                    )
                     Seq((false, UartState.Start)) ++ dataBits.map(
                       (_, UartState.Data)
                     ) ++ Seq(

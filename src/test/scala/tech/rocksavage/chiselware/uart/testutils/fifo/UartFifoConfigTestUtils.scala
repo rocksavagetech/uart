@@ -27,7 +27,7 @@ object UartFifoConfigTestUtils {
                     UartFifoDataDirection.Pop
                 } else {
                     val randomInt = scala.util.Random.nextInt(16)
-                    val boolValue = randomInt >= 15 // 1/16 chance of popping
+                    val boolValue = randomInt <= 15 // 1/16 chance of popping
                     boolToPushPop(boolValue)
                 }
             }
@@ -42,6 +42,11 @@ object UartFifoConfigTestUtils {
                   .nextInt(2.pow(validNumOutputBits.last).toInt),
               pushOrPop
             )
+        }
+
+        // if the height is not 0, we need to pop all the data
+        if (fifoHeight != 0) {
+            datas = datas :+ new UartData(0, UartFifoDataDirection.Pop)
         }
 
         while (true) {
@@ -102,6 +107,13 @@ object UartFifoConfigTestUtils {
                   .nextInt(2.pow(validNumOutputBits.last).toInt),
               pushOrPop
             )
+        }
+
+        // if the height is not 0, we need to pop all the data
+
+        while (fifoHeight != 0) {
+            datas = datas :+ new UartData(0, UartFifoDataDirection.Pop)
+            fifoHeight -= 1
         }
 
         while (true) {

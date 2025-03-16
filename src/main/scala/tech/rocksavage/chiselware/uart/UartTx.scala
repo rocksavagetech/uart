@@ -145,20 +145,20 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
 
     emptywire := fifo.io.empty
 
-    when(io.txConfig.load) {
-        // On any cycle we assert push+full => overflow
-        when(fifo.io.full) {
-            txErrorReg := UartTxError.FifoOverflow
-            printf("[UartTx DEBUG] Setting overflow error - FIFO full\n")
-        }.elsewhen(fifo.io.empty) {
-            // If your design tries to pop when empty => underflow
-            txErrorReg := UartTxError.FifoUnderflow
-            printf("[UartTx DEBUG] Setting underflow error - FIFO empty\n")
-        }.elsewhen(uartFsm.io.complete) {
-            txErrorReg := UartTxError.None
-            printf("[UartTx DEBUG] Clearing error after completion\n")
-        }
-    }
+//    when(io.txConfig.load) {
+//        // On any cycle we assert push+full => overflow
+//        when(fifo.io.full) {
+//            txErrorReg := UartTxError.FifoOverflow
+//            printf("[UartTx DEBUG] Setting overflow error - FIFO full\n")
+//        }.elsewhen(fifo.io.empty) {
+//            // If your design tries to pop when empty => underflow
+//            txErrorReg := UartTxError.FifoUnderflow
+//            printf("[UartTx DEBUG] Setting underflow error - FIFO empty\n")
+//        }.elsewhen(uartFsm.io.complete) {
+//            txErrorReg := UartTxError.None
+//            printf("[UartTx DEBUG] Clearing error after completion\n")
+//        }
+//    }
 
     // Debug status changes
     when(txErrorReg =/= RegNext(txErrorReg)) {

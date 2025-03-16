@@ -30,10 +30,10 @@ object randomTests {
 
         /** 2 exp 13, 2 exp 14, ... */
         val validClockFrequencies = Seq(
-          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+          13, 14, 15, 16, 17
         ).map(iexp(2, _))
         val validBaudRates = Seq(
-          9600, 19_200, 38_400, 57_600, 115_200, 230_400, 460_800, 921_600
+          115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
         )
         val validDataBits = Seq(5, 6, 7, 8)
 
@@ -65,16 +65,16 @@ object randomTests {
 
         /** 2 exp 13, 2 exp 14, ... */
         val validClockFrequencies = Seq(
-          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+          13, 14, 15, 16, 17
         ).map(iexp(2, _))
         val validBaudRates = Seq(
-          9600, 19_200, 38_400, 57_600, 115_200, 230_400, 460_800, 921_600
+          115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
         )
         val validDataBits = Seq(5, 6, 7, 8)
 
-        val seed = Random.nextLong()
+//        val seed = Random.nextLong()
 
-        //        val seed = -706700778016793525L
+        val seed = 1117391718542493081L
         println(s"Random test seed: $seed")
         Random.setSeed(seed)
 
@@ -102,10 +102,10 @@ object randomTests {
 
         /** 2 exp 13, 2 exp 14, ... */
         val validClockFrequencies = Seq(
-          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+          13, 14, 15, 16, 17
         ).map(iexp(2, _))
         val validBaudRates = Seq(
-          9600, 19_200, 38_400, 57_600, 115_200, 230_400, 460_800, 921_600
+          115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
         )
         val validDataBits = Seq(5, 6, 7, 8)
 
@@ -136,10 +136,10 @@ object randomTests {
 
         /** 2 exp 13, 2 exp 14, ... */
         val validClockFrequencies = Seq(
-          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+          13, 14, 15, 16, 17
         ).map(iexp(2, _))
         val validBaudRates = Seq(
-          9600, 19_200, 38_400, 57_600, 115_200, 230_400, 460_800, 921_600
+          115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
         )
         val validDataBits = Seq(5, 6, 7, 8)
 

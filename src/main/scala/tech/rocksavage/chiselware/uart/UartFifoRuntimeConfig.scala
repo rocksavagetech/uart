@@ -75,7 +75,7 @@ case class UartFifoTxRuntimeConfig(
     }
 
     override def toString =
-        s"UartFifoRxRuntimeConfig(useAsserts=$useAsserts, config=$config, data=${data.toString()})"
+        s"UartFifoTxRuntimeConfig(useAsserts=$useAsserts, config=$config, data=${data.toString()})"
 }
 
 case class UartFifoRxRuntimeConfig(

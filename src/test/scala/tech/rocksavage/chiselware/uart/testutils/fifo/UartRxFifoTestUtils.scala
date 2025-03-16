@@ -87,7 +87,7 @@ object UartRxFifoTestUtils {
           "useParityDb register not set correctly"
         )
         assert(
-          (foundParityOdd == 1) == config.config.useParity,
+          (foundParityOdd == 1) == config.config.parityOdd,
           "parityOddDb register not set correctly"
         )
     }
