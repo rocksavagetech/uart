@@ -2,23 +2,46 @@ name: "Generate Documentation and Publish Release"
 
 on:
   workflow_run:
-    workflows: ["Synthesis and Results"]  # Must match the name in synth_sta.yml
+    workflows: ["Synthesis and Results"]
     types: [completed]
 
 jobs:
   docs-and-release:
-    # Only run if the first workflow ended successfully
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
+      actions: read
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Download artifacts from synthesis workflow
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: "Synthesis and Results"
+          workflow_conclusion: success
+          run_id: ${{ github.event.workflow_run.id }}
+
+      - name: Inspect downloaded artifacts
+        run: |
+          echo "Files downloaded from the synthesis workflow:"
+          ls -R
+
+      - name: Move results into out/ folder
+        run: |
+          mkdir -p out/results
+          # The downloaded folder is "synthesis-results" by default
+          cp -r synthesis-results/results out/
+          # Also copy any .v files
+          find synthesis-results -name "*.v" -exec cp {} out/ \;
+
+          echo "Now out/results has..."
+          ls -la out/results
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -58,32 +81,26 @@ jobs:
         run: |
           nix develop --command make docs
 
-      - name: Collect artifacts
+      - name: Collect artifacts for release
         run: |
           mkdir -p release_artifacts
-
-          # Copy PDF(s) from out/doc
+          
+          # 1) PDFs:
           if [ -d out/doc ]; then
             find out/doc -name "*.pdf" -exec cp {} release_artifacts/ \;
           fi
 
-          # Copy Verilog
-          if [ -d generated ]; then
-            find generated -name "*.v" -exec cp {} release_artifacts/ \;
-          fi
+          # 2) Verilog: place in a verilog/ subfolder
+          mkdir -p release_artifacts/verilog
+          find synthesis-results -name "*.v" -exec cp {} release_artifacts/verilog/ \;
 
-          # Copy Netlists
-          if [ -d out/synth ]; then
-            find out/synth -name "*.v" -exec cp {} release_artifacts/ \;
-          fi
+          # 3) JSON / snippet .tex from out/results
+          cp -r out/results/* release_artifacts/ || true
 
-          # Copy JSON + snippet .tex files
-          if [ -d out/results ]; then
-            cp -r out/results/* release_artifacts/ || true
-          fi
-
-          echo "Artifacts in release_artifacts:"
+          echo "Listing release_artifacts:"
           ls -la release_artifacts
+          echo "Listing release_artifacts/verilog:"
+          ls -la release_artifacts/verilog
 
           tar -czvf release_artifacts.tar.gz release_artifacts/
 
@@ -94,9 +111,9 @@ jobs:
           files: |
             release_artifacts.tar.gz
             release_artifacts/*.pdf
-            release_artifacts/*.v
-            release_artifacts/*.json
-            release_artifacts/*.tex
+            # release_artifacts/verilog/*.v
+            # release_artifacts/*.json
+            # release_artifacts/*.tex
           tag_name: v${{ github.run_number }}
           name: "Release ${{ github.run_number }}"
           draft: false
