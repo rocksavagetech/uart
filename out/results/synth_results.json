@@ -1,7 +1,7 @@
 [
   {
     "config_name": "8bits_2sync_115000baud",
-    "gates": "11583.96",
+    "gates": "11624.061",
     "area": "'\\Uart':",
     "combinational_cells": "",
     "sequential_cells": "",
