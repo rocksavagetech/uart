@@ -19,132 +19,123 @@ class UartFsm(params: UartParams) extends Module {
     val io = IO(new Bundle {
 
         // ############# input signals
+
+        // #### Control Signals ####
         val startTransaction = Input(Bool())
+        val shiftOffset      = Input(Bool())
+        val waiting          = Input(Bool())
+
+        // #### Settings Signals ####
         val clocksPerBit =
             Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
         val numOutputBits =
             Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
-        val useParity  = Input(Bool())
+        val useParity = Input(Bool())
+
+        // #### Baud Settings ####
         val updateBaud = Input(Bool())
         val baudValid  = Input(Bool())
 
         // ############# output signals
-        val state         = Output(UartState())
-        val sample        = Output(Bool())
-        val complete      = Output(Bool())
-        val shiftRegister = Output(Bool())
+        val state           = Output(UartState())
+        val shift           = Output(Bool())
+        val complete        = Output(Bool())
+        val nextTransaction = Output(Bool())
     })
 
-    val startTransaction = WireDefault(io.startTransaction)
-    val stopTransaction  = WireDefault(false.B)
+    // #### State Counter
+    val counter = Module(new UartFsmCounter(params))
+    counter.io.clockCounterMax := io.clocksPerBit
+    counter.io.numOutputBits   := io.numOutputBits
+    counter.io.useParity       := io.useParity
 
-    // Internal State
-    val activeReg = RegInit(false.B)
-    val active    = WireDefault(activeReg)
-    active := activeReg
-    when(!activeReg && startTransaction) {
-        active := true.B
-    }
-    when(activeReg && stopTransaction) {
-        active := false.B
-    }
-
-    activeReg := active
-
-    // Counters
-    val clockCounterMax       = WireDefault(io.clocksPerBit)
-    val clockCounterIncrement = WireDefault(active)
-
-    val clockCounter = RegInit(0.U((log2Ceil(params.maxClockFrequency) + 1).W))
-    val clockCounterOverflow = WireInit(false.B)
-
-    val clockCounterIncrmentResult = increment(
-      clockCounter,
-      clockCounterMax,
-      clockCounterIncrement
+    // #### State Active Mealy
+    // This is a combinational Equivalent to io.complete to avoid a comb loop
+    val combComplete  = WireInit(false.B)
+    val combComplete1 = WireInit(false.B)
+    combComplete1 := (counter.io.clockCounter === io.clocksPerBit - 1.U)
+    val combComplete2 = WireInit(false.B)
+    combComplete2 := (
+      (!io.useParity && counter.io.bitCounter === io.numOutputBits + 1.U) || (io.useParity && counter.io.bitCounter === io.numOutputBits + 2.U)
     )
-    clockCounter         := clockCounterIncrmentResult._1
-    clockCounterOverflow := clockCounterIncrmentResult._2
+    combComplete := combComplete1 && combComplete2
 
-//    when(startTransaction && (clockCounter + 1.U >= clockCounterMax)) {
-//        clockCounter         := 0.U
-//        clockCounterOverflow := true.B
-//    }
-//    when(startTransaction && (clockCounter + 1.U < clockCounterMax)) {
-//        clockCounter := 1.U
-//    }
+    val active    = WireInit(false.B)
+    val activeFsm = Module(new UartFsmActive(params))
+    activeFsm.io.idleTransactionStarted := (RegNext(
+      io.state
+    ) === UartState.Idle) && (io.startTransaction)
+    activeFsm.io.transactionCompletedAndNotWaiting := !io.waiting && combComplete
+    activeFsm.io.stateStoppedAndWaiting := (RegNext(
+      io.state
+    ) === UartState.Stop) && io.waiting
 
-    val bitCounterMax = WireDefault(io.numOutputBits + 2.U)
-    when(io.useParity) {
-        bitCounterMax := io.numOutputBits + 3.U
-    }
-    val bitCounterIncrement = WireDefault(clockCounterOverflow)
+    active := activeFsm.io.active
 
-    val bitCounter = RegInit(0.U((log2Ceil(params.maxOutputBits) + 1).W))
-    val bitCounterOverflow = WireDefault(false.B)
+    // #### Counter - Active
+    counter.io.clockCounterIncrement := active
 
-    val bitCounterIncrementResult = increment(
-      bitCounter,
-      bitCounterMax,
-      bitCounterIncrement
-    )
-    bitCounter         := bitCounterIncrementResult._1
-    bitCounterOverflow := bitCounterIncrementResult._2
-
-    // if at the end of the transmission (bitcounter max - 1 & clock counter max - 1)
-    // then we clear all clocks and reset the active register
-    when(
-      bitCounter === bitCounterMax - 1.U && clockCounter === clockCounterMax - 1.U
-    ) {
-        clockCounter         := 0.U
-        clockCounterOverflow := false.B
-        bitCounter           := 0.U
-        bitCounterOverflow   := false.B
-    }
-
-    // State (Combinational)
+    // #### State Machine
     val prevState = RegInit(UartState.Idle)
-    val state = stateCase(
-      numBits = io.numOutputBits,
-      bitCount = bitCounter,
-      parity = io.useParity,
-      active = active,
-      updateBaud = io.updateBaud,
-      baudValid = io.baudValid,
-      clockCounterOverflow = clockCounterOverflow,
-      startTransaction = startTransaction,
-      prevState = prevState
-    )
+    val state     = WireDefault(UartState.Idle)
+    when(io.updateBaud || prevState === UartState.BaudUpdating) {
+        state := stateCaseBaud(
+          updateBaud = io.updateBaud,
+          baudValid = io.baudValid,
+          prevState = prevState
+        )
+    }.otherwise {
+        state := stateCase(
+          numBits = io.numOutputBits,
+          bitCount = counter.io.bitCounter,
+          parity = io.useParity,
+          active = active,
+          activePrev = RegNext(active),
+          waiting = io.waiting,
+          nextTransaction = io.nextTransaction
+        )
+    }
+
     prevState := state
     io.state  := state
 
     // Outputs
-    io.sample := (state =/= UartState.Idle) && (state =/= UartState.BaudUpdating) && (clockCounter === (io.clocksPerBit >> 1.U))
-    io.complete := (state === UartState.Stop) && (clockCounter === clockCounterMax - 1.U)
-    io.shiftRegister := state === UartState.Data || state === UartState.Parity
 
-    when(io.complete) {
-        activeReg := false.B
+    val whenShift = WireInit(false.B)
+    when(io.shiftOffset) {
+        // RX
+        whenShift := (counter.io.clockCounter === (io.clocksPerBit >> 1.U))
+    }.otherwise {
+        // TX
+        whenShift := (counter.io.clockCounter === io.clocksPerBit - 1.U) &&
+            ((counter.io.bitCounter =/= io.numOutputBits) || (io.clocksPerBit === 1.U))
     }
 
+    io.shift := whenShift && active &&
+        (state =/= UartState.Start) &&
+        (prevState =/= UartState.Idle) &&
+        (prevState =/= UartState.BaudUpdating)
+    io.complete := combComplete
+    io.nextTransaction := (io.startTransaction) || (RegNext(
+      combComplete
+    ) && io.waiting)
+
     // Helper Functions
-    def increment(value: UInt, max: UInt, condition: Bool): (UInt, Bool) = {
-        val incrementedInner = WireDefault(value)
-        val incremented      = WireDefault(value)
-        val overflow         = WireDefault(false.B)
+    def stateCaseBaud(
+        updateBaud: Bool,
+        baudValid: Bool,
+        prevState: UartState.Type
+    ): UartState.Type = {
+        val state = WireDefault(UartState.Idle)
 
-        when(condition) {
-            incrementedInner := value + 1.U
-
-            when((incrementedInner >= max) || (incrementedInner < value)) {
-                incremented := 0.U
-                overflow    := true.B
-            }.otherwise {
-                incremented := incrementedInner
-            }
+        when(prevState === UartState.Idle && updateBaud) {
+            state := UartState.BaudUpdating
+        }.elsewhen(prevState === UartState.BaudUpdating && baudValid) {
+            state := UartState.Idle
+        }.elsewhen(prevState === UartState.BaudUpdating && !baudValid) {
+            state := UartState.BaudUpdating
         }
-
-        (incremented, overflow)
+        state
     }
 
     def stateCase(
@@ -152,43 +143,29 @@ class UartFsm(params: UartParams) extends Module {
         bitCount: UInt,
         parity: Bool,
         active: Bool,
-        updateBaud: Bool,
-        baudValid: Bool,
-        clockCounterOverflow: Bool,
-        startTransaction: Bool,
-        prevState: UartState.Type
+        activePrev: Bool,
+        waiting: Bool,
+        nextTransaction: Bool
     ): UartState.Type = {
-
-        val state      = WireDefault(UartState.Idle)
-        val stateInner = WireDefault(UartState.Idle)
-
-        when(prevState === UartState.Idle && updateBaud) {
-            stateInner := UartState.BaudUpdating
-        }
-        when(prevState === UartState.BaudUpdating && baudValid) {
-            stateInner := UartState.Idle
-        }
-        when(prevState === UartState.BaudUpdating && !baudValid) {
-            stateInner := UartState.BaudUpdating
-        }
-
-        when(stateInner =/= UartState.BaudUpdating) {
-            when(active) {
-                when(startTransaction) {
-                    state := UartState.Start
-                }.elsewhen(bitCounter === 0.U) {
-                    state := UartState.Start
-                }.elsewhen(bitCount > 0.U && bitCount <= numBits) {
-                    state := UartState.Data
-                }.elsewhen(parity && bitCount === numBits + 1.U) {
-                    state := UartState.Parity
-                }.elsewhen(!parity && bitCount === numBits + 1.U) {
-                    state := UartState.Stop
-                }.elsewhen(parity && bitCount === numBits + 2.U) {
-                    state := UartState.Stop
-                }
+        val state = WireDefault(UartState.Idle)
+        when(active) {
+            when(nextTransaction) {
+                state := UartState.Start
+            }.elsewhen(bitCount === 0.U) {
+                state := UartState.Start
+            }.elsewhen(bitCount > 0.U && bitCount <= numBits) {
+                state := UartState.Data
+            }.elsewhen(parity && bitCount === numBits + 1.U) {
+                state := UartState.Parity
+            }.elsewhen(!parity && bitCount === numBits + 1.U) {
+                state := UartState.Stop
+            }.elsewhen(parity && bitCount === numBits + 2.U) {
+                state := UartState.Stop
             }
-        }.otherwise(state := stateInner)
+        }.elsewhen(activePrev && waiting) {
+            state := UartState.Start
+        }
         state
     }
+
 }

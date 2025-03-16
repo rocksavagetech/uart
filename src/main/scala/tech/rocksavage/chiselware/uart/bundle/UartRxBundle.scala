@@ -11,12 +11,12 @@ import tech.rocksavage.chiselware.uart.param.UartParams
 class UartRxBundle(params: UartParams) extends Bundle {
     val rx    = Input(Bool())
     val data  = Output(UInt(params.maxOutputBits.W))
-    val valid = Output(Bool())
-
     val error = Output(UartRxError())
 
     // configuration inputs
     val rxConfig     = new UartRxControlBundle(params)
     val clocksPerBit = Output(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+
+    val fifoBundle = new FifoStatusBundle(params)
 
 }

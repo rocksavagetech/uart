@@ -56,9 +56,9 @@ object errorTests {
         // Now read the error register. We expect a non–zero value indicating an error.
         val errorVal = readAPB(
           dut.io.apb,
-          dut.registerMap.getAddressOfRegister("top_error").get.U
+          dut.registerMap.getAddressOfRegister("error").get.U
         )
-        println(f"Invalid write test: Error register = 0x$errorVal%02x")
+        println(f"Invalid write test: Error register = $errorVal")
         assert(
           errorVal != 0,
           s"Invalid register writes did not trigger error; error register = 0x$errorVal%02x"
@@ -147,7 +147,7 @@ object errorTests {
             )
             println(f"Cycle $cycleCount: Error register = 0x$errVal%02x")
             // Check for the parity error flag (here we assume bitmask 0x04 indicates a parity error).
-            if ((errVal & 0x03) == 0x03) {
+            if (errVal == 0x30) {
                 parityErrorDetected = true
                 println("Parity error detected!")
             }
@@ -219,7 +219,7 @@ object errorTests {
             )
             println(f"Cycle $cycleCount: Error register = 0x$errorVal%02x")
             // Check for the stop bit error flag (assume bitmask 0x02 indicates a stop bit error).
-            if ((errorVal & 0x02) == 0x02) {
+            if (errorVal == 0x20) {
                 errorDetected = true
                 println("Stop bit error detected!")
             }
@@ -237,9 +237,9 @@ object errorTests {
       *
       * In this test the receiver is first forced to report a parity error by
       * sending a byte (0x55) with an incorrect parity bit. Once the error is
-      * detected and read, the error is cleared by writing to the
-      * "clearError" register. Then a normal valid frame is sent, and the
-      * received data is verified.
+      * detected and read, the error is cleared by writing to the "clearError"
+      * register. Then a normal valid frame is sent, and the received data is
+      * verified.
       */
     def parityErrorRecoveryTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
@@ -310,7 +310,7 @@ object errorTests {
               dut.io.apb,
               dut.registerMap.getAddressOfRegister("error").get.U
             )
-            if ((errVal & 0x03) == 0x03) {
+            if (errVal == 0x30) {
                 parityErrorDetected = true
                 println("Parity error detected!")
             }

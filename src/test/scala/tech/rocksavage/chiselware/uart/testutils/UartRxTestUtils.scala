@@ -31,6 +31,7 @@ object UartRxTestUtils {
         val bits      = binString.map(_ == '1')
         println(s"Transmitting character: $char, with bits: ${binString}")
         transactionRx(dut, bits, clocksPerBit, 8)
+
     }
 
     def transactionRx(
@@ -41,25 +42,21 @@ object UartRxTestUtils {
     ): Unit = {
 
         // Transmit the start bit
-        println("--- Transmitting start bit")
         transmitBitRx(dut, false, clocksPerBit)
         // Transmit numBits bits
-        println("--- Transmitting data bits")
         for (i <- 0 until numBits) {
             transmitBitRx(dut, bits(i), clocksPerBit)
         }
         // Transmit the stop bit
-        println("--- Transmitting stop bit")
         UartRxTestUtils.transmitBitRx(dut, true, clocksPerBit)
+
+        // One extra clock to allow for the receiver to process the stop bit
+        dut.clock.setTimeout(clocksPerBit + 1)
+        dut.clock.step(3)
     }
 
     def transmitBitRx(dut: UartRx, bit: Boolean, clocksPerBit: Int): Unit = {
-        if (bit) println("--- --- 1")
-        else
-            println("--- --- 0")
         dut.io.rx.poke(bit.B)
-
-        println(s"Transmitting bit for $clocksPerBit cycles")
         dut.clock.setTimeout(clocksPerBit + 1)
         for (i <- 0 until clocksPerBit) {
             dut.clock.step()

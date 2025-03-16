@@ -1,8 +1,9 @@
 package tech.rocksavage.chiselware.uart
 
 import chisel3._
+import tech.rocksavage.chiselware.addrdecode.AddrDecodeError
 import tech.rocksavage.chiselware.uart.bundle.UartInnerBundle
-import tech.rocksavage.chiselware.uart.error.UartErrorObject
+import tech.rocksavage.chiselware.uart.error.UartTopError
 import tech.rocksavage.chiselware.uart.param.UartParams
 
 /** A merged UART module that includes both the receiver and transmitter.
@@ -22,12 +23,12 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     val txModule = Module(new UartTx(params, formal))
 
     // Connect the RX side
-    rxModule.io.rx    := io.rx
-    io.dataOut        := rxModule.io.data
-    io.rxValid        := rxModule.io.valid
-    io.error.rxError  := rxModule.io.error
-    io.error.txError  := txModule.io.error
-    // io.error.topError := UartErrorObject.None
+    rxModule.io.rx           := io.rx
+    io.dataOut               := rxModule.io.data
+    io.error.rxError         := rxModule.io.error
+    io.error.txError         := txModule.io.error
+    io.error.topError        := UartTopError.None
+    io.error.addrDecodeError := AddrDecodeError.None
 
     io.rxClocksPerBit := rxModule.io.clocksPerBit
     io.txClocksPerBit := txModule.io.clocksPerBit
@@ -35,6 +36,9 @@ class UartInner(params: UartParams, formal: Boolean = true) extends Module {
     // Connect control signals
     rxModule.io.rxConfig <> io.rxControlBundle
     txModule.io.txConfig <> io.txControlBundle
+
+    io.rxFifoStatus <> rxModule.io.fifoBundle
+    io.txFifoStatus <> txModule.io.fifoBundle
 
     // Connect the TX output
     io.tx := txModule.io.tx

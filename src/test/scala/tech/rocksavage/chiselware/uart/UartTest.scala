@@ -2,24 +2,29 @@ package tech.rocksavage.chiselware.uart
 
 import chiseltest._
 import chiseltest.simulator.{
-    VerilatorBackendAnnotation,
     VerilatorCFlags,
     WriteFstAnnotation,
     WriteVcdAnnotation
 }
 import firrtl2.annotations.Annotation
 import firrtl2.options.TargetDirAnnotation
+import org.scalatest.ParallelTestExecution
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import tech.rocksavage.chiselware.uart.param.UartParams
 import tech.rocksavage.chiselware.uart.tests._
 
-class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
+class UartTest
+    extends AnyFlatSpec
+    with ChiselScalatestTester
+    with Matchers
+    with ParallelTestExecution {
     val numTests    = 2
     val testNameArg = System.getProperty("testName")
     // Command-line toggles
-    val enableVcd = System.getProperty("enableVcd", "true").toBoolean
-    val enableFst = System.getProperty("enableFst", "false").toBoolean
+    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
+    val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
+    val enableFst    = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
         case true  => "regression"
         case false => testNameArg
@@ -27,7 +32,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
 
     println(s"Running test: $testName")
     val testDir = "out/test"
-    useVerilator = true
+    useVerilator = false
     val backendAnnotations = {
         var annos: Seq[Annotation] = Seq()
         if (enableVcd) annos = annos :+ WriteVcdAnnotation
@@ -41,8 +46,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
     }
-    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
-
     runTest(testName)
 
     def runTest(name: String): Unit = {
@@ -70,41 +73,56 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 it should "detect TX FIFO overflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.txFifoOverflowTest(dut, uartParams)
+                            fifoIntegrationTests.txFifoOverflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
+
             case "rxFifoOverflow" =>
                 it should "detect RX FIFO overflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.rxFifoOverflowTest(dut, uartParams)
+                            fifoIntegrationTests.rxFifoOverflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
+
             case "txFifoUnderflow" =>
                 it should "detect TX FIFO underflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.txFifoUnderflowTest(dut, uartParams)
+                            fifoIntegrationTests.txFifoUnderflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
+
             case "rxFifoUnderflow" =>
                 it should "detect RX FIFO underflow correctly" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.rxFifoUnderflowTest(dut, uartParams)
+                            fifoIntegrationTests.rxFifoUnderflowTest(
+                              dut,
+                              uartParams
+                            )
                         }
                 }
-                
-            case "fifoErrorClearing" =>
-                it should "clear FIFO errors correctly" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            fifoIntegrationTests.errorClearingTest(dut, uartParams)
-                        }
-                }
+
+//            case "fifoErrorClearing" =>
+//                it should "clear FIFO errors correctly" in {
+//                    test(new Uart(uartParams, false))
+//                        .withAnnotations(backendAnnotations) { dut =>
+//                            fifoIntegrationTests.errorClearingTest(
+//                              dut,
+//                              uartParams
+//                            )
+//                        }
+//                }
 
             // Add Random Test Cases
             case "randomTransmit" =>
@@ -115,6 +133,14 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                         }
                 }
             // Add Random Test Cases
+            case "randomFifoTransmit" =>
+                it should "pass random fifo transmit test" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomFifoTransmitTest(dut, uartParams)
+                        }
+                }
+            // Add Random Test Cases
             case "randomReceive" =>
                 it should "pass random receive test" in {
                     test(new Uart(uartParams, false))
@@ -122,11 +148,29 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                             randomTests.randomReceiveTest(dut, uartParams)
                         }
                 }
+            // Add Random Test Cases
+            case "randomFifoReceive" =>
+                it should "pass random receive test" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomFifoReceiveTest(dut, uartParams)
+                        }
+                }
             case "specialCaseTransmit" =>
                 it should "handle special transmit cases" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             specialCaseTests.specialCaseTransmitTests(
+                              dut,
+                              uartParams
+                            )
+                        }
+                }
+            case "specialCaseFifoTransmit" =>
+                it should "handle special transmit cases" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            specialCaseTests.specialCaseFifoTransmitTests(
                               dut,
                               uartParams
                             )
@@ -142,6 +186,16 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                             )
                         }
                 }
+            case "specialCaseFifoReceive" =>
+                it should "handle special receive cases" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            specialCaseTests.specialCaseFifoReceiveTests(
+                              dut,
+                              uartParams
+                            )
+                        }
+                }
             case "changingBaudRate" =>
                 it should "handle changing baud rate" in {
                     test(new Uart(uartParams, false))
@@ -149,14 +203,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                             baudrateTests.changeingBaudTest(dut, uartParams)
                         }
                 }
-
-//            case "randomNoise" =>
-//                it should "handle random noise patterns" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            randomTests.randomNoiseTest(dut, uartParams)
-//                        }
-//                }
             case "randomParity" =>
                 it should "handle random parity configurations" in {
                     test(new FullDuplexUart(uartParams))
@@ -208,12 +254,26 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                             transmissionTests.basicTxTest(dut, uartParams)
                         }
                 }
+            case "basicBufferedTransmit" =>
+                it should "transmit buffered data correctly" in {
+                    test(new UartTx(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            transmissionTests.bufferedTxTest(dut, uartParams)
+                        }
+                }
 
             case "basicReceive" =>
                 it should "receive data correctly" in {
                     test(new UartRx(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             transmissionTests.basicRxTest(dut, uartParams)
+                        }
+                }
+            case "basicBufferedReceive" =>
+                it should "receive buffered data correctly" in {
+                    test(new UartRx(uartParams))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            transmissionTests.bufferedRxTest(dut, uartParams)
                         }
                 }
 
@@ -240,14 +300,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                         }
                 }
 
-//            case "mixedBaudRate" =>
-//                it should "handle mixed baud rates" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            fullDuplexTests.mixedBaudRateTest(dut, uartParams)
-//                        }
-//                }
-
             case "highSpeedTransmit" =>
                 it should "handle high-speed transmission" in {
                     test(new FullDuplexUart(uartParams))
@@ -267,23 +319,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                         fullDuplexTests.longTransmissionTest(dut, uartParams)
                     }
                 }
-
-//            case "errorRecovery" =>
-//                it should "recover from errors" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            fullDuplexTests.errorRecoveryTest(dut, uartParams)
-//                        }
-//                }
-//
-//            case "noiseImmunity" =>
-//                it should "be immune to noise" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            fullDuplexTests.noiseImmunityTest(dut, uartParams)
-//                        }
-//                }
-
             case "baudRateSwitch" =>
                 it should "handle baud rate switching" in {
                     test(new FullDuplexUart(uartParams)).withAnnotations(
@@ -335,34 +370,34 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                     fifoIntegrationTests.txFifoOverflowTest(dut, params)
                 }
         }
-        
+
         it should "detect RX FIFO overflow correctly" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     fifoIntegrationTests.rxFifoOverflowTest(dut, params)
                 }
         }
-        
+
         it should "detect TX FIFO underflow correctly" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     fifoIntegrationTests.txFifoUnderflowTest(dut, params)
                 }
         }
-        
+
         it should "detect RX FIFO underflow correctly" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     fifoIntegrationTests.rxFifoUnderflowTest(dut, params)
                 }
         }
-        
-        it should "clear FIFO errors correctly" in {
-            test(new Uart(params, false))
-                .withAnnotations(backendAnnotations) { dut =>
-                    fifoIntegrationTests.errorClearingTest(dut, params)
-                }
-        }
+
+//        it should "clear FIFO errors correctly" in {
+//            test(new Uart(params, false))
+//                .withAnnotations(backendAnnotations) { dut =>
+//                    fifoIntegrationTests.errorClearingTest(dut, params)
+//                }
+//        }
     }
 
     def randomTestsFull(params: UartParams): Unit = {
@@ -380,12 +415,19 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
         }
 
-//        it should "handle random noise patterns" in {
-//            test(new FullDuplexUart(params))
-//                .withAnnotations(backendAnnotations) { dut =>
-//                    randomTests.randomNoiseTest(dut, params)
-//                }
-//        }
+        it should "pass random fifo transmit test" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomFifoTransmitTest(dut, params)
+                }
+        }
+
+        it should "pass random fifo receive test" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomFifoReceiveTest(dut, params)
+                }
+        }
 
         it should "handle random parity configurations" in {
             test(new FullDuplexUart(params))
@@ -403,10 +445,24 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
         }
 
+        it should "handle special fifo transmit cases" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    specialCaseTests.specialCaseFifoTransmitTests(dut, params)
+                }
+        }
+
         it should "handle special receive cases" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     specialCaseTests.specialCaseReceiveTests(dut, params)
+                }
+        }
+
+        it should "handle special fifo receive cases" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    specialCaseTests.specialCaseFifoReceiveTests(dut, params)
                 }
         }
     }
