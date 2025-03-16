@@ -305,9 +305,18 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     }
 
     // If RX data is read, clear the available flag.
+//    when(!io.apb.PWRITE) {
+//        for (reg <- registerMap.getRegisters if reg.name == "rx_data") {
+//            when(addrDecode.io.sel(reg.id) && rxDataAvailable) {
+//                rxDataRegRead := true.B
+//            }
+//        }
+//    }
     when(!io.apb.PWRITE) {
         for (reg <- registerMap.getRegisters if reg.name == "rx_data") {
-            when(addrDecode.io.sel(reg.id) && rxDataAvailable) {
+            when(
+              addrDecode.io.sel(reg.id)
+            ) { // fix to send an error when trying to read from an empty fifo
                 rxDataRegRead := true.B
             }
         }
