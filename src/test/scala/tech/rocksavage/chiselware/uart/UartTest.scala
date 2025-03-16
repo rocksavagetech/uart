@@ -21,7 +21,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
     val enableFst    = System.getProperty("enableFst", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "longTransmission"
+        case true  => "regression"
         case false => testNameArg
     }
 
@@ -143,6 +143,14 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                             randomTests.randomReceiveTest(dut, uartParams)
                         }
                 }
+            // Add Random Test Cases
+            case "randomFifoReceive" =>
+                it should "pass random receive test" in {
+                    test(new Uart(uartParams, false))
+                        .withAnnotations(backendAnnotations) { dut =>
+                            randomTests.randomFifoReceiveTest(dut, uartParams)
+                        }
+                }
             case "specialCaseTransmit" =>
                 it should "handle special transmit cases" in {
                     test(new Uart(uartParams, false))
@@ -190,14 +198,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                             baudrateTests.changeingBaudTest(dut, uartParams)
                         }
                 }
-
-//            case "randomNoise" =>
-//                it should "handle random noise patterns" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            randomTests.randomNoiseTest(dut, uartParams)
-//                        }
-//                }
             case "randomParity" =>
                 it should "handle random parity configurations" in {
                     test(new FullDuplexUart(uartParams))
@@ -295,14 +295,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                         }
                 }
 
-//            case "mixedBaudRate" =>
-//                it should "handle mixed baud rates" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            fullDuplexTests.mixedBaudRateTest(dut, uartParams)
-//                        }
-//                }
-
             case "highSpeedTransmit" =>
                 it should "handle high-speed transmission" in {
                     test(new FullDuplexUart(uartParams))
@@ -322,23 +314,6 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                         fullDuplexTests.longTransmissionTest(dut, uartParams)
                     }
                 }
-
-//            case "errorRecovery" =>
-//                it should "recover from errors" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            fullDuplexTests.errorRecoveryTest(dut, uartParams)
-//                        }
-//                }
-//
-//            case "noiseImmunity" =>
-//                it should "be immune to noise" in {
-//                    test(new FullDuplexUart(uartParams))
-//                        .withAnnotations(backendAnnotations) { dut =>
-//                            fullDuplexTests.noiseImmunityTest(dut, uartParams)
-//                        }
-//                }
-
             case "baudRateSwitch" =>
                 it should "handle baud rate switching" in {
                     test(new FullDuplexUart(uartParams)).withAnnotations(
@@ -435,12 +410,19 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
         }
 
-//        it should "handle random noise patterns" in {
-//            test(new FullDuplexUart(params))
-//                .withAnnotations(backendAnnotations) { dut =>
-//                    randomTests.randomNoiseTest(dut, params)
-//                }
-//        }
+        it should "pass random fifo transmit test" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomFifoTransmitTest(dut, params)
+                }
+        }
+
+        it should "pass random fifo receive test" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    randomTests.randomFifoReceiveTest(dut, params)
+                }
+        }
 
         it should "handle random parity configurations" in {
             test(new FullDuplexUart(params))
@@ -458,10 +440,24 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
         }
 
+        it should "handle special fifo transmit cases" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    specialCaseTests.specialCaseFifoTransmitTests(dut, params)
+                }
+        }
+
         it should "handle special receive cases" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     specialCaseTests.specialCaseReceiveTests(dut, params)
+                }
+        }
+
+        it should "handle special fifo receive cases" in {
+            test(new Uart(params, false))
+                .withAnnotations(backendAnnotations) { dut =>
+                    specialCaseTests.specialCaseFifoReceiveTests(dut, params)
                 }
         }
     }
