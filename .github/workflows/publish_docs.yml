@@ -26,8 +26,16 @@ jobs:
         with:
           workflow: "Synthesis and Results"
           workflow_conclusion: success
-          name: synthesis-results
-          path: out/
+          run_id: ${{ github.event.workflow_run.id }}
+
+      - name: Extract synthesis results
+        run: |
+          ls -la
+          tar -xzvf synthesis-results.tar.gz
+          mkdir -p out
+          cp -r artifacts/results out/
+          find artifacts -name "*.v" -exec cp {} out/ \;
+          ls -la out/results/
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -77,19 +85,10 @@ jobs:
           fi
 
           # Copy Verilog
-          if [ -d generated ]; then
-            find generated -name "*.v" -exec cp {} release_artifacts/ \;
-          fi
-
-          # Copy Netlists
-          if [ -d out/synth ]; then
-            find out/synth -name "*.v" -exec cp {} release_artifacts/ \;
-          fi
+          find artifacts -name "*.v" -exec cp {} release_artifacts/ \;
 
           # Copy JSON + snippet .tex files
-          if [ -d out/results ]; then
-            cp -r out/results/* release_artifacts/ || true
-          fi
+          cp -r out/results/* release_artifacts/ || true
 
           echo "Artifacts in release_artifacts:"
           ls -la release_artifacts

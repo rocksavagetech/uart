@@ -192,11 +192,19 @@ jobs:
           nix develop --command make verilog
           echo "Verilog generation complete."
 
-      - name: Upload artifacts
+      # Create a tar file of the results to make downloading easier
+      - name: Create results archive
+        run: |
+          mkdir -p artifacts
+          cp -r out/results artifacts/
+          find out/synth -name "*.v" -exec cp {} artifacts/ \;
+          find generated -name "*.v" -exec cp {} artifacts/ \;
+          tar -czvf synthesis-results.tar.gz artifacts/
+
+      # Upload the artifacts using GitHub Actions
+      - name: Upload synthesis results
         uses: actions/upload-artifact@v4
         with:
           name: synthesis-results
-          path: |
-            out/results/
-            out/synth/
-            generated/
+          path: synthesis-results.tar.gz
+          retention-days: 5
