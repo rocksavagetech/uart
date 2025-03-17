@@ -95,6 +95,9 @@ class UartBaudRateGenerator(p: UartParams) extends Module {
       */
     val muxedNum = Mux(state === BaudGenState.Idle, io.clkFreq, numeratorReg)
 
+    // Current baud is twice the desired baud, this should correct that error
+    val actualDesiredBaud = io.desiredBaud >> 1.U
+
     /** Multiplexed denominator based on the current state.
       *
       * When Idle, use the current desired baud input; otherwise, use the stored
@@ -103,7 +106,7 @@ class UartBaudRateGenerator(p: UartParams) extends Module {
       * This Allows the Clock Divider latches to hit timing requirements
       */
     val muxedDen =
-        Mux(state === BaudGenState.Idle, io.desiredBaud, denominatorReg)
+        Mux(state === BaudGenState.Idle, actualDesiredBaud, denominatorReg)
 
     /** Control signal to start the divider. Default is false. */
     divider.io.start := false.B

@@ -210,6 +210,21 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
+    val rxLsbFirst = RegInit(true.B)
+    val txLsbFirst = RegInit(true.B)
+    registerMap.createAddressableRegister(
+      rxLsbFirst,
+      "rx_lsbFirst",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+    registerMap.createAddressableRegister(
+      txLsbFirst,
+      "tx_lsbFirst",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+
 //    registerMap.prettyPrint()
 //    registerMap.printHeaderFile()
 
@@ -256,6 +271,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.txControlBundle.parityOddDb     := tx_parityOddDb
     uartInner.io.txControlBundle.txDataRegWrite  := txDataRegWrite
     uartInner.io.txControlBundle.clearErrorDb    := clearError
+    uartInner.io.txControlBundle.lsbFirst        := txLsbFirst
 
     // RX control bundle connection:
     uartInner.io.rxControlBundle.baud            := rx_baud
@@ -266,6 +282,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.rxControlBundle.parityOddDb     := rx_parityOddDb
     uartInner.io.rxControlBundle.clearErrorDb    := clearError
     uartInner.io.rxControlBundle.rxDataRegRead   := rxDataRegRead
+    uartInner.io.rxControlBundle.lsbFirst        := rxLsbFirst
 
     fifoStatusRx := uartInner.io.rxFifoStatus
     fifoStatusTx := uartInner.io.txFifoStatus
@@ -357,40 +374,40 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
 
     // Generate one‐cycle pulses for the load and updateBaud signals.
 
-//    when(
-//      error.rxError =/= UartRxError.None || error.txError =/= UartTxError.None || error.topError =/= UartTopError.None || error.addrDecodeError =/= AddrDecodeError.None
-//    ) {
-//        // Print debug message
-//        printf(
-//          "[Uart.scala DEBUG] Error detected Bits: %b\n",
-//          error.asUInt
-//        )
-//        when(error.rxError =/= UartRxError.None) {
-//            printf(
-//              "[Uart.scala DEBUG] RX Error detected: %b\n",
-//              error.rxError.asUInt
-//            )
-//        }
-//        when(error.txError =/= UartTxError.None) {
-//            printf(
-//              "[Uart.scala DEBUG] TX Error detected: %b\n",
-//              error.txError.asUInt
-//            )
-//        }
-//        when(error.topError =/= UartTopError.None) {
-//            printf(
-//              "[Uart.scala DEBUG] Top Error detected: %b\n",
-//              error.topError.asUInt
-//            )
-//        }
-//        when(error.addrDecodeError =/= AddrDecodeError.None) {
-//            printf(
-//              "[Uart.scala DEBUG] AddrDecode Error detected: %b\n",
-//              error.addrDecodeError.asUInt
-//            )
-//        }
-//
-//    }
+    when(
+      error.rxError =/= UartRxError.None || error.txError =/= UartTxError.None || error.topError =/= UartTopError.None || error.addrDecodeError =/= AddrDecodeError.None
+    ) {
+        // Print debug message
+        printf(
+          "[Uart.scala DEBUG] Error detected Bits: %b\n",
+          error.asUInt
+        )
+        when(error.rxError =/= UartRxError.None) {
+            printf(
+              "[Uart.scala DEBUG] RX Error detected: %b\n",
+              error.rxError.asUInt
+            )
+        }
+        when(error.txError =/= UartTxError.None) {
+            printf(
+              "[Uart.scala DEBUG] TX Error detected: %b\n",
+              error.txError.asUInt
+            )
+        }
+        when(error.topError =/= UartTopError.None) {
+            printf(
+              "[Uart.scala DEBUG] Top Error detected: %b\n",
+              error.topError.asUInt
+            )
+        }
+        when(error.addrDecodeError =/= AddrDecodeError.None) {
+            printf(
+              "[Uart.scala DEBUG] AddrDecode Error detected: %b\n",
+              error.addrDecodeError.asUInt
+            )
+        }
+
+    }
 
     when(load) {
         load := false.B

@@ -173,6 +173,10 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     val sampledRxSync = RegInit(true.B)
 
+    val lsbFirstReg  = RegInit(false.B)
+    val lsbFirstNext = WireInit(false.B)
+    lsbFirstReg := lsbFirstNext
+
     dataReg := dataNext
 
     when(clearErrorDbReg) {
@@ -315,6 +319,12 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       clearErrorReg
     )
 
+    lsbFirstNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.rxConfig.lsbFirst,
+      lsbFirstReg
+    )
+
     rxSyncNext := calculateRxSyncNext(
       rxSyncRegs,
       io.rx
@@ -334,7 +344,9 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     dataNext := calculateDataNext(
       dataShiftReg,
       dataReg,
-      completeWire
+      completeWire,
+      lstFirst = lsbFirstNext,
+      outputBitSize = numOutputBitsReg
     )
 
     val parityData = WireDefault(0.U(params.maxOutputBits.W))
@@ -402,10 +414,17 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     def calculateDataNext(
         dataShiftReg: UInt,
         dataReg: UInt,
-        completeWire: Bool
+        completeWire: Bool,
+        lstFirst: Bool,
+        outputBitSize: UInt
     ): UInt = {
         val dataNext = WireDefault(dataReg)
         when(completeWire) {
+            when(!lstFirst) {
+                dataNext := dataShiftReg
+            }.otherwise {
+                dataNext := UartUtils.reverse(dataShiftReg, outputBitSize)
+            }
             dataNext := dataShiftReg
         }
         dataNext

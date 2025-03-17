@@ -4,6 +4,7 @@ package tech.rocksavage.chiselware.uart
 import chisel3._
 import chisel3.util._
 import tech.rocksavage.chiselware.dynamicfifo.{DynamicFifo, DynamicFifoParams}
+import tech.rocksavage.chiselware.uart.UartUtils.reverse
 import tech.rocksavage.chiselware.uart.bundle.UartTxBundle
 import tech.rocksavage.chiselware.uart.error.UartTxError
 import tech.rocksavage.chiselware.uart.param.UartParams
@@ -55,6 +56,10 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val clearErrorNext  = WireInit(false.B)
     clearErrorReg   := clearErrorNext
     clearErrorDbReg := io.txConfig.clearErrorDb
+
+    val lsbFirstReg  = RegInit(false.B)
+    val lsbFirstNext = WireInit(false.B)
+    lsbFirstReg := lsbFirstNext
 
     val fifoEmptyReg = RegInit(true.B)
 
@@ -143,23 +148,6 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     io.fifoBundle.almostFull  := fifo.io.almostFull
     io.fifoBundle.almostEmpty := fifo.io.almostEmpty
 
-    emptywire := fifo.io.empty
-
-//    when(io.txConfig.load) {
-//        // On any cycle we assert push+full => overflow
-//        when(fifo.io.full) {
-//            txErrorReg := UartTxError.FifoOverflow
-//            printf("[UartTx DEBUG] Setting overflow error - FIFO full\n")
-//        }.elsewhen(fifo.io.empty) {
-//            // If your design tries to pop when empty => underflow
-//            txErrorReg := UartTxError.FifoUnderflow
-//            printf("[UartTx DEBUG] Setting underflow error - FIFO empty\n")
-//        }.elsewhen(uartFsm.io.complete) {
-//            txErrorReg := UartTxError.None
-//            printf("[UartTx DEBUG] Clearing error after completion\n")
-//        }
-//    }
-
     // Debug status changes
     when(txErrorReg =/= RegNext(txErrorReg)) {
         printf(
@@ -233,11 +221,18 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       parityOddReg
     )
 
+    lsbFirstNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.txConfig.lsbFirst,
+      lsbFirstReg
+    )
+
     dataShiftNext := calculateDataShiftNext(
       dataShiftReg = dataShiftReg,
       loadData = fifo.io.dataOut,
       nextTransaction = uartFsm.io.nextTransaction,
       applyShiftReg = applyShiftReg,
+      lsbFirst = lsbFirstNext,
       numOutputBits = numOutputBitsReg
     )
 
@@ -250,43 +245,22 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
         loadData: UInt,
         nextTransaction: Bool,
         applyShiftReg: Bool,
+        lsbFirst: Bool,
         numOutputBits: UInt
     ): UInt = {
         val dataShiftNext = WireDefault(dataShiftReg)
 
         when(nextTransaction) {
-            dataShiftNext := reverse(loadData, numOutputBits)
+            when(!lsbFirst) {
+                dataShiftNext := reverse(loadData, numOutputBits)
+            }.otherwise {
+                dataShiftNext := loadData
+            }
         }
         when(applyShiftReg) {
             dataShiftNext := Cat(0.U(1.W), dataShiftReg >> 1)
         }
         dataShiftNext
-    }
-
-    def reverse(data: UInt, width: UInt): UInt = {
-        // Assume the maximum width is that of data.
-        val maxWidth = data.getWidth
-
-        // Precompute the reversed value for each possible width (from 0 up to maxWidth).
-        val lookup: Seq[UInt] = Seq.tabulate(maxWidth + 1) { w =>
-            if (w == 0) {
-                0.U(maxWidth.W)
-            } else {
-                // Extract the lower w bits, reverse them and then pad with zeros.
-                val reversed =
-                    VecInit((0 until w).map(i => data(i)).reverse).asUInt
-                Cat(0.U((maxWidth - w).W), reversed)
-            }
-        }
-
-        // Build mapping for each width value
-        val mapping: Seq[(UInt, UInt)] = lookup.zipWithIndex.map {
-            case (rev, idx) =>
-                (idx.U, rev)
-        }
-
-        // Use the curried form of MuxLookup - notice the second parameter list for mapping
-        MuxLookup[UInt](width, 0.U(maxWidth.W))(mapping)
     }
 
     // The TX output is driven based on the current FSM state.
