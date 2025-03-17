@@ -102,7 +102,6 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       state
     ) === UartState.Idle) && (loadNext)
 
-    uartFsm.io.waiting          := !emptywire
     uartFsm.io.startTransaction := startTransaction
     uartFsm.io.clocksPerBit     := clocksPerBitReg
     uartFsm.io.numOutputBits    := numOutputBitsReg
@@ -178,6 +177,7 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     fifo.io.almostFullLevel  := 0.U
     fifo.io.almostEmptyLevel := 0.U
     fifoEmptyReg             := fifo.io.empty
+    uartFsm.io.waiting       := !fifo.io.empty
 
     when(uartFsm.io.nextTransaction) {
         txParityData := fifo.io.dataOut
