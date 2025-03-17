@@ -14,7 +14,7 @@ case class UartRuntimeConfig(
         require(baudRate > 0, "Baud rate must be greater than 0")
         require(clockFrequency > 0, "Clock frequency must be greater than 0")
         require(
-          clockFrequency >= baudRate,
+          clockFrequency >= (baudRate / 2),
           "Clock frequency must be greater than or equal to the baud rate"
         )
         require(

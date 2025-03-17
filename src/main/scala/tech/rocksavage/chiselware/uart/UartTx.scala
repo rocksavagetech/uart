@@ -60,6 +60,13 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     val lsbFirstReg  = RegInit(false.B)
     val lsbFirstNext = WireInit(false.B)
     lsbFirstReg := lsbFirstNext
+    when(lsbFirstNext =/= lsbFirstReg) {
+        printf(
+          "[UartTx DEBUG] lsbFirst changed: from %d to %d\n",
+          lsbFirstReg.asUInt,
+          lsbFirstNext.asUInt
+        )
+    }
 
     val fifoEmptyReg = RegInit(true.B)
 
@@ -203,6 +210,12 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     // ###################
     // Updated state transitions to include parity mode.
 
+    lsbFirstNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.txConfig.lsbFirst,
+      lsbFirstReg
+    )
+
     numOutputBitsNext := Mux(
       state === UartState.Idle || state === UartState.BaudUpdating,
       numOutputBitsDbReg,
@@ -221,18 +234,12 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
       parityOddReg
     )
 
-    lsbFirstNext := Mux(
-      state === UartState.Idle || state === UartState.BaudUpdating,
-      io.txConfig.lsbFirst,
-      lsbFirstReg
-    )
-
     dataShiftNext := calculateDataShiftNext(
       dataShiftReg = dataShiftReg,
       loadData = fifo.io.dataOut,
       nextTransaction = uartFsm.io.nextTransaction,
       applyShiftReg = applyShiftReg,
-      lsbFirst = lsbFirstNext,
+      lsbFirst = lsbFirstReg,
       numOutputBits = numOutputBitsReg
     )
 

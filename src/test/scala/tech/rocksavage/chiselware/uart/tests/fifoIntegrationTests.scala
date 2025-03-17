@@ -84,7 +84,7 @@ object fifoIntegrationTests {
 
         val clockFreq    = 1_000_000
         val baudRate     = 115200
-        val clocksPerBit = clockFreq / baudRate
+        val clocksPerBit = clockFreq / (baudRate / 2)
 
         println("Setting up UART for RX FIFO overflow test")
 

@@ -126,10 +126,10 @@ class UartBaudRateGenerator(p: UartParams) extends Module {
         when(io.update) {
 
             /** Latch the current clock frequency into numerator register. */
-            numeratorReg := io.clkFreq
+            numeratorReg := muxedNum
 
             /** Latch the current desired baud into denominator register. */
-            denominatorReg := io.desiredBaud
+            denominatorReg := muxedDen
 
             /** Assert start signal to begin divider operation. */
             divider.io.start := true.B

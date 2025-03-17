@@ -71,6 +71,11 @@ object UartTxFifoTestUtils {
           dut.registerMap.getAddressOfRegister("tx_parityOddDb").get.U,
           config.config.parityOdd.B
         )
+        writeAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("tx_lsbFirst").get.U,
+          config.config.lsbFirst.B
+        )
 
         val foundNumOutputBits = readAPB(
           dut.io.apb,
@@ -84,6 +89,10 @@ object UartTxFifoTestUtils {
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("tx_parityOddDb").get.U
         )
+        val foundLsbFirst = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("tx_lsbFirst").get.U
+        )
 
         assert(
           foundNumOutputBits == numOutputBits,
@@ -96,6 +105,10 @@ object UartTxFifoTestUtils {
         assert(
           (foundParityOdd == 1) == config.config.parityOdd,
           "parityOddDb register not set correctly"
+        )
+        assert(
+          (foundLsbFirst == 1) == config.config.lsbFirst,
+          "lsbFirst register not set correctly"
         )
     }
 
@@ -143,10 +156,20 @@ object UartTxFifoTestUtils {
               "Data must be in the range 0 to 255"
             )
 
-            val dataBits: Seq[Boolean] =
+//            val dataBits: Seq[Boolean] =
+//                (0 until config.config.numOutputBits).map { i =>
+//                    ((dataDequeued >> i) & 1) == 1
+//                }.reverse
+
+            val dataBits: Seq[Boolean] = if (config.config.lsbFirst) {
+                (0 until config.config.numOutputBits).map { i =>
+                    ((dataDequeued >> i) & 1) == 1
+                }
+            } else {
                 (0 until config.config.numOutputBits).map { i =>
                     ((dataDequeued >> i) & 1) == 1
                 }.reverse
+            }
             val expectedSequenceIndividual: Seq[(Boolean, UartState.Type)] =
                 if (config.config.useParity) {
                     val parityBit = UartParity.parity(
@@ -197,7 +220,7 @@ object UartTxFifoTestUtils {
             val clockFrequency = config.config.clockFrequency
             val baudRate       = config.config.baudRate
 
-            val clocksPerBit = clockFrequency / baudRate
+            val clocksPerBit = clockFrequency / (baudRate / 2)
 
             // #####################
             for ((expectedBit, index) <- expectedBits.zipWithIndex) {

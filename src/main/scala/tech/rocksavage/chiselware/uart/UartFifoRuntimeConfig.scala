@@ -20,7 +20,8 @@ case class UartTestConfig(
     numOutputBits: Int = 8,
     useParity: Boolean = false,
     parityOdd: Boolean = false,
-    fifoSize: Int = 16
+    fifoSize: Int = 16,
+    lsbFirst: Boolean = false
 )
 
 case class UartFifoTxRuntimeConfig(
@@ -36,7 +37,7 @@ case class UartFifoTxRuntimeConfig(
           "Clock frequency must be greater than 0"
         )
         require(
-          config.clockFrequency >= config.baudRate,
+          config.clockFrequency >= (config.baudRate / 2),
           "Clock frequency must be greater than or equal to the baud rate"
         )
         require(

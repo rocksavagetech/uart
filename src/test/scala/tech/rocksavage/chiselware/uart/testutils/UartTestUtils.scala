@@ -58,7 +58,7 @@ object UartTestUtils {
         val clockFrequency = config.clockFrequency
         val baudRate       = config.baudRate
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = config.numOutputBits
 
         val data = config.data
@@ -196,7 +196,7 @@ object UartTestUtils {
         writeAPB(dut.io.apb, txClockFreqAddr.U, clockFrequency.U)
         writeAPB(dut.io.apb, txUpdateBaudAddr.U, 1.U)
 
-        val clocksPerBitExpected = clockFrequency / baudRate
+        val clocksPerBitExpected = clockFrequency / (baudRate / 2)
 
         clock.setTimeout(1000)
         var breakLoop = false
@@ -221,7 +221,7 @@ object UartTestUtils {
         val clockFrequency = config.clockFrequency
         val baudRate       = config.baudRate
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = config.numOutputBits
 
         val data = config.data
@@ -353,7 +353,7 @@ object UartTestUtils {
         writeAPB(dut.io.apb, rxClockFreqAddr.U, clockFrequency.U)
         writeAPB(dut.io.apb, rxUpdateBaudAddr.U, 1.U)
 
-        val clocksPerBitExpected = clockFrequency / baudRate
+        val clocksPerBitExpected = clockFrequency / (baudRate / 2)
 
         clock.setTimeout(1000)
         var breakLoop = false
@@ -367,7 +367,7 @@ object UartTestUtils {
             if (clocksPerBitActual == clocksPerBitExpected) {
                 breakLoop = true
             }
-            
+
             if (loopCount >= numLoops) {
                 throw new RuntimeException(
                   s"Failed to set baud rate after $numLoops attempts"

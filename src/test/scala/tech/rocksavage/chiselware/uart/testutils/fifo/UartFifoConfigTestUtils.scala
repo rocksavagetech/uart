@@ -62,7 +62,8 @@ object UartFifoConfigTestUtils {
                     scala.util.Random.nextInt(validNumOutputBits.length)
                   ),
                   useParity = scala.util.Random.nextBoolean(),
-                  parityOdd = scala.util.Random.nextBoolean()
+                  parityOdd = scala.util.Random.nextBoolean(),
+                  lsbFirst = scala.util.Random.nextBoolean()
                 )
                 return UartFifoTxRuntimeConfig(
                   config = config,
@@ -129,7 +130,8 @@ object UartFifoConfigTestUtils {
                     scala.util.Random.nextInt(validNumOutputBits.length)
                   ),
                   useParity = scala.util.Random.nextBoolean(),
-                  parityOdd = scala.util.Random.nextBoolean()
+                  parityOdd = scala.util.Random.nextBoolean(),
+                  lsbFirst = scala.util.Random.nextBoolean()
                 )
                 return UartFifoRxRuntimeConfig(
                   config = config,

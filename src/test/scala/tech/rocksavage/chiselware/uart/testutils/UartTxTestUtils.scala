@@ -19,7 +19,7 @@ object UartTxTestUtils {
         dut.clock.step(1)
         dut.clock.step(36)
 
-        dut.io.clocksPerBit.expect((clockFrequency / baudRate).U)
+        dut.io.clocksPerBit.expect((clockFrequency / (baudRate / 2)).U)
     }
 
 }

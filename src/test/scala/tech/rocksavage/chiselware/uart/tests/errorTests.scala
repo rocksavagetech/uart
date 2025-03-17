@@ -82,7 +82,7 @@ object errorTests {
 
         val clockFrequency = 25000000
         val baudRate       = 115200
-        val clocksPerBit   = clockFrequency / baudRate
+        val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
 
         setBaudRate(dut, baudRate, clockFrequency)
@@ -175,7 +175,7 @@ object errorTests {
 
         val clockFrequency = 25000000
         val baudRate       = 115200
-        val clocksPerBit   = clockFrequency / baudRate
+        val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
 
         setBaudRate(dut, baudRate, clockFrequency)
@@ -248,7 +248,7 @@ object errorTests {
 
         val clockFrequency = 25000000
         val baudRate       = 115200
-        val clocksPerBit   = clockFrequency / baudRate
+        val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
 
         setBaudRate(dut, baudRate, clockFrequency)

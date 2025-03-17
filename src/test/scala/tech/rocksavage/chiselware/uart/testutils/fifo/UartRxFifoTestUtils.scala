@@ -64,6 +64,11 @@ object UartRxFifoTestUtils {
           uart.registerMap.getAddressOfRegister("rx_parityOddDb").get.U,
           config.config.parityOdd.B
         )
+        writeAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_lsbFirst").get.U,
+          config.config.lsbFirst.B
+        )
 
         val foundNumOutputBits = readAPB(
           uart.io.apb,
@@ -76,6 +81,10 @@ object UartRxFifoTestUtils {
         val foundParityOdd = readAPB(
           uart.io.apb,
           uart.registerMap.getAddressOfRegister("rx_parityOddDb").get.U
+        )
+        val foundLsbFirst = readAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_lsbFirst").get.U
         )
 
         assert(
@@ -90,6 +99,10 @@ object UartRxFifoTestUtils {
           (foundParityOdd == 1) == config.config.parityOdd,
           "parityOddDb register not set correctly"
         )
+        assert(
+          (foundLsbFirst == 1) == config.config.lsbFirst,
+          "lsbFirst register not set correctly"
+        )
     }
 
     def receivePush(
@@ -102,7 +115,7 @@ object UartRxFifoTestUtils {
         val numOutputBits  = config.config.numOutputBits
         val clockFrequency = config.config.clockFrequency
         val baudRate       = config.config.baudRate
-        val clocksPerBit   = clockFrequency / baudRate
+        val clocksPerBit   = clockFrequency / (baudRate / 2)
         val useParity      = config.config.useParity
         val parityOdd      = config.config.parityOdd
 
@@ -113,9 +126,19 @@ object UartRxFifoTestUtils {
           "Data must be in the range 0 to 255"
         )
 
-        val dataBits: Seq[Boolean] = (0 until numOutputBits).map { i =>
-            ((dataSend >> i) & 1) == 1
-        }.reverse
+        // msbFirst
+//        val dataBits: Seq[Boolean] = (0 until numOutputBits).map { i =>
+//            ((dataSend >> i) & 1) == 1
+//        }.reverse
+        val dataBits: Seq[Boolean] = if (config.config.lsbFirst) {
+            (0 until numOutputBits).map { i =>
+                ((dataSend >> i) & 1) == 1
+            }
+        } else {
+            (0 until numOutputBits).map { i =>
+                ((dataSend >> i) & 1) == 1
+            }.reverse
+        }
 
         // Build the expected sequence
         // match on useParity

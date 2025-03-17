@@ -26,7 +26,7 @@ object fullDuplexTests {
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
         // Configure both UARTs
@@ -124,7 +124,7 @@ object fullDuplexTests {
         val clockFrequency = 25_000_000
         val baudRate       = 2_500_000
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
         setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
@@ -297,8 +297,8 @@ object fullDuplexTests {
         val baudRate1      = 115_200
         val baudRate2      = 57_600
 
-        val clocksPerBit1 = clockFrequency / baudRate1
-        val clocksPerBit2 = clockFrequency / baudRate2
+        val clocksPerBit1 = clockFrequency / (baudRate1 / 2)
+        val clocksPerBit2 = clockFrequency / (baudRate2 / 2)
         val numOutputBits = 8
 
         println(s"Starting mixed baud rate test")
@@ -392,7 +392,7 @@ object fullDuplexTests {
         val clockFrequency = 25_000_000
         val baudRate       = 921_600
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
         setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
@@ -440,7 +440,7 @@ object fullDuplexTests {
         val clockFrequency = 1_000_000
         val baudRate       = 100_000
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
         setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
@@ -656,7 +656,7 @@ object fullDuplexTests {
             setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
             setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
 
-            val clocksPerBit = clockFrequency / baudRate
+            val clocksPerBit = clockFrequency / (baudRate / 2)
 
             val testChar = 'R'
             sendChar(dut.io.uart1Apb, dut.getUart1, testChar, clocksPerBit)
@@ -680,7 +680,7 @@ object fullDuplexTests {
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
         setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)

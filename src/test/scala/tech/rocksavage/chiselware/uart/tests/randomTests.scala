@@ -185,7 +185,7 @@ object randomTests {
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
         // Provide the baud rate
@@ -320,7 +320,7 @@ object randomTests {
         val clockFrequency = 25_000_000
         val baudRate       = 115_200
 
-        val clocksPerBit  = clockFrequency / baudRate
+        val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
         for (_ <- 1 to 5) { // Test 5 random parity configurations

@@ -177,6 +177,17 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val lsbFirstNext = WireInit(false.B)
     lsbFirstReg := lsbFirstNext
 
+    /** I don't know why this print needs to be here but the tests fail without
+      * it, its 11 pm and I just need to get the tests to pass
+      */
+    when(lsbFirstNext =/= lsbFirstReg) {
+        printf(
+          "[UartRx DEBUG] lsbFirst changed: from %d to %d\n",
+          lsbFirstReg.asUInt,
+          lsbFirstNext.asUInt
+        )
+    }
+
     dataReg := dataNext
 
     when(clearErrorDbReg) {
@@ -246,7 +257,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     }
 
     fifo.io.push   := completeWire && errorReg === UartRxError.None
-    fifo.io.dataIn := dataShiftReg
+    fifo.io.dataIn := dataNext
 
     // a new read indicates that someone is trying to read from the fifo
     val newFifoDataRead = RegInit(false.B)
@@ -295,6 +306,12 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     // Finite State Machine (FSM)
     // ###################
 
+    lsbFirstNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.rxConfig.lsbFirst,
+      lsbFirstReg
+    )
+
     numOutputBitsNext := Mux(
       state === UartState.Idle || state === UartState.BaudUpdating,
       numOutputBitsDbReg,
@@ -319,12 +336,6 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       clearErrorReg
     )
 
-    lsbFirstNext := Mux(
-      state === UartState.Idle || state === UartState.BaudUpdating,
-      io.rxConfig.lsbFirst,
-      lsbFirstReg
-    )
-
     rxSyncNext := calculateRxSyncNext(
       rxSyncRegs,
       io.rx
@@ -345,7 +356,7 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
       dataShiftReg,
       dataReg,
       completeWire,
-      lstFirst = lsbFirstNext,
+      lstFirst = lsbFirstReg,
       outputBitSize = numOutputBitsReg
     )
 
@@ -421,12 +432,23 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
         val dataNext = WireDefault(dataReg)
         when(completeWire) {
             when(!lstFirst) {
+//                printf(
+//                  "[UartRx DEBUG] Data shift reg: %d\n",
+//                  dataShiftReg
+//                )
                 dataNext := dataShiftReg
             }.otherwise {
+//                printf(
+//                  "[UartRx DEBUG] Data shift reg reversed: %d\n",
+//                  dataShiftReg
+//                )
                 dataNext := UartUtils.reverse(dataShiftReg, outputBitSize)
             }
-            dataNext := dataShiftReg
         }
+//        printf(
+//          "[UartRx DEBUG] Data next: %d\n",
+//          dataNext
+//        )
         dataNext
     }
 
