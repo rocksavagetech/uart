@@ -8,31 +8,26 @@ import chiseltest.simulator.{
 }
 import firrtl2.annotations.Annotation
 import firrtl2.options.TargetDirAnnotation
-import org.scalatest.ParallelTestExecution
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
 import tech.rocksavage.chiselware.uart.tests._
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 
-class UartTest
-    extends AnyFlatSpec
-    with ChiselScalatestTester
-    with Matchers
-    with ParallelTestExecution {
-    val numTests    = 2
-    val testNameArg = System.getProperty("testName")
-    // Command-line toggles
-    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
+class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
+    val numTests     = 2
+    val testNameArg  = System.getProperty("testName")
     val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
     val enableFst    = System.getProperty("enableFst", "false").toBoolean
+    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
         case true  => "regression"
         case false => testNameArg
     }
+    val testDir = "out/test"
 
     println(s"Running test: $testName")
-    val testDir = "out/test"
-    useVerilator = false
     val backendAnnotations = {
         var annos: Seq[Annotation] = Seq()
         if (enableVcd) annos = annos :+ WriteVcdAnnotation
@@ -46,6 +41,7 @@ class UartTest
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
     }
+    // Command-line toggles
     runTest(testName)
 
     def runTest(name: String): Unit = {
@@ -123,29 +119,12 @@ class UartTest
 //                            )
 //                        }
 //                }
-
-            // Add Random Test Cases
-            case "randomTransmit" =>
-                it should "pass random transmit test" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            randomTests.randomTransmitTest(dut, uartParams)
-                        }
-                }
             // Add Random Test Cases
             case "randomFifoTransmit" =>
                 it should "pass random fifo transmit test" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             randomTests.randomFifoTransmitTest(dut, uartParams)
-                        }
-                }
-            // Add Random Test Cases
-            case "randomReceive" =>
-                it should "pass random receive test" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            randomTests.randomReceiveTest(dut, uartParams)
                         }
                 }
             // Add Random Test Cases
@@ -156,31 +135,11 @@ class UartTest
                             randomTests.randomFifoReceiveTest(dut, uartParams)
                         }
                 }
-            case "specialCaseTransmit" =>
-                it should "handle special transmit cases" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            specialCaseTests.specialCaseTransmitTests(
-                              dut,
-                              uartParams
-                            )
-                        }
-                }
             case "specialCaseFifoTransmit" =>
                 it should "handle special transmit cases" in {
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             specialCaseTests.specialCaseFifoTransmitTests(
-                              dut,
-                              uartParams
-                            )
-                        }
-                }
-            case "specialCaseReceive" =>
-                it should "handle special receive cases" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            specialCaseTests.specialCaseReceiveTests(
                               dut,
                               uartParams
                             )
@@ -194,20 +153,6 @@ class UartTest
                               dut,
                               uartParams
                             )
-                        }
-                }
-            case "changingBaudRate" =>
-                it should "handle changing baud rate" in {
-                    test(new Uart(uartParams, false))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            baudrateTests.changeingBaudTest(dut, uartParams)
-                        }
-                }
-            case "randomParity" =>
-                it should "handle random parity configurations" in {
-                    test(new FullDuplexUart(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            randomTests.randomParityTest(dut, uartParams)
                         }
                 }
 
@@ -243,37 +188,6 @@ class UartTest
                     test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             errorTests.parityErrorRecoveryTest(dut, uartParams)
-                        }
-                }
-
-            // Basic Transmission Tests
-            case "basicTransmit" =>
-                it should "transmit data correctly" in {
-                    test(new UartTx(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            transmissionTests.basicTxTest(dut, uartParams)
-                        }
-                }
-            case "basicBufferedTransmit" =>
-                it should "transmit buffered data correctly" in {
-                    test(new UartTx(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            transmissionTests.bufferedTxTest(dut, uartParams)
-                        }
-                }
-
-            case "basicReceive" =>
-                it should "receive data correctly" in {
-                    test(new UartRx(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            transmissionTests.basicRxTest(dut, uartParams)
-                        }
-                }
-            case "basicBufferedReceive" =>
-                it should "receive buffered data correctly" in {
-                    test(new UartRx(uartParams))
-                        .withAnnotations(backendAnnotations) { dut =>
-                            transmissionTests.bufferedRxTest(dut, uartParams)
                         }
                 }
 
@@ -355,8 +269,6 @@ class UartTest
 
     def runAllTests(params: UartParams): Unit = {
         errorTestsFull(params)
-        baudrateTestsFull(params)
-        transmissionTestsFull(params)
         fullDuplexTestsFull(params)
         randomTestsFull(params)
         specialCaseTestsFull(params)
@@ -392,28 +304,9 @@ class UartTest
                 }
         }
 
-//        it should "clear FIFO errors correctly" in {
-//            test(new Uart(params, false))
-//                .withAnnotations(backendAnnotations) { dut =>
-//                    fifoIntegrationTests.errorClearingTest(dut, params)
-//                }
-//        }
     }
 
     def randomTestsFull(params: UartParams): Unit = {
-        it should "pass random transmit test" in {
-            test(new Uart(params, false))
-                .withAnnotations(backendAnnotations) { dut =>
-                    randomTests.randomTransmitTest(dut, params)
-                }
-        }
-
-        it should "pass random receive test" in {
-            test(new Uart(params, false))
-                .withAnnotations(backendAnnotations) { dut =>
-                    randomTests.randomReceiveTest(dut, params)
-                }
-        }
 
         it should "pass random fifo transmit test" in {
             test(new Uart(params, false))
@@ -428,22 +321,9 @@ class UartTest
                     randomTests.randomFifoReceiveTest(dut, params)
                 }
         }
-
-        it should "handle random parity configurations" in {
-            test(new FullDuplexUart(params))
-                .withAnnotations(backendAnnotations) { dut =>
-                    randomTests.randomParityTest(dut, params)
-                }
-        }
     }
 
     def specialCaseTestsFull(params: UartParams): Unit = {
-        it should "handle special transmit cases" in {
-            test(new Uart(params, false))
-                .withAnnotations(backendAnnotations) { dut =>
-                    specialCaseTests.specialCaseTransmitTests(dut, params)
-                }
-        }
 
         it should "handle special fifo transmit cases" in {
             test(new Uart(params, false))
@@ -452,43 +332,11 @@ class UartTest
                 }
         }
 
-        it should "handle special receive cases" in {
-            test(new Uart(params, false))
-                .withAnnotations(backendAnnotations) { dut =>
-                    specialCaseTests.specialCaseReceiveTests(dut, params)
-                }
-        }
-
         it should "handle special fifo receive cases" in {
             test(new Uart(params, false))
                 .withAnnotations(backendAnnotations) { dut =>
                     specialCaseTests.specialCaseFifoReceiveTests(dut, params)
                 }
-        }
-    }
-
-    def baudrateTestsFull(params: UartParams): Unit = {
-        it should "handle changing baud rate" in {
-            test(new Uart(params, false))
-                .withAnnotations(backendAnnotations) { dut =>
-                    baudrateTests.changeingBaudTest(dut, params)
-                }
-        }
-    }
-
-    def transmissionTestsFull(params: UartParams): Unit = {
-        it should "transmit data correctly" in {
-            test(new UartTx(params)).withAnnotations(backendAnnotations) {
-                dut =>
-                    transmissionTests.basicTxTest(dut, params)
-            }
-        }
-
-        it should "receive data correctly" in {
-            test(new UartRx(params)).withAnnotations(backendAnnotations) {
-                dut =>
-                    transmissionTests.basicRxTest(dut, params)
-            }
         }
     }
 
@@ -507,13 +355,6 @@ class UartTest
                 }
         }
 
-//        it should "handle mixed baud rates" in {
-//            test(new FullDuplexUart(params))
-//                .withAnnotations(backendAnnotations) { dut =>
-//                    fullDuplexTests.mixedBaudRateTest(dut, params)
-//                }
-//        }
-
         it should "handle high-speed transmission" in {
             test(new FullDuplexUart(params))
                 .withAnnotations(backendAnnotations) { dut =>
@@ -527,20 +368,6 @@ class UartTest
                     fullDuplexTests.longTransmissionTest(dut, params)
                 }
         }
-
-//        it should "recover from errors" in {
-//            test(new FullDuplexUart(params))
-//                .withAnnotations(backendAnnotations) { dut =>
-//                    fullDuplexTests.errorRecoveryTest(dut, params)
-//                }
-//        }
-//
-//        it should "be immune to noise" in {
-//            test(new FullDuplexUart(params))
-//                .withAnnotations(backendAnnotations) { dut =>
-//                    fullDuplexTests.noiseImmunityTest(dut, params)
-//                }
-//        }
 
         it should "handle baud rate switching" in {
             test(new FullDuplexUart(params))

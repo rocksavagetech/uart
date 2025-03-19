@@ -3,9 +3,10 @@ package tech.rocksavage.chiselware.uart.tests
 import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.Uart
-import tech.rocksavage.chiselware.uart.param.UartParams
-import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.setBaudRate
+import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.testconfig.UartTestConfig
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopSetupTestUtils.setupUart
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 object errorTests {
 
@@ -80,40 +81,21 @@ object errorTests {
         // Ensure RX line is idle.
         dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25000000
+        val clockFrequency = 250000
         val baudRate       = 115200
         val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
 
-        setBaudRate(dut, baudRate, clockFrequency)
-        println(
-          s"Starting uartRx Parity Error Test with clocksPerBit = $clocksPerBit"
+        val config: UartTestConfig = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits,
+          useParity = true,
+          parityOdd = false,
+          lsbFirst = false
         )
 
-        // Configure UART RX: 8 data bits and parity enabled (even parity)
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_numOutputBitsDb").get.U,
-          numOutputBits.U
-        )
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_useParityDb").get.U,
-          1.U
-        )
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_parityOddDb").get.U,
-          0.U
-        ) // 0 => even parity
-        clk.step(clocksPerBit * 2)
-
-        // Clear any existing errors.
-        readAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("error").get.U
-        )
-        clk.step(2)
+        setupUart(dut.registerMap, dut.io.apb, config)
 
         // Send the byte 0x55 (binary 01010101 LSB–first) with an incorrect parity bit.
         println("Sending 0x55 with forced WRONG parity bit.")
@@ -173,24 +155,21 @@ object errorTests {
         dut.clock.setTimeout(5000)
         dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25000000
+        val clockFrequency = 250000
         val baudRate       = 115200
         val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
 
-        setBaudRate(dut, baudRate, clockFrequency)
-        println(
-          s"Starting uartRx Stop Bit Error Test with clocksPerBit = $clocksPerBit"
+        val config: UartTestConfig = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits,
+          useParity = true,
+          parityOdd = false,
+          lsbFirst = false
         )
 
-        // Configure RX for 8 data bits with no parity.
-        clk.step(clocksPerBit * 2)
-        // Clear existing errors.
-        readAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("error").get.U
-        )
-        clk.step(2)
+        setupUart(dut.registerMap, dut.io.apb, config)
 
         // Transmit a frame:
         // Start bit: pull low.
@@ -246,39 +225,21 @@ object errorTests {
         dut.clock.setTimeout(5000)
         dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25000000
+        val clockFrequency = 250000
         val baudRate       = 115200
         val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
 
-        setBaudRate(dut, baudRate, clockFrequency)
-        println(
-          s"Starting RX Parity Error Recovery Test with clocksPerBit = $clocksPerBit"
+        val config: UartTestConfig = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits,
+          useParity = true,
+          parityOdd = false,
+          lsbFirst = false
         )
 
-        // Configure RX: 8 data bits with parity enabled (even parity: rx_parityOddDb = 0).
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_numOutputBitsDb").get.U,
-          numOutputBits.U
-        )
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_useParityDb").get.U,
-          1.U
-        )
-        writeAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("rx_parityOddDb").get.U,
-          0.U
-        )
-        clk.step(clocksPerBit * 2)
-        // Clear any previous errors.
-        readAPB(
-          dut.io.apb,
-          dut.registerMap.getAddressOfRegister("error").get.U
-        )
-        clk.step(2)
+        setupUart(dut.registerMap, dut.io.apb, config)
 
         // --- First, induce a parity error ---
         println("Sending 0x55 with incorrect parity to force a parity error.")
@@ -385,10 +346,10 @@ object errorTests {
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("rx_data").get.U
         )
-        println(f"Normal transaction received data = 0x$receivedData%02x")
+        println(f"Normal transaction received data = 0x$receivedData")
         assert(
           receivedData == 0x55,
-          s"Data mismatch; expected 0x55, got 0x$receivedData%02x"
+          s"Data mismatch; expected 0x55, got 0x$receivedData"
         )
         println("UART Rx Parity Error Recovery Test PASSED")
     }

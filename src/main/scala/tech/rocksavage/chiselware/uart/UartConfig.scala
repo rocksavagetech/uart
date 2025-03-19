@@ -1,6 +1,6 @@
 package tech.rocksavage.chiselware.uart
 
-import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 import tech.rocksavage.traits.ModuleConfig
 
 class UartConfig extends ModuleConfig {

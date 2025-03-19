@@ -4,13 +4,13 @@ import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.param.UartParams
-import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.{
-    setupRxUart,
-    setupTxUart,
-    setupUart
-}
-import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
+import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.testconfig.UartTestConfig
+import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
+import tech.rocksavage.chiselware.uart.testutils.rx.UartRxSetupTestUtils.receiveSetup
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopSetupTestUtils.setupUart
+import tech.rocksavage.chiselware.uart.testutils.tx.UartTxSetupTestUtils.transmitSetup
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 object fullDuplexTests {
 
@@ -30,8 +30,15 @@ object fullDuplexTests {
         val numOutputBits = 8
 
         // Configure both UARTs
-        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
+
+        val config: UartTestConfig = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
+        setupUart(dut.getUart1.registerMap, dut.io.uart1Apb, config)
+        setupUart(dut.getUart2.registerMap, dut.io.uart2Apb, config)
 
         val dataFromUart1 = "Hello"
         val dataFromUart2 = "World"
@@ -127,8 +134,14 @@ object fullDuplexTests {
         val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
-        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
+        val config = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
+        setupUart(dut.getUart1.registerMap, dut.io.uart1Apb, config)
+        setupUart(dut.getUart2.registerMap, dut.io.uart2Apb, config)
 
         println(
           "Starting simultaneous transmission test with clocksPerBit = " + clocksPerBit
@@ -305,30 +318,38 @@ object fullDuplexTests {
         println(s"UART1: clocksPerBit = $clocksPerBit1 (115200 baud)")
         println(s"UART2: clocksPerBit = $clocksPerBit2 (57600 baud)")
 
+        val config1: UartTestConfig = UartTestConfig(
+          baudRate = baudRate1,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
+        val config2: UartTestConfig = UartTestConfig(
+          baudRate = baudRate2,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
         // Configure UARTs and let settings settle
-        setupRxUart(
+        receiveSetup(
+          dut.getUart1.registerMap,
           dut.io.uart1Apb,
-          dut.getUart1,
-          clockFrequency,
-          baudRate2
+          config2
         )
-        setupTxUart(
+        transmitSetup(
+          dut.getUart1.registerMap,
           dut.io.uart1Apb,
-          dut.getUart1,
-          clockFrequency,
-          baudRate1
+          config1
         )
-        setupRxUart(
+        receiveSetup(
+          dut.getUart2.registerMap,
           dut.io.uart2Apb,
-          dut.getUart2,
-          clockFrequency,
-          baudRate1
+          config1
         )
-        setupTxUart(
+        transmitSetup(
+          dut.getUart2.registerMap,
           dut.io.uart2Apb,
-          dut.getUart2,
-          clockFrequency,
-          baudRate2
+          config2
         )
         val maxClocksPerBit = math.max(clocksPerBit1, clocksPerBit2)
         clock.step(maxClocksPerBit * 2) // Wait for slower UART to settle
@@ -395,8 +416,14 @@ object fullDuplexTests {
         val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
-        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
+        val config = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
+        setupUart(dut.getUart1.registerMap, dut.io.uart1Apb, config)
+        setupUart(dut.getUart2.registerMap, dut.io.uart2Apb, config)
 
         val testData     = "HighSpeedTest"
         var receivedData = new StringBuilder
@@ -443,8 +470,14 @@ object fullDuplexTests {
         val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
-        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
+        val config = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
+        setupUart(dut.getUart1.registerMap, dut.io.uart1Apb, config)
+        setupUart(dut.getUart2.registerMap, dut.io.uart2Apb, config)
 
         // Generate long test data
         val testData     = "Long transmission test with multiple sentences. "
@@ -653,8 +686,15 @@ object fullDuplexTests {
         )
 
         for (baudRate <- baudRates) {
-            setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-            setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
+
+            val config = UartTestConfig(
+              baudRate = baudRate,
+              clockFrequency = clockFrequency,
+              numOutputBits = 8
+            )
+
+            setupUart(dut.getUart1.registerMap, dut.io.uart1Apb, config)
+            setupUart(dut.getUart2.registerMap, dut.io.uart2Apb, config)
 
             val clocksPerBit = clockFrequency / (baudRate / 2)
 
@@ -683,8 +723,14 @@ object fullDuplexTests {
         val clocksPerBit  = clockFrequency / (baudRate / 2)
         val numOutputBits = 8
 
-        setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
-        setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
+        val config = UartTestConfig(
+          baudRate = baudRate,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
+        setupUart(dut.getUart1.registerMap, dut.io.uart1Apb, config)
+        setupUart(dut.getUart2.registerMap, dut.io.uart2Apb, config)
 
         // Verify initial idle state
         dut.io.uart1_tx.expect(true.B)
