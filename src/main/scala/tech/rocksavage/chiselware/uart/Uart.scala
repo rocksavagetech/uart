@@ -14,6 +14,7 @@ import tech.rocksavage.chiselware.uart.error.{
     UartTxError
 }
 import tech.rocksavage.chiselware.uart.param.UartParams
+import tech.rocksavage.test.TestUtils.coverAll
 
 class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     val dataWidth    = uartParams.dataWidth
@@ -86,7 +87,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
-    val tx_useParityDb = RegInit(uartParams.parity.B)
+    val tx_useParityDb = RegInit(false.B)
     registerMap.createAddressableRegister(
       tx_useParityDb,
       "tx_useParityDb",
@@ -94,7 +95,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
-    val tx_parityOddDb = RegInit(uartParams.parity.B)
+    val tx_parityOddDb = RegInit(false.B)
     registerMap.createAddressableRegister(
       tx_parityOddDb,
       "tx_parityOddDb",
@@ -172,7 +173,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
-    val rx_useParityDb = RegInit(uartParams.parity.B)
+    val rx_useParityDb = RegInit(false.B)
     registerMap.createAddressableRegister(
       rx_useParityDb,
       "rx_useParityDb",
@@ -180,7 +181,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
 
-    val rx_parityOddDb = RegInit(uartParams.parity.B)
+    val rx_parityOddDb = RegInit(false.B)
     registerMap.createAddressableRegister(
       rx_parityOddDb,
       "rx_parityOddDb",
@@ -427,5 +428,11 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
 
         // Print debug message
         printf("[Uart.scala DEBUG] Clearing error registers\n")
+    }
+
+    // Collect code coverage points
+    if (uartParams.coverage) {
+        // Cover the entire IO bundle recursively.
+        coverAll(io, "_io")
     }
 }

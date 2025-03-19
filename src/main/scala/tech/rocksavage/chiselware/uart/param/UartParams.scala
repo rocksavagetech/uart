@@ -31,8 +31,8 @@ case class UartParams(
     maxBaudRate: Int = 921_600,
     maxClockFrequency: Int = 25_000_000,
     bufferSize: Int = 8,
-    parity: Boolean = false,
-    verbose: Boolean = false
+    verbose: Boolean = false,
+    coverage: Boolean = false
 ) {
 
     require(dataWidth >= 1, "Data Width must be greater than or equal 1")

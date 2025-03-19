@@ -50,6 +50,9 @@ test:
 	@echo Running tests...
 	@$(SBT) -DuseVerilator="true" test
 
+cov:
+	@$(SBT) coverageOn test coverageReport
+
 # Synthesize the design
 synth:
 	@echo Synthesizing...
