@@ -15,6 +15,7 @@ import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
 import tech.rocksavage.chiselware.uart.tests._
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 import tech.rocksavage.test.coverageCollector
+import tech.rocksavage.test._
 
 class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val numTests     = 2
@@ -56,7 +57,8 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
           maxOutputBits = 8,
           syncDepth = 2,
           maxBaudRate = 25_000_000,
-          maxClockFrequency = 25_000_000
+          maxClockFrequency = 25_000_000,
+          coverage = true
         )
 
         info(
@@ -71,188 +73,321 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
 
             case "txFifoOverflow" =>
                 it should "detect TX FIFO overflow correctly" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             fifoIntegrationTests.txFifoOverflowTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "rxFifoOverflow" =>
                 it should "detect RX FIFO overflow correctly" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             fifoIntegrationTests.rxFifoOverflowTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )                        
                 }
 
             case "txFifoUnderflow" =>
                 it should "detect TX FIFO underflow correctly" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             fifoIntegrationTests.txFifoUnderflowTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "rxFifoUnderflow" =>
                 it should "detect RX FIFO underflow correctly" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             fifoIntegrationTests.rxFifoUnderflowTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             // Add Random Test Cases
             case "randomFifoTransmit" =>
                 it should "pass random fifo transmit test" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             randomTests.randomFifoTransmitTest(dut, uartParams)
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
             // Add Random Test Cases
             case "randomFifoReceive" =>
                 it should "pass random receive test" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             randomTests.randomFifoReceiveTest(dut, uartParams)
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
             case "specialCaseFifoTransmit" =>
                 it should "handle special transmit cases" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             specialCaseTests.specialCaseFifoTransmitTests(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
             case "specialCaseFifoReceive" =>
                 it should "handle special receive cases" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             specialCaseTests.specialCaseFifoReceiveTests(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             // Error Tests
             case "stopBitError" =>
                 it should "detect stop bit errors correctly" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             errorTests.stopBitErrorTest(dut, uartParams)
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "invalidRegisterProgrammingError" =>
                 it should "detect invalid register programming attempts" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             errorTests.invalidRegisterProgrammingTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "parityError" =>
                 it should "detect wrong parity errors correctly" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             errorTests.parityErrorTest(dut, uartParams)
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
             case "parityErrorRecovery" =>
                 it should "recover from parity errors correctly" in {
-                    test(new Uart(uartParams, false))
+                    val cov = test(new Uart(uartParams, false))
                         .withAnnotations(backendAnnotations) { dut =>
                             errorTests.parityErrorRecoveryTest(dut, uartParams)
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             // FullDuplex Tests
             case "bidirectionalComm" =>
                 it should "handle bidirectional communication" in {
-                    test(new FullDuplexUart(uartParams))
+                    val cov = test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             fullDuplexTests.bidirectionalCommunicationTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "simultaneousTransmit" =>
                 it should "handle simultaneous transmission" in {
-                    test(new FullDuplexUart(uartParams))
+                    val cov = test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             fullDuplexTests.simultaneousTransmissionTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "highSpeedTransmit" =>
                 it should "handle high-speed transmission" in {
-                    test(new FullDuplexUart(uartParams))
+                    val cov = test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             fullDuplexTests.highSpeedTransmissionTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "longTransmission" =>
                 it should "handle long transmissions" in {
-                    test(new FullDuplexUart(uartParams)).withAnnotations(
+                    val cov = test(new FullDuplexUart(uartParams)).withAnnotations(
                       backendAnnotations
                     ) { dut =>
                         fullDuplexTests.longTransmissionTest(dut, uartParams)
                     }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
             case "baudRateSwitch" =>
                 it should "handle baud rate switching" in {
-                    test(new FullDuplexUart(uartParams)).withAnnotations(
+                    val cov = test(new FullDuplexUart(uartParams)).withAnnotations(
                       backendAnnotations
                     ) { dut =>
                         fullDuplexTests.baudRateSwitchingTest(dut, uartParams)
                     }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "lineIdle" =>
                 it should "detect line idle correctly" in {
-                    test(new FullDuplexUart(uartParams))
+                    val cov = test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             fullDuplexTests.lineIdleTest(dut, uartParams)
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             case "fullDuplex" =>
                 it should "handle bidirectional communication" in {
-                    test(new FullDuplexUart(uartParams))
+                    val cov = test(new FullDuplexUart(uartParams))
                         .withAnnotations(backendAnnotations) { dut =>
                             fullDuplexTests.bidirectionalCommunicationTest(
                               dut,
                               uartParams
                             )
                         }
+                    coverageCollector.collectCoverage(
+                      cov.getAnnotationSeq,
+                      testName,
+                      configName,
+                      coverage,
+                      covDir
+                    )
                 }
 
             // default => run all tests
