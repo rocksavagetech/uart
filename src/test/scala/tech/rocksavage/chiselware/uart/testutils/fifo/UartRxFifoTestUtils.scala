@@ -33,6 +33,36 @@ object UartRxFifoTestUtils {
                 receivePop(dut, config, poppedData)
                 println(s"Data popped from Fifo Successfully")
             }
+            val actualAlmostFull = readAPB(
+              dut.io.apb,
+              dut.registerMap.getAddressOfRegister("rx_almostFull").get.U
+            )
+            val actualAlmostEmpty = readAPB(
+              dut.io.apb,
+              dut.registerMap.getAddressOfRegister("rx_almostEmpty").get.U
+            )
+            if (testFifo.size >= config.config.almostFullLevel) {
+                assert(
+                  actualAlmostFull == 1,
+                  "TX almostFull should be 1 when the fifo is almost full"
+                )
+            } else {
+                assert(
+                  actualAlmostFull == 0,
+                  "TX almostFull should be 0 when the fifo is not almost full"
+                )
+            }
+            if (testFifo.size <= config.config.almostEmptyLevel) {
+                assert(
+                  actualAlmostEmpty == 1,
+                  "TX almostEmpty should be 1 when the fifo is almost empty"
+                )
+            } else {
+                assert(
+                  actualAlmostEmpty == 0,
+                  "TX almostEmpty should be 0 when the fifo is not almost empty"
+                )
+            }
         }
     }
 
@@ -66,6 +96,16 @@ object UartRxFifoTestUtils {
         )
         writeAPB(
           uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_almostFullLevel").get.U,
+          config.config.almostFullLevel.U
+        )
+        writeAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_almostEmptyLevel").get.U,
+          config.config.almostEmptyLevel.U
+        )
+        writeAPB(
+          uart.io.apb,
           uart.registerMap.getAddressOfRegister("rx_lsbFirst").get.U,
           config.config.lsbFirst.B
         )
@@ -82,6 +122,16 @@ object UartRxFifoTestUtils {
           uart.io.apb,
           uart.registerMap.getAddressOfRegister("rx_parityOddDb").get.U
         )
+
+        val foundAlmostFullLevel = readAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_almostFullLevel").get.U
+        )
+        val foundAlmostEmptyLevel = readAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_almostEmptyLevel").get.U
+        )
+
         val foundLsbFirst = readAPB(
           uart.io.apb,
           uart.registerMap.getAddressOfRegister("rx_lsbFirst").get.U
@@ -98,6 +148,14 @@ object UartRxFifoTestUtils {
         assert(
           (foundParityOdd == 1) == config.config.parityOdd,
           "parityOddDb register not set correctly"
+        )
+        assert(
+          foundAlmostFullLevel == config.config.almostFullLevel,
+          "almostFullLevel register not set correctly"
+        )
+        assert(
+          foundAlmostEmptyLevel == config.config.almostEmptyLevel,
+          "almostEmptyLevel register not set correctly"
         )
         assert(
           (foundLsbFirst == 1) == config.config.lsbFirst,
@@ -127,9 +185,6 @@ object UartRxFifoTestUtils {
         )
 
         // msbFirst
-//        val dataBits: Seq[Boolean] = (0 until numOutputBits).map { i =>
-//            ((dataSend >> i) & 1) == 1
-//        }.reverse
         val dataBits: Seq[Boolean] = if (config.config.lsbFirst) {
             (0 until numOutputBits).map { i =>
                 ((dataSend >> i) & 1) == 1
@@ -159,9 +214,6 @@ object UartRxFifoTestUtils {
         // Start transmission
         // Check each bit with a timeout
         for ((bit, index) <- sequence.zipWithIndex) {
-//            println(
-//              s"Checking bit $index: expected ${bit._1} in state ${bit._2}"
-//            )
             dut.io.rx.poke(bit._1.B)
             dut.clock.setTimeout(clocksPerBit + 1)
             dut.clock.step(clocksPerBit)

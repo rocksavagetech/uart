@@ -39,7 +39,36 @@ object UartTxFifoTestUtils {
                 println(s"Data popped from Fifo Successfully")
             }
             // depending on the fill level, we should expect the fill level indicators to be correct
-
+            val actualAlmostFull = readAPB(
+              dut.io.apb,
+              dut.registerMap.getAddressOfRegister("tx_almostFull").get.U
+            )
+            val actualAlmostEmpty = readAPB(
+              dut.io.apb,
+              dut.registerMap.getAddressOfRegister("tx_almostEmpty").get.U
+            )
+            if (testFifo.size >= config.config.almostFullLevel) {
+                assert(
+                  actualAlmostFull == 1,
+                  "TX almostFull should be 1 when the fifo is almost full"
+                )
+            } else {
+                assert(
+                  actualAlmostFull == 0,
+                  "TX almostFull should be 0 when the fifo is not almost full"
+                )
+            }
+            if (testFifo.size <= config.config.almostEmptyLevel) {
+                assert(
+                  actualAlmostEmpty == 1,
+                  "TX almostEmpty should be 1 when the fifo is almost empty"
+                )
+            } else {
+                assert(
+                  actualAlmostEmpty == 0,
+                  "TX almostEmpty should be 0 when the fifo is not almost empty"
+                )
+            }
         }
     }
 
@@ -74,6 +103,16 @@ object UartTxFifoTestUtils {
         )
         writeAPB(
           dut.io.apb,
+          dut.registerMap.getAddressOfRegister("tx_almostFullLevel").get.U,
+          config.config.almostFullLevel.U
+        )
+        writeAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("tx_almostEmptyLevel").get.U,
+          config.config.almostEmptyLevel.U
+        )
+        writeAPB(
+          dut.io.apb,
           dut.registerMap.getAddressOfRegister("tx_lsbFirst").get.U,
           config.config.lsbFirst.B
         )
@@ -89,6 +128,14 @@ object UartTxFifoTestUtils {
         val foundParityOdd = readAPB(
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("tx_parityOddDb").get.U
+        )
+        val foundAlmostFullLevel = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("tx_almostFullLevel").get.U
+        )
+        val foundAlmostEmptyLevel = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("tx_almostEmptyLevel").get.U
         )
         val foundLsbFirst = readAPB(
           dut.io.apb,
@@ -106,6 +153,14 @@ object UartTxFifoTestUtils {
         assert(
           (foundParityOdd == 1) == config.config.parityOdd,
           "parityOddDb register not set correctly"
+        )
+        assert(
+          foundAlmostFullLevel == config.config.almostFullLevel,
+          "almostFullLevel register not set correctly"
+        )
+        assert(
+          foundAlmostEmptyLevel == config.config.almostEmptyLevel,
+          "almostEmptyLevel register not set correctly"
         )
         assert(
           (foundLsbFirst == 1) == config.config.lsbFirst,
