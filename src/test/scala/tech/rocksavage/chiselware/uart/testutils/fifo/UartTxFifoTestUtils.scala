@@ -41,18 +41,26 @@ object UartTxFifoTestUtils {
             // depending on the fill level, we should expect the fill level indicators to be correct
             val actualAlmostFull = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("tx_almostFull").get.U
+              dut.registerMap.getAddressOfRegister("tx_almostFullLevel").get.U
             )
             val actualAlmostEmpty = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("tx_almostEmpty").get.U
+              dut.registerMap.getAddressOfRegister("tx_almostEmptyLevel").get.U
             )
             if (testFifo.size >= config.config.almostFullLevel) {
+                println(
+                  s"TX Config almostFull: ${config.config.almostFullLevel}"
+                )
+                println(s"TX Actual Almost Full Level: $actualAlmostFull")
                 assert(
                   actualAlmostFull == 1,
-                  "TX almostFull should be 1 when the fifo is almost full"
+                  s"TX almostFull should be 1 when the fifo is almost full"
                 )
             } else {
+                println(
+                  s"TX Config almostFull: ${config.config.almostFullLevel}"
+                )
+                println(s"TX Actual Almost Full Level: $actualAlmostFull")
                 assert(
                   actualAlmostFull == 0,
                   "TX almostFull should be 0 when the fifo is not almost full"

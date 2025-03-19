@@ -119,6 +119,34 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       readOnly = false,
       verbose = uartParams.verbose
     )
+    val tx_fifoFull = WireInit(false.B)
+    registerMap.createAddressableRegister(
+      tx_fifoFull,
+      "tx_fifoFull",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    val tx_fifoEmpty = WireInit(true.B)
+    registerMap.createAddressableRegister(
+      tx_fifoEmpty,
+      "tx_fifoEmpty",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    val tx_fifoAlmostEmpty = WireInit(false.B)
+    registerMap.createAddressableRegister(
+      tx_fifoAlmostEmpty,
+      "tx_fifoAlmostEmpty",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    val tx_fifoAlmostFull = WireInit(false.B)
+    registerMap.createAddressableRegister(
+      tx_fifoAlmostFull,
+      "tx_fifoAlmostFull",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
 
     // -------------------------------------------------------
     // RX registers (for the RX control bundle and RX data/status)
@@ -221,6 +249,34 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       rx_almostFullLevel,
       "rx_almostFullLevel",
       readOnly = false,
+      verbose = uartParams.verbose
+    )
+    val rx_fifoFull = WireInit(false.B)
+    registerMap.createAddressableRegister(
+      rx_fifoFull,
+      "rx_fifoFull",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    val rx_fifoEmpty = WireInit(true.B)
+    registerMap.createAddressableRegister(
+      rx_fifoEmpty,
+      "rx_fifoEmpty",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    val rx_fifoAlmostEmpty = WireInit(false.B)
+    registerMap.createAddressableRegister(
+      rx_fifoAlmostEmpty,
+      "rx_fifoAlmostEmpty",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    val rx_fifoAlmostFull = WireInit(false.B)
+    registerMap.createAddressableRegister(
+      rx_fifoAlmostFull,
+      "rx_fifoAlmostFull",
+      readOnly = true,
       verbose = uartParams.verbose
     )
 
@@ -326,6 +382,16 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
 
     fifoStatusRx := uartInner.io.rxFifoStatus
     fifoStatusTx := uartInner.io.txFifoStatus
+
+    tx_fifoEmpty       := uartInner.io.txFifoStatus.empty
+    tx_fifoFull        := uartInner.io.txFifoStatus.full
+    tx_fifoAlmostEmpty := uartInner.io.txFifoStatus.almostEmpty
+    tx_fifoAlmostFull  := uartInner.io.txFifoStatus.almostFull
+
+    rx_fifoEmpty       := uartInner.io.rxFifoStatus.empty
+    rx_fifoFull        := uartInner.io.rxFifoStatus.full
+    rx_fifoAlmostEmpty := uartInner.io.rxFifoStatus.almostEmpty
+    rx_fifoAlmostFull  := uartInner.io.rxFifoStatus.almostFull
 
     error.rxError := uartInner.io.error.rxError
     error.txError := uartInner.io.error.txError

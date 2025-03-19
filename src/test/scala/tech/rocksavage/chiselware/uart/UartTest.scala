@@ -19,20 +19,18 @@ class UartTest
     with ChiselScalatestTester
     with Matchers
     with ParallelTestExecution {
-    val numTests    = 2
-    val testNameArg = System.getProperty("testName")
-    // Command-line toggles
-    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
+    val numTests     = 2
+    val testNameArg  = System.getProperty("testName")
     val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
     val enableFst    = System.getProperty("enableFst", "false").toBoolean
+    var useVerilator = System.getProperty("useVerilator", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "regression"
+        case true  => "specialCaseFifoTransmit"
         case false => testNameArg
     }
+    val testDir = "out/test"
 
     println(s"Running test: $testName")
-    val testDir = "out/test"
-    useVerilator = false
     val backendAnnotations = {
         var annos: Seq[Annotation] = Seq()
         if (enableVcd) annos = annos :+ WriteVcdAnnotation
@@ -46,6 +44,8 @@ class UartTest
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
     }
+    useVerilator = false
+    // Command-line toggles
     runTest(testName)
 
     def runTest(name: String): Unit = {
