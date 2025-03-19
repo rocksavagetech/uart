@@ -205,8 +205,8 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     fifo.io.pop    := uartFsm.io.nextTransaction
     fifo.io.dataIn := io.txConfig.data
 
-    fifo.io.almostFullLevel  := 0.U
-    fifo.io.almostEmptyLevel := 0.U
+    fifo.io.almostFullLevel  := almostFullLevelReg
+    fifo.io.almostEmptyLevel := almostEmptyLevelReg
     fifoEmptyReg             := fifo.io.empty
     uartFsm.io.waiting       := !fifo.io.empty
 

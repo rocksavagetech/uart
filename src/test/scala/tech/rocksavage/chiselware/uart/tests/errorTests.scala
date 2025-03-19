@@ -80,7 +80,7 @@ object errorTests {
         // Ensure RX line is idle.
         dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25000000
+        val clockFrequency = 250000
         val baudRate       = 115200
         val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
@@ -173,7 +173,7 @@ object errorTests {
         dut.clock.setTimeout(5000)
         dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25000000
+        val clockFrequency = 250000
         val baudRate       = 115200
         val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
@@ -246,7 +246,7 @@ object errorTests {
         dut.clock.setTimeout(5000)
         dut.io.rx.poke(true.B)
 
-        val clockFrequency = 25000000
+        val clockFrequency = 250000
         val baudRate       = 115200
         val clocksPerBit   = clockFrequency / (baudRate / 2)
         val numOutputBits  = 8
@@ -385,10 +385,10 @@ object errorTests {
           dut.io.apb,
           dut.registerMap.getAddressOfRegister("rx_data").get.U
         )
-        println(f"Normal transaction received data = 0x$receivedData%02x")
+        println(f"Normal transaction received data = 0x$receivedData")
         assert(
           receivedData == 0x55,
-          s"Data mismatch; expected 0x55, got 0x$receivedData%02x"
+          s"Data mismatch; expected 0x55, got 0x$receivedData"
         )
         println("UART Rx Parity Error Recovery Test PASSED")
     }

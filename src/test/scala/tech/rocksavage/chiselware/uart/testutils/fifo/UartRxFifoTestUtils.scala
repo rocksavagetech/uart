@@ -35,11 +35,11 @@ object UartRxFifoTestUtils {
             }
             val actualAlmostFull = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("rx_almostFull").get.U
+              dut.registerMap.getAddressOfRegister("rx_fifoAlmostFull").get.U
             )
             val actualAlmostEmpty = readAPB(
               dut.io.apb,
-              dut.registerMap.getAddressOfRegister("rx_almostEmpty").get.U
+              dut.registerMap.getAddressOfRegister("rx_fifoAlmostEmpty").get.U
             )
             if (testFifo.size >= config.config.almostFullLevel) {
                 assert(

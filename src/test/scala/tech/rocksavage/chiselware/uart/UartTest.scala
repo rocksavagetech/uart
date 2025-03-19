@@ -8,24 +8,19 @@ import chiseltest.simulator.{
 }
 import firrtl2.annotations.Annotation
 import firrtl2.options.TargetDirAnnotation
-import org.scalatest.ParallelTestExecution
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import tech.rocksavage.chiselware.uart.param.UartParams
 import tech.rocksavage.chiselware.uart.tests._
 
-class UartTest
-    extends AnyFlatSpec
-    with ChiselScalatestTester
-    with Matchers
-    with ParallelTestExecution {
+class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val numTests     = 2
     val testNameArg  = System.getProperty("testName")
     val enableVcd    = System.getProperty("enableVcd", "true").toBoolean
     val enableFst    = System.getProperty("enableFst", "false").toBoolean
     var useVerilator = System.getProperty("useVerilator", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "specialCaseFifoTransmit"
+        case true  => "regression"
         case false => testNameArg
     }
     val testDir = "out/test"
@@ -44,7 +39,6 @@ class UartTest
         annos = annos :+ TargetDirAnnotation(testDir)
         annos
     }
-    useVerilator = false
     // Command-line toggles
     runTest(testName)
 
