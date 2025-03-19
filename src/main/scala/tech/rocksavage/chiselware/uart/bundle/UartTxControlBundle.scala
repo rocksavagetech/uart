@@ -22,6 +22,7 @@ class UartTxControlBundle(params: UartParams) extends Bundle {
     val updateBaud     = Input(Bool())
     val clearErrorDb   = Input(Bool())
     val txDataRegWrite = Input(Bool())
+    val almostEmptyLevel = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
+    val almostFullLevel  = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
     val lsbFirst       = Input(Bool())
-
 }

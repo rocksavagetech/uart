@@ -203,6 +203,37 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     // ###################
     // Fifo for reads
     // ###################
+
+    val almostFullLevelReg = RegInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+    val almostFullLevelNext = WireInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+
+    almostFullLevelNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.rxConfig.almostFullLevel,
+      almostFullLevelReg
+    )
+
+    almostFullLevelReg := almostFullLevelNext
+
+    val almostEmptyLevelReg = RegInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+    val almostEmptyLevelNext = WireInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+
+    almostEmptyLevelNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.rxConfig.almostEmptyLevel,
+      almostEmptyLevelReg
+    )
+
+    almostEmptyLevelReg := almostEmptyLevelNext
+
     val fifoParams = DynamicFifoParams(
       dataWidth = params.maxOutputBits,
       fifoDepth = params.bufferSize,
@@ -290,8 +321,8 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
     io.data := fifo.io.dataOut
 
-    fifo.io.almostFullLevel  := 0.U
-    fifo.io.almostEmptyLevel := 0.U
+    fifo.io.almostFullLevel  := almostFullLevelReg
+    fifo.io.almostEmptyLevel := almostEmptyLevelReg
 
     // ###################
     // Output Assignments

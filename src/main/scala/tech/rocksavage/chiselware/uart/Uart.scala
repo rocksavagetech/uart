@@ -101,6 +101,24 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       readOnly = false,
       verbose = uartParams.verbose
     )
+    val tx_almostEmptyLevel = RegInit(
+      1.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+    )
+    registerMap.createAddressableRegister(
+      rx_almostEmptyLevel,
+      "rx_almostEmptyLevel",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+    val tx_almostFullLevel = RegInit(
+      (uartParams.bufferSize - 1).U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+    )
+    registerMap.createAddressableRegister(
+      rx_almostFullLevel,
+      "rx_almostFullLevel",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
 
     // -------------------------------------------------------
     // RX registers (for the RX control bundle and RX data/status)
@@ -187,6 +205,24 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       readOnly = false,
       verbose = uartParams.verbose
     )
+    val rx_almostEmptyLevel = RegInit(
+      1.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+    )
+    registerMap.createAddressableRegister(
+      rx_almostEmptyLevel,
+      "rx_almostEmptyLevel",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+    val rx_almostFullLevel = RegInit(
+      (uartParams.bufferSize - 1).U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+    )
+    registerMap.createAddressableRegister(
+      rx_almostFullLevel,
+      "rx_almostFullLevel",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
 
     // -------------------------------------------------------
     // Clocks-per-bit registers (read-only outputs)
@@ -261,28 +297,33 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     //   RX: rx_baud, rx_clockFreq, rx_updateBaud, rx_numOutputBitsDb, rx_useParityDb, rx_parityOddDb, clearError
     // ---------------------------------------------------------------
     // TX control bundle connection:
-    uartInner.io.txControlBundle.load            := load
-    uartInner.io.txControlBundle.data            := dataIn
-    uartInner.io.txControlBundle.baud            := tx_baud
-    uartInner.io.txControlBundle.clockFreq       := tx_clockFreq
-    uartInner.io.txControlBundle.updateBaud      := tx_updateBaud
-    uartInner.io.txControlBundle.numOutputBitsDb := tx_numOutputBitsDb
-    uartInner.io.txControlBundle.useParityDb     := tx_useParityDb
-    uartInner.io.txControlBundle.parityOddDb     := tx_parityOddDb
-    uartInner.io.txControlBundle.txDataRegWrite  := txDataRegWrite
-    uartInner.io.txControlBundle.clearErrorDb    := clearError
+    uartInner.io.txControlBundle.load             := load
+    uartInner.io.txControlBundle.data             := dataIn
+    uartInner.io.txControlBundle.baud             := tx_baud
+    uartInner.io.txControlBundle.clockFreq        := tx_clockFreq
+    uartInner.io.txControlBundle.updateBaud       := tx_updateBaud
+    uartInner.io.txControlBundle.numOutputBitsDb  := tx_numOutputBitsDb
+    uartInner.io.txControlBundle.useParityDb      := tx_useParityDb
+    uartInner.io.txControlBundle.parityOddDb      := tx_parityOddDb
+    uartInner.io.txControlBundle.txDataRegWrite   := txDataRegWrite
+    uartInner.io.txControlBundle.clearErrorDb     := clearError
+    uartInner.io.txControlBundle.almostEmptyLevel := tx_almostEmptyLevel
+    uartInner.io.txControlBundle.almostFullLevel  := tx_almostFullLevel
     uartInner.io.txControlBundle.lsbFirst        := txLsbFirst
 
     // RX control bundle connection:
-    uartInner.io.rxControlBundle.baud            := rx_baud
-    uartInner.io.rxControlBundle.clockFreq       := rx_clockFreq
-    uartInner.io.rxControlBundle.updateBaud      := rx_updateBaud
-    uartInner.io.rxControlBundle.numOutputBitsDb := rx_numOutputBitsDb
-    uartInner.io.rxControlBundle.useParityDb     := rx_useParityDb
-    uartInner.io.rxControlBundle.parityOddDb     := rx_parityOddDb
-    uartInner.io.rxControlBundle.clearErrorDb    := clearError
-    uartInner.io.rxControlBundle.rxDataRegRead   := rxDataRegRead
+    uartInner.io.rxControlBundle.baud             := rx_baud
+    uartInner.io.rxControlBundle.clockFreq        := rx_clockFreq
+    uartInner.io.rxControlBundle.updateBaud       := rx_updateBaud
+    uartInner.io.rxControlBundle.numOutputBitsDb  := rx_numOutputBitsDb
+    uartInner.io.rxControlBundle.useParityDb      := rx_useParityDb
+    uartInner.io.rxControlBundle.parityOddDb      := rx_parityOddDb
+    uartInner.io.rxControlBundle.clearErrorDb     := clearError
+    uartInner.io.rxControlBundle.rxDataRegRead    := rxDataRegRead
+    uartInner.io.rxControlBundle.almostEmptyLevel := rx_almostEmptyLevel
+    uartInner.io.rxControlBundle.almostFullLevel  := rx_almostFullLevel
     uartInner.io.rxControlBundle.lsbFirst        := rxLsbFirst
+
 
     fifoStatusRx := uartInner.io.rxFifoStatus
     fifoStatusTx := uartInner.io.txFifoStatus
