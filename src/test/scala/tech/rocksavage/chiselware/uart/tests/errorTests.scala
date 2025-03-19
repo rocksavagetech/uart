@@ -166,7 +166,7 @@ object errorTests {
           numOutputBits = numOutputBits,
           useParity = true,
           parityOdd = false,
-          lsbFirst = false
+          lsbFirst = true
         )
 
         setupUart(dut.registerMap, dut.io.apb, config)
@@ -183,7 +183,7 @@ object errorTests {
         }
         // Invalid stop bit: should be high, but force low.
         dut.io.rx.poke(false.B)
-        clk.step(clocksPerBit)
+        clk.step(2 * clocksPerBit)
         // Return to idle:
         dut.io.rx.poke(true.B)
 
