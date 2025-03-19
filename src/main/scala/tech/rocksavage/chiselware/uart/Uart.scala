@@ -105,8 +105,8 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       1.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
     )
     registerMap.createAddressableRegister(
-      rx_almostEmptyLevel,
-      "rx_almostEmptyLevel",
+      tx_almostEmptyLevel,
+      "tx_almostEmptyLevel",
       readOnly = false,
       verbose = uartParams.verbose
     )
@@ -114,8 +114,8 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       (uartParams.bufferSize - 1).U((log2Ceil(uartParams.maxOutputBits) + 1).W)
     )
     registerMap.createAddressableRegister(
-      rx_almostFullLevel,
-      "rx_almostFullLevel",
+      tx_almostFullLevel,
+      "tx_almostFullLevel",
       readOnly = false,
       verbose = uartParams.verbose
     )
@@ -309,7 +309,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.txControlBundle.clearErrorDb     := clearError
     uartInner.io.txControlBundle.almostEmptyLevel := tx_almostEmptyLevel
     uartInner.io.txControlBundle.almostFullLevel  := tx_almostFullLevel
-    uartInner.io.txControlBundle.lsbFirst        := txLsbFirst
+    uartInner.io.txControlBundle.lsbFirst         := txLsbFirst
 
     // RX control bundle connection:
     uartInner.io.rxControlBundle.baud             := rx_baud
@@ -322,8 +322,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.rxControlBundle.rxDataRegRead    := rxDataRegRead
     uartInner.io.rxControlBundle.almostEmptyLevel := rx_almostEmptyLevel
     uartInner.io.rxControlBundle.almostFullLevel  := rx_almostFullLevel
-    uartInner.io.rxControlBundle.lsbFirst        := rxLsbFirst
-
+    uartInner.io.rxControlBundle.lsbFirst         := rxLsbFirst
 
     fifoStatusRx := uartInner.io.rxFifoStatus
     fifoStatusTx := uartInner.io.txFifoStatus

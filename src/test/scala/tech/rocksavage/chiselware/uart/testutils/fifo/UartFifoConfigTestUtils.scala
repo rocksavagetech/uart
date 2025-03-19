@@ -63,6 +63,8 @@ object UartFifoConfigTestUtils {
                   ),
                   useParity = scala.util.Random.nextBoolean(),
                   parityOdd = scala.util.Random.nextBoolean(),
+                  almostFullLevel = scala.util.Random.nextInt(fifoSize),
+                  almostEmptyLevel = scala.util.Random.nextInt(fifoSize),
                   lsbFirst = scala.util.Random.nextBoolean()
                 )
                 return UartFifoTxRuntimeConfig(
@@ -131,6 +133,8 @@ object UartFifoConfigTestUtils {
                   ),
                   useParity = scala.util.Random.nextBoolean(),
                   parityOdd = scala.util.Random.nextBoolean(),
+                  almostFullLevel = scala.util.Random.nextInt(fifoSize),
+                  almostEmptyLevel = scala.util.Random.nextInt(fifoSize),
                   lsbFirst = scala.util.Random.nextBoolean()
                 )
                 return UartFifoRxRuntimeConfig(

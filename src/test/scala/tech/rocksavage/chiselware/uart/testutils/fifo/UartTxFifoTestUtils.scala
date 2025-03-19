@@ -38,6 +38,7 @@ object UartTxFifoTestUtils {
                 transmitPop(dut, config, testFifo)
                 println(s"Data popped from Fifo Successfully")
             }
+            // depending on the fill level, we should expect the fill level indicators to be correct
 
         }
     }

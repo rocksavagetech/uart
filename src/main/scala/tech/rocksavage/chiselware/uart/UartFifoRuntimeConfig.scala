@@ -21,6 +21,8 @@ case class UartTestConfig(
     useParity: Boolean = false,
     parityOdd: Boolean = false,
     fifoSize: Int = 16,
+    almostFullLevel: Int = 14,
+    almostEmptyLevel: Int = 2,
     lsbFirst: Boolean = false
 )
 
@@ -47,6 +49,12 @@ case class UartFifoTxRuntimeConfig(
         require(
           9 >= config.numOutputBits,
           "Number of output bits must be less than or equal to 9"
+        )
+        require(
+          config.almostFullLevel >= 0 && config.almostFullLevel <= config.fifoSize
+        )
+        require(
+          config.almostEmptyLevel >= 0 && config.almostEmptyLevel <= config.fifoSize
         )
 
         // data must be represented in numOutputBits

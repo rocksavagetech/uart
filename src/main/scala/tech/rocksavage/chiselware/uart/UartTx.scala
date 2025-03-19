@@ -142,6 +142,37 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     // ###################
     // Fifo for reads
     // ###################
+
+    val almostFullLevelReg = RegInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+    val almostFullLevelNext = WireInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+
+    almostFullLevelNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.txConfig.almostFullLevel,
+      almostFullLevelReg
+    )
+
+    almostFullLevelReg := almostFullLevelNext
+
+    val almostEmptyLevelReg = RegInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+    val almostEmptyLevelNext = WireInit(
+      (0).U((log2Ceil(params.maxOutputBits) + 1).W)
+    )
+
+    almostEmptyLevelNext := Mux(
+      state === UartState.Idle || state === UartState.BaudUpdating,
+      io.txConfig.almostEmptyLevel,
+      almostEmptyLevelReg
+    )
+
+    almostEmptyLevelReg := almostEmptyLevelNext
+
     val fifoParams = DynamicFifoParams(
       dataWidth = params.maxOutputBits,
       fifoDepth = params.bufferSize,
