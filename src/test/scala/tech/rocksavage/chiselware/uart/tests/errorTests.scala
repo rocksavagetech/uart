@@ -3,9 +3,9 @@ package tech.rocksavage.chiselware.uart.tests
 import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.Uart
-import tech.rocksavage.chiselware.uart.param.UartParams
-import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.setBaudRate
+import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopSetupTestUtils.setBaudRate
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 object errorTests {
 

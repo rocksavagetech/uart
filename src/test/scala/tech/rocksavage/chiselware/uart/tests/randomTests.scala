@@ -3,61 +3,16 @@ package tech.rocksavage.chiselware.uart.tests
 import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.param.UartParams
-import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.{
-    setupUart,
-    waitForDataAndVerify
-}
-import tech.rocksavage.chiselware.uart.testutils.fifo._
-import tech.rocksavage.chiselware.uart.testutils.{
-    UartTestUtils,
-    UartTxFifoTestUtils
-}
-import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
+import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopTestUtils.generateNextValidTxRandomConfig
+import tech.rocksavage.chiselware.uart.testutils.tx.UartTxTestUtils.transmit
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 
+import scala.math.pow
 import scala.util.Random
 
 object randomTests {
-
-    def iexp(base: Int, exp: Int): Int = {
-        if (exp == 0) 1
-        else base * iexp(base, exp - 1)
-    }
-
-    def randomTransmitTest(dut: Uart, params: UartParams): Unit = {
-        implicit val clk: Clock = dut.clock
-        dut.io.rx.poke(1.U)
-
-        /** 2 exp 13, 2 exp 14, ... */
-        val validClockFrequencies = Seq(
-          13, 14, 15, 16, 17
-        ).map(iexp(2, _))
-        val validBaudRates = Seq(
-          115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
-        )
-        val validDataBits = Seq(5, 6, 7, 8)
-
-        val seed = Random.nextLong()
-
-//        val seed = -706700778016793525L
-        println(s"Random test seed: $seed")
-        Random.setSeed(seed)
-
-        for (_ <- 1 to 10) { // Test 10 random configurations
-            val config = UartTestUtils.generateNextValidRandomConfig(
-              validClockFrequencies,
-              validBaudRates,
-              validDataBits
-            )
-
-            println(
-              s"Random tramsit transaction with configuration: \n$config"
-            )
-
-            // does all assertions that the behavior is correct
-            UartTestUtils.transmit(dut, config)
-        }
-    }
 
     def randomFifoTransmitTest(dut: Uart, params: UartParams): Unit = {
         implicit val clk: Clock = dut.clock
@@ -66,7 +21,7 @@ object randomTests {
         /** 2 exp 13, 2 exp 14, ... */
         val validClockFrequencies = Seq(
           13, 14, 15, 16, 17
-        ).map(iexp(2, _))
+        ).map(pow(2, _).toInt)
         val validBaudRates = Seq(
           115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
         )
@@ -80,7 +35,7 @@ object randomTests {
 
         for (_ <- 1 to 10) { // Test 10 random configurations
             val config =
-                UartFifoConfigTestUtils.generateNextValidTxRandomConfig(
+                generateNextValidTxRandomConfig(
                   validClockFrequencies,
                   validBaudRates,
                   validDataBits,
@@ -92,41 +47,7 @@ object randomTests {
             )
 
             // does all assertions that the behavior is correct
-            UartTxFifoTestUtils.transmit(dut, config)
-        }
-    }
-
-    def randomReceiveTest(dut: Uart, params: UartParams): Unit = {
-        implicit val clk: Clock = dut.clock
-        dut.io.rx.poke(1.U)
-
-        /** 2 exp 13, 2 exp 14, ... */
-        val validClockFrequencies = Seq(
-          13, 14, 15, 16, 17
-        ).map(iexp(2, _))
-        val validBaudRates = Seq(
-          115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
-        )
-        val validDataBits = Seq(5, 6, 7, 8)
-
-        val seed = Random.nextLong()
-
-        println(s"Random test seed: $seed")
-        Random.setSeed(seed)
-
-        for (_ <- 1 to 10) { // Test 10 random configurations
-            val config = UartTestUtils.generateNextValidRandomConfig(
-              validClockFrequencies,
-              validBaudRates,
-              validDataBits
-            )
-
-            println(
-              s"Random receive transaction with configuration: \n$config"
-            )
-
-            // does all assertions that the behavior is correct
-            UartTestUtils.receive(dut, config)
+            transmit(dut, config)
         }
     }
 

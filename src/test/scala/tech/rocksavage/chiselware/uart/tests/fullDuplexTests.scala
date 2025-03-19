@@ -4,13 +4,10 @@ import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.param.UartParams
-import tech.rocksavage.chiselware.uart.testutils.UartTestUtils.{
-    setupRxUart,
-    setupTxUart,
-    setupUart
-}
-import tech.rocksavage.chiselware.uart.{FullDuplexUart, Uart}
+import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopSetupTestUtils.setupUart
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 object fullDuplexTests {
 
@@ -30,6 +27,7 @@ object fullDuplexTests {
         val numOutputBits = 8
 
         // Configure both UARTs
+
         setupUart(dut.io.uart1Apb, dut.getUart1, clockFrequency, baudRate)
         setupUart(dut.io.uart2Apb, dut.getUart2, clockFrequency, baudRate)
 
@@ -306,7 +304,7 @@ object fullDuplexTests {
         println(s"UART2: clocksPerBit = $clocksPerBit2 (57600 baud)")
 
         // Configure UARTs and let settings settle
-        setupRxUart(
+        receiveSetup(
           dut.io.uart1Apb,
           dut.getUart1,
           clockFrequency,

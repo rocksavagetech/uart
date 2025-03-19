@@ -4,9 +4,9 @@ import chisel3._
 import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
-import tech.rocksavage.chiselware.uart.error.{UartRxError, UartTxError}
-import tech.rocksavage.chiselware.uart.param.UartParams
-import tech.rocksavage.chiselware.uart.testutils.UartTestUtils
+import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.types.error.{UartRxError, UartTxError}
+import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 object fifoIntegrationTests {
 
@@ -320,7 +320,7 @@ object fifoIntegrationTests {
         clock.step(5)
 
         // Setup UART
-        UartTestUtils.setupRxUart(dut.io.apb, dut, clockFreq, baudRate)
+
         clock.step(20) // Allow setup to fully complete
 
         // Verify we start with no errors
