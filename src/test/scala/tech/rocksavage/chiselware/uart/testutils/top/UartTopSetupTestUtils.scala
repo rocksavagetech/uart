@@ -6,7 +6,10 @@ package tech.rocksavage.chiselware.uart.testutils.top
 import chisel3.Clock
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.uart.hw.Uart
-import tech.rocksavage.chiselware.uart.testutils.rx.UartRxSetupTestUtils.rxSetBaudRate
+import tech.rocksavage.chiselware.uart.testutils.rx.UartRxSetupTestUtils.{
+    receiveSetup,
+    rxSetBaudRate
+}
 import tech.rocksavage.chiselware.uart.testutils.tx.UartTxSetupTestUtils.txSetBaudRate
 
 object UartTopSetupTestUtils {
@@ -26,7 +29,7 @@ object UartTopSetupTestUtils {
         useParity: Boolean = false,
         parityOdd: Boolean = false
     )(implicit clock: Clock): Unit = {
-        setupRxUart(apb, uart, clockFreq, baudRate, useParity, parityOdd)
+        receiveSetup(apb, uart, clockFreq, baudRate, useParity, parityOdd)
         setupTxUart(apb, uart, clockFreq, baudRate, useParity, parityOdd)
     }
 

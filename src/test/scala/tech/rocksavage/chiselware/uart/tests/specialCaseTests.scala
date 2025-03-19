@@ -10,6 +10,8 @@ import tech.rocksavage.chiselware.uart.testconfig.{
     UartFifoTxRuntimeConfig,
     UartTestConfig
 }
+import tech.rocksavage.chiselware.uart.testutils.rx.UartRxTestUtils.receive
+import tech.rocksavage.chiselware.uart.testutils.tx.UartTxTestUtils.transmit
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 object specialCaseTests {
@@ -67,7 +69,7 @@ object specialCaseTests {
               s"Receive transaction with configuration: \n$config"
             )
 
-            UartTxFifoTestUtils.transmit(dut, config)
+            transmit(dut, config)
         }
     }
 
@@ -188,7 +190,7 @@ object specialCaseTests {
               s"Receive transaction with configuration: \n$config"
             )
 
-            UartRxFifoTestUtils.receive(dut, config)
+            receive(dut, config)
         }
     }
 

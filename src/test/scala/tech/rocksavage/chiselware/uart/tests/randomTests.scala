@@ -5,7 +5,13 @@ import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
 import tech.rocksavage.chiselware.uart.hw.Uart
 import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
-import tech.rocksavage.chiselware.uart.testutils.top.UartTopTestUtils.generateNextValidTxRandomConfig
+import tech.rocksavage.chiselware.uart.testutils.rx.UartRxTestUtils.receive
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopSetupTestUtils.setupUart
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopTestUtils
+import tech.rocksavage.chiselware.uart.testutils.top.UartTopTestUtils.{
+    generateNextValidTxRandomConfig,
+    waitForDataAndVerify
+}
 import tech.rocksavage.chiselware.uart.testutils.tx.UartTxTestUtils.transmit
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 
@@ -58,7 +64,7 @@ object randomTests {
         /** 2 exp 13, 2 exp 14, ... */
         val validClockFrequencies = Seq(
           13, 14, 15, 16, 17
-        ).map(iexp(2, _))
+        ).map(pow(2, _).toInt)
         val validBaudRates = Seq(
           115_200, 230_400, 460_800, 921_600, 1_843_200, 3_686_400
         )
@@ -72,7 +78,7 @@ object randomTests {
 
         for (_ <- 1 to 10) { // Test 10 random configurations
             val config =
-                UartFifoConfigTestUtils.generateNextValidRxRandomConfig(
+                UartTopTestUtils.generateNextValidRxRandomConfig(
                   validClockFrequencies,
                   validBaudRates,
                   validDataBits,
@@ -84,7 +90,7 @@ object randomTests {
             )
 
             // does all assertions that the behavior is correct
-            UartRxFifoTestUtils.receive(dut, config)
+            receive(dut, config)
         }
     }
 

@@ -5,8 +5,11 @@ import chiseltest._
 import tech.rocksavage.chiselware.apb.ApbBundle
 import tech.rocksavage.chiselware.apb.ApbTestUtils._
 import tech.rocksavage.chiselware.uart.hw.Uart
+import tech.rocksavage.chiselware.uart.testconfig.UartTestConfig
 import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
+import tech.rocksavage.chiselware.uart.testutils.rx.UartRxSetupTestUtils.receiveSetup
 import tech.rocksavage.chiselware.uart.testutils.top.UartTopSetupTestUtils.setupUart
+import tech.rocksavage.chiselware.uart.testutils.tx.UartTxSetupTestUtils.transmitSetup
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 object fullDuplexTests {
@@ -303,30 +306,34 @@ object fullDuplexTests {
         println(s"UART1: clocksPerBit = $clocksPerBit1 (115200 baud)")
         println(s"UART2: clocksPerBit = $clocksPerBit2 (57600 baud)")
 
+        val config1: UartTestConfig = UartTestConfig(
+          baudRate = baudRate1,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
+        val config2: UartTestConfig = UartTestConfig(
+          baudRate = baudRate2,
+          clockFrequency = clockFrequency,
+          numOutputBits = numOutputBits
+        )
+
         // Configure UARTs and let settings settle
         receiveSetup(
-          dut.io.uart1Apb,
           dut.getUart1,
-          clockFrequency,
-          baudRate2
+          config2
         )
-        setupTxUart(
-          dut.io.uart1Apb,
+        transmitSetup(
           dut.getUart1,
-          clockFrequency,
-          baudRate1
+          config1
         )
-        setupRxUart(
-          dut.io.uart2Apb,
+        receiveSetup(
           dut.getUart2,
-          clockFrequency,
-          baudRate1
+          config1
         )
-        setupTxUart(
-          dut.io.uart2Apb,
+        transmitSetup(
           dut.getUart2,
-          clockFrequency,
-          baudRate2
+          config2
         )
         val maxClocksPerBit = math.max(clocksPerBit1, clocksPerBit2)
         clock.step(maxClocksPerBit * 2) // Wait for slower UART to settle
