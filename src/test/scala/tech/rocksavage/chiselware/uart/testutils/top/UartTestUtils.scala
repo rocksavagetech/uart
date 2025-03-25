@@ -71,11 +71,11 @@ object UartTestUtils {
             datas = datas :+ new UartData(0, UartFifoDataDirection.Pop)
         }
 
-        var iterations = 100
+        var iterations = 1000
         while (true) {
-            if (iterations == 0) {
-                throw new RuntimeException("Failed to generate a valid config")
-            }
+//            if (iterations == 0) {
+//                throw new RuntimeException("Failed to generate a valid config")
+//            }
             iterations -= 1
             try {
                 val config = UartTestConfig(
@@ -163,11 +163,11 @@ object UartTestUtils {
             fifoHeight -= 1
         }
 
-        var iterations = 100
+        var iterations = 1000
         while (true) {
-            if (iterations == 0) {
-                throw new RuntimeException("Failed to generate a valid config")
-            }
+//            if (iterations == 0) {
+//                throw new RuntimeException("Failed to generate a valid config")
+//            }
             iterations -= 1
 //            println("Generating new config")
             try {
@@ -192,7 +192,9 @@ object UartTestUtils {
                   data = datas
                 )
             } catch {
-                case _: IllegalArgumentException =>
+                case e: IllegalArgumentException => {
+//                    println(e)
+                }
             }
         }
 

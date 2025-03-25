@@ -157,10 +157,17 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // RX registers (for the RX control bundle and RX data/status)
     // -------------------------------------------------------
     val rxData          = WireInit(0.U(uartParams.maxOutputBits.W))
+    val rxDataPeek      = WireInit(0.U(uartParams.maxOutputBits.W))
     val rxDataAvailable = !fifoStatusRx.empty
     registerMap.createAddressableRegister(
       rxData,
       "rx_data",
+      readOnly = true,
+      verbose = uartParams.verbose
+    )
+    registerMap.createAddressableRegister(
+      rxDataPeek,
+      "rx_dataPeek",
       readOnly = true,
       verbose = uartParams.verbose
     )
@@ -364,7 +371,8 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     io.tx           := uartInner.io.tx
 
     // Capture RX data when the inner module asserts valid.
-    rxData := uartInner.io.dataOut
+    rxData     := uartInner.io.dataOut
+    rxDataPeek := uartInner.io.dataOut
 
     // ---------------------------------------------------------------
     // Connect the control bundles using the separate configuration registers:

@@ -49,6 +49,12 @@ object UartRxTestUtils {
                 println(s"RX Flushed Successfully")
                 testFifo.clear()
             }
+            if (testFifo.nonEmpty) {
+                val peekedData = testFifo.head
+                println(s"Peeking next data: ${peekedData} from RX: $testFifo")
+                receivePeek(dut, config, peekedData)
+                println(s"Data peeked from Fifo Successfully")
+            }
             val actualAlmostFull = readAPB(
               dut.io.apb,
               dut.registerMap.getAddressOfRegister("rx_fifoAlmostFull").get.U
@@ -80,7 +86,7 @@ object UartRxTestUtils {
                 )
             }
             println("Data Operation Completed")
-            
+
         }
     }
 
@@ -183,6 +189,30 @@ object UartRxTestUtils {
           errorStatusActual == 0,
           "RX error should be 0"
         )
+    }
+
+    def receivePeek(
+        dut: Uart,
+        config: UartFifoRxRuntimeConfig,
+        dataExpect: Int
+    )(implicit
+        clock: Clock
+    ): Unit = {
+        // Verify final state
+        val dataAvailableActual = readAPB(
+          dut.io.apb,
+          dut.registerMap.getAddressOfRegister("rx_dataAvailable").get.U
+        )
+        if (dataAvailableActual == 1) {
+            val dataActual = readAPB(
+              dut.io.apb,
+              dut.registerMap.getAddressOfRegister("rx_dataPeek").get.U
+            )
+            assert(
+              dataActual == dataExpect,
+              s"RX data should match transmitted data: expected $dataExpect, got $dataActual"
+            )
+        }
     }
 
     def receiveFlush(uart: Uart, config: UartFifoRxRuntimeConfig): Unit = {

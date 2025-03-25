@@ -82,7 +82,7 @@ object randomTests {
                 )
 
             println(
-              s"Random tramsit transaction with configuration: \n$config"
+              s"Random receive transaction with configuration: \n$config"
             )
 
             // does all assertions that the behavior is correct
