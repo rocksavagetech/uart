@@ -6,7 +6,10 @@ import chisel3.util._
 import tech.rocksavage.chiselware.addrdecode.{AddrDecode, AddrDecodeError}
 import tech.rocksavage.chiselware.addressable.RegisterMap
 import tech.rocksavage.chiselware.apb.{ApbBundle, ApbParams}
-import tech.rocksavage.chiselware.uart.types.bundle.FifoStatusBundle
+import tech.rocksavage.chiselware.uart.types.bundle.{
+    FifoStatusBundle,
+    UartInterruptBundle
+}
 import tech.rocksavage.chiselware.uart.types.error.{
     UartErrorBundle,
     UartRxError,
@@ -22,9 +25,10 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     val wordWidth    = uartParams.wordWidth
 
     val io = IO(new Bundle {
-        val apb = new ApbBundle(ApbParams(dataWidth, addressWidth))
-        val rx  = Input(Bool())
-        val tx  = Output(Bool())
+        val apb        = new ApbBundle(ApbParams(dataWidth, addressWidth))
+        val rx         = Input(Bool())
+        val tx         = Output(Bool())
+        val interrupts = Output(new UartInterruptBundle(uartParams))
     })
 
     // Create a register map (this example reuses one register map but differentiates TX vs RX registers by name)
@@ -404,6 +408,13 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     // ---------------------------------------------------------------
     txClocksPerBit := uartInner.io.txClocksPerBit
     rxClocksPerBit := uartInner.io.rxClocksPerBit
+
+    // ---------------------------------------------------------------
+    // Connect the interrupt bundle
+    // ---------------------------------------------------------------
+    io.interrupts.dataReceived := !uartInner.io.rxFifoStatus.empty & RegNext(
+      uartInner.io.rxFifoStatus.empty
+    )
 
     // ---------------------------------------------------------------
     // APB read/write interface handling

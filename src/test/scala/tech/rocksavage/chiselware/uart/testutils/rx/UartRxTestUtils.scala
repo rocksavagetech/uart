@@ -32,7 +32,12 @@ object UartRxTestUtils {
             if (data.direction == UartFifoDataDirection.Push) {
                 testFifo.enqueue(data.data)
                 println(s"Data ($data) sent to RX")
-                receivePush(dut, config, data.data)
+                receivePush(
+                  dut,
+                  config,
+                  data.data,
+                  dataFirst = testFifo.size == 1
+                )
             } else {
                 val poppedData = testFifo.dequeue()
                 println(s"Popping next data: ${poppedData} from RX: $testFifo")
@@ -75,7 +80,8 @@ object UartRxTestUtils {
     def receivePush(
         dut: Uart,
         config: UartFifoRxRuntimeConfig,
-        dataSend: Int
+        dataSend: Int,
+        dataFirst: Boolean = false
     )(implicit
         clock: Clock
     ): Unit = {
@@ -127,6 +133,15 @@ object UartRxTestUtils {
             dut.clock.setTimeout(clocksPerBit + 1)
             dut.clock.step(clocksPerBit)
         }
+        clock.setTimeout(100)
+        fork {
+            clock.step(2)
+            if (dataFirst) {
+                dut.io.interrupts.dataReceived.expect(true.B)
+            } else {
+                dut.io.interrupts.dataReceived.expect(false.B)
+            }
+        }.joinAndStep(clock)
     }
 
     def receivePop(

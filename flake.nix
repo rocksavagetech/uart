@@ -180,6 +180,7 @@
 
                     # Other
                     gcc
+                    clang
                     python3
                     nodePackages_latest.wavedrom-cli
                 ];

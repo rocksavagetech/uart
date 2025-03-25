@@ -5,7 +5,7 @@ ThisBuild / version          := "0.1.0"
 ThisBuild / organization     := "tech.rocksavage"
 ThisBuild / organizationName := "Rocksavage Technology"
 
-Test / parallelExecution := true
+Test / parallelExecution := false
 
 lazy val chisel_module_runner = RootProject(
   uri("https://github.com/The-Chiselers/chisel_module_runner.git#main")

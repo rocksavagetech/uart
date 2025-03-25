@@ -15,7 +15,6 @@ import tech.rocksavage.chiselware.uart.testmodules.FullDuplexUart
 import tech.rocksavage.chiselware.uart.tests._
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 import tech.rocksavage.test.coverageCollector
-import tech.rocksavage.test._
 
 class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val numTests     = 2
@@ -24,7 +23,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableFst    = System.getProperty("enableFst", "false").toBoolean
     var useVerilator = System.getProperty("useVerilator", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "regression"
+        case true  => "randomFifoReceive"
         case false => testNameArg
     }
     val testDir = "out/test"
@@ -104,7 +103,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                       configName,
                       coverage,
                       covDir
-                    )                        
+                    )
                 }
 
             case "txFifoUnderflow" =>
@@ -328,11 +327,15 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
 
             case "longTransmission" =>
                 it should "handle long transmissions" in {
-                    val cov = test(new FullDuplexUart(uartParams)).withAnnotations(
-                      backendAnnotations
-                    ) { dut =>
-                        fullDuplexTests.longTransmissionTest(dut, uartParams)
-                    }
+                    val cov =
+                        test(new FullDuplexUart(uartParams)).withAnnotations(
+                          backendAnnotations
+                        ) { dut =>
+                            fullDuplexTests.longTransmissionTest(
+                              dut,
+                              uartParams
+                            )
+                        }
                     coverageCollector.collectCoverage(
                       cov.getAnnotationSeq,
                       testName,
@@ -343,11 +346,15 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
                 }
             case "baudRateSwitch" =>
                 it should "handle baud rate switching" in {
-                    val cov = test(new FullDuplexUart(uartParams)).withAnnotations(
-                      backendAnnotations
-                    ) { dut =>
-                        fullDuplexTests.baudRateSwitchingTest(dut, uartParams)
-                    }
+                    val cov =
+                        test(new FullDuplexUart(uartParams)).withAnnotations(
+                          backendAnnotations
+                        ) { dut =>
+                            fullDuplexTests.baudRateSwitchingTest(
+                              dut,
+                              uartParams
+                            )
+                        }
                     coverageCollector.collectCoverage(
                       cov.getAnnotationSeq,
                       testName,
