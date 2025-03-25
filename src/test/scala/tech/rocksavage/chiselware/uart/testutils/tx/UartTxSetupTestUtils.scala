@@ -119,7 +119,7 @@ object UartTxSetupTestUtils {
           "lsbFirst register not set correctly"
         )
         assert(
-          (foundFlush == 0) == false,
+          (foundFlush == 0),
           "flush register not set correctly"
         )
     }

@@ -23,7 +23,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
     val enableFst    = System.getProperty("enableFst", "false").toBoolean
     var useVerilator = System.getProperty("useVerilator", "false").toBoolean
     val testName = (testNameArg == null || testNameArg == "") match {
-        case true  => "randomFifoReceive"
+        case true  => "specialCaseFifoTransmit"
         case false => testNameArg
     }
     val testDir = "out/test"
