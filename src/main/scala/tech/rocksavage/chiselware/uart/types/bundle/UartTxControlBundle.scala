@@ -25,4 +25,5 @@ class UartTxControlBundle(params: UartParams) extends Bundle {
     val almostEmptyLevel = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
     val almostFullLevel  = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
     val lsbFirst         = Input(Bool())
+    val flush            = Input(Bool())
 }

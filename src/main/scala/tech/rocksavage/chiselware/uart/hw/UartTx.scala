@@ -188,6 +188,8 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     io.fifoBundle.almostFull  := fifo.io.almostFull
     io.fifoBundle.almostEmpty := fifo.io.almostEmpty
 
+    fifo.io.flush := io.txConfig.flush
+
     // Debug status changes
     when(txErrorReg =/= RegNext(txErrorReg)) {
         printf(

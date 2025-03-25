@@ -321,6 +321,20 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       readOnly = false,
       verbose = uartParams.verbose
     )
+    val rxFlush = RegInit(false.B)
+    val txFlush = RegInit(false.B)
+    registerMap.createAddressableRegister(
+      rxFlush,
+      "rx_flush",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
+    registerMap.createAddressableRegister(
+      txFlush,
+      "tx_flush",
+      readOnly = false,
+      verbose = uartParams.verbose
+    )
 
 //    registerMap.prettyPrint()
 //    registerMap.printHeaderFile()
@@ -371,6 +385,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.txControlBundle.almostEmptyLevel := tx_almostEmptyLevel
     uartInner.io.txControlBundle.almostFullLevel  := tx_almostFullLevel
     uartInner.io.txControlBundle.lsbFirst         := txLsbFirst
+    uartInner.io.txControlBundle.flush            := txFlush
 
     // RX control bundle connection:
     uartInner.io.rxControlBundle.baud             := rx_baud
@@ -384,6 +399,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
     uartInner.io.rxControlBundle.almostEmptyLevel := rx_almostEmptyLevel
     uartInner.io.rxControlBundle.almostFullLevel  := rx_almostFullLevel
     uartInner.io.rxControlBundle.lsbFirst         := rxLsbFirst
+    uartInner.io.rxControlBundle.flush            := rxFlush
 
     fifoStatusRx := uartInner.io.rxFifoStatus
     fifoStatusTx := uartInner.io.txFifoStatus

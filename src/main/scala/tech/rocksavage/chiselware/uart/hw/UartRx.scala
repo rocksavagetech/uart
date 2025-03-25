@@ -249,6 +249,8 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     io.fifoBundle.almostFull  := fifo.io.almostFull
     io.fifoBundle.almostEmpty := fifo.io.almostEmpty
 
+    fifo.io.flush := io.rxConfig.flush
+
     val attemptingPush = completeWire && errorReg === UartRxError.None
     val attemptingPop  = io.rxConfig.rxDataRegRead
     // If the receiver tries to push when FIFO is full => overflow

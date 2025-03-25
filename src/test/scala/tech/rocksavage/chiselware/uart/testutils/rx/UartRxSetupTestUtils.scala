@@ -58,6 +58,11 @@ object UartRxSetupTestUtils {
           registerMap.getAddressOfRegister("rx_lsbFirst").get.U,
           config.lsbFirst.B
         )
+        writeAPB(
+          apb,
+          registerMap.getAddressOfRegister("rx_flush").get.U,
+          false.B
+        )
 
         val foundNumOutputBits = readAPB(
           apb,
@@ -85,6 +90,10 @@ object UartRxSetupTestUtils {
           apb,
           registerMap.getAddressOfRegister("rx_lsbFirst").get.U
         )
+        val foundFlush = readAPB(
+          apb,
+          registerMap.getAddressOfRegister("rx_flush").get.U
+        )
 
         assert(
           foundNumOutputBits == numOutputBits,
@@ -109,6 +118,10 @@ object UartRxSetupTestUtils {
         assert(
           (foundLsbFirst == 1) == config.lsbFirst,
           "lsbFirst register not set correctly"
+        )
+        assert(
+          (foundFlush == 1) == false,
+          "flush register not set correctly"
         )
     }
 

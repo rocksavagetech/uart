@@ -24,29 +24,45 @@ object UartTestUtils {
     ): UartFifoTxRuntimeConfig = {
         var datas: Seq[UartData] = Seq()
         var fifoHeight           = 0
+
+        val weightPush  = 14
+        val weightPop   = 1
+        val weightFlush = 1
+
         for (_ <- 0 until 2 * fifoSize) {
             // case statement to determine if we should push or pop
-            val pushOrPop: UartFifoDataDirection = {
+            val dir: UartFifoDataDirection = {
                 if (fifoHeight == 0) {
                     UartFifoDataDirection.Push
                 } else if (fifoHeight == fifoSize) {
                     UartFifoDataDirection.Pop
                 } else {
-                    val randomInt = scala.util.Random.nextInt(16)
-                    val boolValue = randomInt <= 15 // 1/16 chance of popping
-                    boolToPushPop(boolValue)
+                    val pushOrPop = scala.util.Random.nextInt(
+                      weightPush + weightPop + weightFlush + 1
+                    )
+                    pushOrPop match {
+                        case x if 0 until weightPush contains x =>
+                            UartFifoDataDirection.Push
+                        case x
+                            if weightPush until weightPush + weightPop contains x =>
+                            UartFifoDataDirection.Pop
+                        case _ =>
+                            UartFifoDataDirection.Flush
+                    }
                 }
             }
 
-            if (pushOrPop == UartFifoDataDirection.Push) {
+            if (dir == UartFifoDataDirection.Push) {
                 fifoHeight += 1
-            } else {
+            } else if (dir == UartFifoDataDirection.Pop) {
+                fifoHeight = 0
+            } else if (dir == UartFifoDataDirection.Flush) {
                 fifoHeight = 0
             }
             datas = datas :+ new UartData(
               scala.util.Random
                   .nextInt(2.pow(validNumOutputBits.last).toInt),
-              pushOrPop
+              dir
             )
         }
 
@@ -55,7 +71,12 @@ object UartTestUtils {
             datas = datas :+ new UartData(0, UartFifoDataDirection.Pop)
         }
 
+        var iterations = 100
         while (true) {
+            if (iterations == 0) {
+                throw new RuntimeException("Failed to generate a valid config")
+            }
+            iterations -= 1
             try {
                 val config = UartTestConfig(
                   baudRate = validBaudRates(
@@ -93,28 +114,45 @@ object UartTestUtils {
     ): UartFifoRxRuntimeConfig = {
         var datas: Seq[UartData] = Seq()
         var fifoHeight           = 0
+
+        val weightPush  = 14
+        val weightPop   = 1
+        val weightFlush = 1
+
         for (_ <- 0 until 2 * fifoSize) {
             // case statement to determine if we should push or pop
-            val pushOrPop: UartFifoDataDirection = {
+            val dir: UartFifoDataDirection = {
                 if (fifoHeight == 0) {
                     UartFifoDataDirection.Push
                 } else if (fifoHeight == fifoSize) {
                     UartFifoDataDirection.Pop
                 } else {
-                    val boolValue = scala.util.Random.nextBoolean()
-                    boolToPushPop(boolValue)
+                    val pushOrPop = scala.util.Random.nextInt(
+                      weightPush + weightPop + weightFlush + 1
+                    )
+                    pushOrPop match {
+                        case x if 0 until weightPush contains x =>
+                            UartFifoDataDirection.Push
+                        case x
+                            if weightPush until weightPush + weightPop contains x =>
+                            UartFifoDataDirection.Pop
+                        case _ =>
+                            UartFifoDataDirection.Flush
+                    }
                 }
             }
 
-            if (pushOrPop == UartFifoDataDirection.Push) {
+            if (dir == UartFifoDataDirection.Push) {
                 fifoHeight += 1
-            } else {
+            } else if (dir == UartFifoDataDirection.Pop) {
                 fifoHeight -= 1
+            } else if (dir == UartFifoDataDirection.Flush) {
+                fifoHeight = 0
             }
             datas = datas :+ new UartData(
               scala.util.Random
                   .nextInt(2.pow(validNumOutputBits.last).toInt),
-              pushOrPop
+              dir
             )
         }
 
@@ -125,7 +163,13 @@ object UartTestUtils {
             fifoHeight -= 1
         }
 
+        var iterations = 100
         while (true) {
+            if (iterations == 0) {
+                throw new RuntimeException("Failed to generate a valid config")
+            }
+            iterations -= 1
+//            println("Generating new config")
             try {
                 val config = UartTestConfig(
                   baudRate = validBaudRates(

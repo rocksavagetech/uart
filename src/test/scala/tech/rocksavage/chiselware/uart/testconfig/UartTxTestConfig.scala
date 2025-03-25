@@ -45,6 +45,8 @@ case class UartFifoTxRuntimeConfig(
             d.direction match {
                 case UartFifoDataDirection.Push => fifoHeight += 1
                 case UartFifoDataDirection.Pop  => fifoHeight = 0
+                case UartFifoDataDirection.Flush =>
+                    fifoHeight = 0
             }
             require(
               fifoHeight >= 0,

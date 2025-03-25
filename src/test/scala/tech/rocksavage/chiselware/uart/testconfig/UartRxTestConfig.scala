@@ -37,8 +37,9 @@ case class UartFifoRxRuntimeConfig(
         var fifoHeight = 0
         for (d <- data) {
             d.direction match {
-                case UartFifoDataDirection.Push => fifoHeight += 1
-                case UartFifoDataDirection.Pop  => fifoHeight -= 1
+                case UartFifoDataDirection.Push  => fifoHeight += 1
+                case UartFifoDataDirection.Pop   => fifoHeight -= 1
+                case UartFifoDataDirection.Flush => fifoHeight = 0
             }
             require(
               fifoHeight >= 0,

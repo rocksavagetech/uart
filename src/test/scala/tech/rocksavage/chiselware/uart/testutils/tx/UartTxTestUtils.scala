@@ -38,10 +38,15 @@ object UartTxTestUtils {
                 testFifo.enqueue(data.data)
                 println(s"Data ($data) queued to Fifo: $testFifo")
                 transmitPush(uart, config, data.data)
-            } else {
+            } else if (data.direction == UartFifoDataDirection.Pop) {
                 println(s"Popping all data from Fifo: $testFifo")
                 transmitPop(uart, config, testFifo)
                 println(s"Data popped from Fifo Successfully")
+            } else if (data.direction == UartFifoDataDirection.Flush) {
+                println(s"Flushing RX")
+                transmitFlush(uart)
+                println(s"RX Flushed Successfully")
+                testFifo.clear()
             }
             clock.setTimeout(100)
             // depending on the fill level, we should expect the fill level indicators to be correct
@@ -196,5 +201,25 @@ object UartTxTestUtils {
                 expectConstantTx(expectedBit._1, clocksPerBit)
             }
         }.join()
+    }
+    def transmitFlush(uart: Uart): Unit = {
+        writeAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("tx_flush").get.U,
+          true.B
+        )(uart.clock)
+        writeAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("tx_flush").get.U,
+          false.B
+        )(uart.clock)
+        val empty = readAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("tx_fifoEmpty").get.U
+        )(uart.clock)
+        assert(
+          empty == 1,
+          "RX data should be flushed"
+        )
     }
 }

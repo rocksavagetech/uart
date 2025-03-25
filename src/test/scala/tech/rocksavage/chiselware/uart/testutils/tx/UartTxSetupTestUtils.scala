@@ -59,6 +59,11 @@ object UartTxSetupTestUtils {
           registerMap.getAddressOfRegister("tx_lsbFirst").get.U,
           config.lsbFirst.B
         )
+        writeAPB(
+          apb,
+          registerMap.getAddressOfRegister("tx_flush").get.U,
+          false.B
+        )
 
         val foundNumOutputBits = readAPB(
           apb,
@@ -84,6 +89,10 @@ object UartTxSetupTestUtils {
           apb,
           registerMap.getAddressOfRegister("tx_lsbFirst").get.U
         )
+        val foundFlush = readAPB(
+          apb,
+          registerMap.getAddressOfRegister("tx_flush").get.U
+        )
 
         assert(
           foundNumOutputBits == numOutputBits,
@@ -108,6 +117,10 @@ object UartTxSetupTestUtils {
         assert(
           (foundLsbFirst == 1) == config.lsbFirst,
           "lsbFirst register not set correctly"
+        )
+        assert(
+          (foundFlush == 0) == false,
+          "flush register not set correctly"
         )
     }
     def txSetBaudRate(

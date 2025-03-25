@@ -29,9 +29,9 @@ object randomTests {
         )
         val validDataBits = Seq(5, 6, 7, 8)
 
-//        val seed = Random.nextLong()
+        val seed = Random.nextLong()
 
-        val seed = 1117391718542493081L
+//        val seed = 1117391718542493081L
         println(s"Random test seed: $seed")
         Random.setSeed(seed)
 
@@ -68,7 +68,7 @@ object randomTests {
 
         val seed = Random.nextLong()
 
-        //        val seed = -706700778016793525L
+//        val seed = 6176633847783885148L
         println(s"Random test seed: $seed")
         Random.setSeed(seed)
 

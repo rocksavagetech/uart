@@ -5,7 +5,7 @@ package tech.rocksavage.chiselware.uart.testutils.rx
 
 import chisel3._
 import chiseltest._
-import tech.rocksavage.chiselware.apb.ApbTestUtils.readAPB
+import tech.rocksavage.chiselware.apb.ApbTestUtils._
 import tech.rocksavage.chiselware.uart.UartParity
 import tech.rocksavage.chiselware.uart.hw.Uart
 import tech.rocksavage.chiselware.uart.testconfig.{
@@ -38,11 +38,16 @@ object UartRxTestUtils {
                   data.data,
                   dataFirst = testFifo.size == 1
                 )
-            } else {
+            } else if (data.direction == UartFifoDataDirection.Pop) {
                 val poppedData = testFifo.dequeue()
                 println(s"Popping next data: ${poppedData} from RX: $testFifo")
                 receivePop(dut, config, poppedData)
                 println(s"Data popped from Fifo Successfully")
+            } else if (data.direction == UartFifoDataDirection.Flush) {
+                println(s"Flushing RX")
+                receiveFlush(dut, config)
+                println(s"RX Flushed Successfully")
+                testFifo.clear()
             }
             val actualAlmostFull = readAPB(
               dut.io.apb,
@@ -74,6 +79,8 @@ object UartRxTestUtils {
                   "TX almostEmpty should be 0 when the fifo is not almost empty"
                 )
             }
+            println("Data Operation Completed")
+            
         }
     }
 
@@ -175,6 +182,27 @@ object UartRxTestUtils {
         assert(
           errorStatusActual == 0,
           "RX error should be 0"
+        )
+    }
+
+    def receiveFlush(uart: Uart, config: UartFifoRxRuntimeConfig): Unit = {
+        writeAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_flush").get.U,
+          true.B
+        )(uart.clock)
+        writeAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_flush").get.U,
+          false.B
+        )(uart.clock)
+        val empty = readAPB(
+          uart.io.apb,
+          uart.registerMap.getAddressOfRegister("rx_fifoEmpty").get.U
+        )(uart.clock)
+        assert(
+          empty == 1,
+          "RX data should be flushed"
         )
     }
 
