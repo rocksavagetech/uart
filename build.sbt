@@ -1,13 +1,11 @@
 // See README.md for license details.
 
-ThisBuild / scalaVersion     := "2.13.16"
+ThisBuild / scalaVersion     := "2.13.15"
 ThisBuild / version          := "0.1.0"
 ThisBuild / organization     := "tech.rocksavage"
 ThisBuild / organizationName := "Rocksavage Technology"
 
 Test / parallelExecution := false
-
-coverageScalacPluginVersion := "2.3.0"
 
 lazy val chisel_module_runner = RootProject(
   uri("https://github.com/The-Chiselers/chisel_module_runner.git#main")
@@ -57,7 +55,7 @@ lazy val root = (project in file("."))
       registermap,
       dynamicfifo_one_cycle
     )
-val chiselVersion   = "6.7.0"
+val chiselVersion   = "6.6.0"
 val scalafmtVersion = "2.5.0"
 
 // Scala coverage settings
