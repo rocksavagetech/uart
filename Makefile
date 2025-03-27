@@ -14,6 +14,11 @@ docs:
 	mkdir -p $(shell pwd)/out/doc
 	cd doc/user-guide && pdflatex -output-directory=$(shell pwd)/out/doc uart.tex | tee -a $(shell pwd)/out/doc/doc.rpt
 
+doc_frags:
+	@echo Generating doc fragments
+	@$(SBT) "runMain tech.rocksavage.Main docs --module tech.rocksavage.chiselware.uart.hw.Uart --config-class tech.rocksavage.chiselware.uart.UartConfig --techlib synth/stdcells.lib --clock-period 5.0"
+
+
 update:
 	@echo Updating...
 	sbt clean update

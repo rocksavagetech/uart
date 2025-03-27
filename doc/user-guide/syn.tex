@@ -3,45 +3,7 @@
 \subsection{Area and Gate Count}
 Example synthesis results vary based on \texttt{fifoDepth} and other settings. An illustrative table:
 
-
-% \renewcommand*{\arraystretch}{1.3}
-% \begingroup
-% \small
-% \rowcolors{2}{gray!30}{gray!10}
-% \begin{longtable}[H]{
-%   | p{0.22\textwidth}
-%   | p{0.18\textwidth}
-%   | p{0.20\textwidth}
-%   | p{0.30\textwidth} |
-% }
-% \hline
-% \rowcolor{gray}
-% \textcolor{white}{\textbf{Config}} &
-% \textcolor{white}{\textbf{FIFO Depth}} &
-% \textcolor{white}{\textbf{Data Bits}} &
-% \textcolor{white}{\textbf{Gate Count}} \\ 
-% \hline
-% \endfirsthead
-
-% \hline
-% \rowcolor{gray}
-% \textcolor{white}{\textbf{Config}} &
-% \textcolor{white}{\textbf{FIFO Depth}} &
-% \textcolor{white}{\textbf{Data Bits}} &
-% \textcolor{white}{\textbf{Gate Count}} \\ 
-% \hline
-% \endhead
-
-% \hline
-% \endfoot
-
-% \texttt{uart\_8\_depth4}  & 4  & 8  & 2,200 gates \\ \hline
-% \texttt{uart\_8\_depth16} & 16 & 8  & 3,100 gates \\ \hline
-% \texttt{uart\_9\_depth16} & 16 & 9  & 3,400 gates \\ \hline
-
-% \caption{Example Synthesis Results}
-% \end{longtable}
-% \endgroup
+\input{../../out/doc/synth_sta.tex}
 
 \subsection{Timing Constraints}
 An \texttt{.sdc} file can be generated to specify clock period, input/output constraints, etc. For example:
