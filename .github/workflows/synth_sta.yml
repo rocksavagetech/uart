@@ -47,7 +47,7 @@ jobs:
         with:
           files: |
             release_artifacts.tar.gz
-            release_artifacts/*.pdf
+            out/doc/*.pdf
             # release_artifacts/verilog/*.v
             # release_artifacts/*.json
             # release_artifacts/*.tex
