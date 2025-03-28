@@ -66,34 +66,202 @@ It should be noted that all registers are \textbf{Double Buffered} and are autom
     0 &
     Desc \\ \hline
 
-    0x18                                         & TX\_USEPARITYDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x1C                                         & TX\_PARITYODDDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x20                                         & TX\_ALMOSTEMPTYLEVEL\_OFFSET              & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x24                                         & TX\_ALMOSTFULLLEVEL\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x28                                         & TX\_FIFOFULL\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x2C                                         & TX\_FIFOEMPTY\_OFFSET                     & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x30                                         & TX\_FIFOALMOSTEMPTY\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x34                                         & TX\_FIFOALMOSTFULL\_OFFSET                & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x38                                         & RX\_DATA\_OFFSET                          & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x3C                                         & RX\_DATAAVAILABLE\_OFFSET                 & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x40                                         & ERROR\_OFFSET                             & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x44                                         & CLEARERROR\_OFFSET                        & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x48                                         & RX\_BAUDRATE\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x4C                                         & RX\_CLOCKFREQ\_OFFSET                     & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x50                                         & RX\_UPDATEBAUD\_OFFSET                    & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x54                                         & RX\_NUMOUTPUTBITSDB\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x58                                         & RX\_USEPARITYDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x5C                                         & RX\_PARITYODDDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x60                                         & RX\_ALMOSTEMPTYLEVEL\_OFFSET              & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x64                                         & RX\_ALMOSTFULLLEVEL\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x68                                         & RX\_FIFOFULL\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x6C                                         & RX\_FIFOEMPTY\_OFFSET                     & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x70                                         & RX\_FIFOALMOSTEMPTY\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x74                                         & RX\_FIFOALMOSTFULL\_OFFSET                & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x78                                         & RX\_CLOCKSPERBIT\_OFFSET                  & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x7C                                         & TX\_CLOCKSPERBIT\_OFFSET                  & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x80                                         & RX\_LSBFIRST\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
-    0x84                                         & TX\_LSBFIRST\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
+    
+    0x18 & 
+    TX\_USEPARITYDB\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x1C & 
+    TX\_PARITYODDDB\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x20 & 
+    TX\_ALMOSTEMPTYLEVEL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x24 & 
+    TX\_ALMOSTFULLLEVEL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x28 & 
+    TX\_FIFOFULL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x2C & 
+    TX\_FIFOEMPTY\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x30 & 
+    TX\_FIFOALMOSTEMPTY\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x34 & 
+    TX\_FIFOALMOSTFULL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x38 & 
+    RX\_DATA\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x3C & 
+    RX\_DATAAVAILABLE\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x40 & 
+    ERROR\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x44 & 
+    CLEARERROR\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x48 & 
+    RX\_BAUDRATE\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x4C & 
+    RX\_CLOCKFREQ\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x50 & 
+    RX\_UPDATEBAUD\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x54 & 
+    RX\_NUMOUTPUTBITSDB\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x58 & 
+    RX\_USEPARITYDB\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x5C & 
+    RX\_PARITYODDDB\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x60 & 
+    RX\_ALMOSTEMPTYLEVEL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x64 & 
+    RX\_ALMOSTFULLLEVEL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x68 & 
+    RX\_FIFOFULL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x6C & 
+    RX\_FIFOEMPTY\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x70 & 
+    RX\_FIFOALMOSTEMPTY\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x74 & 
+    RX\_FIFOALMOSTFULL\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x78 & 
+    RX\_CLOCKSPERBIT\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x7C & 
+    TX\_CLOCKSPERBIT\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x80 & 
+    RX\_LSBFIRST\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
+    
+    0x84 & 
+    TX\_LSBFIRST\_OFFSET & 
+    R/W & 
+    0 & 
+    Desc
+    \\ \hline
 \end{longtable}
 \captionof{table}{UART Register Map}
 \label{table:uart_register_map}
