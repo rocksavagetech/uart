@@ -11,44 +11,54 @@ The table below summarizes the complete register space. All addresses assume a 3
 \small
 \rowcolors{2}{gray!30}{gray!10}
 \arrayrulecolor{gray!80}
-\begin{longtable}{|c|c|c|c|c|p{0.35\textwidth}|}
+\begin{longtable}{|c|c|c|c|p{0.35\textwidth}|}
     \hline
     \rowcolor{gray}
-    \textcolor{white}{\textbf{Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Width}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
+    \textcolor{white}{\textbf{Relative Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
     \endfirsthead
 
     \hline
     \rowcolor{gray}
-    \textcolor{white}{\textbf{Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Width}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
+    \textcolor{white}{\textbf{Relative Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
     \endhead
 
     \hline
     \endfoot
 
-% Transmitter registers
-    0x00                                & TX\_DATA\_IN                              & $\text{maxOutputBits}+1$                                                     & W                                & 0x000                                   & Data word to be transmitted. The LSB is transmitted first after internal reversal.         \\ \hline
-    0x04                                & TX\_LOAD                                  & 1 bit                                                                        & W                                & 0x0                                     & Writing ‘1’ pushes the contents of TX\_DATA\_IN into the TX FIFO. This signal auto–clears. \\ \hline
-    0x08                                & TX\_BAUD\_RATE                            & \textit{dataWidth}                                                           & R/W                              & 115200                                  & Desired baud rate for transmission.                                                        \\ \hline
-    0x0C                                & TX\_CLOCK\_FREQ                           & \textit{dataWidth}                                                           & R/W                              & 25,000,000                              & System clock frequency for the TX baud generator.                                          \\ \hline
-    0x10                                & TX\_UPDATE\_BAUD                          & 1 bit                                                                        & W                                & 0x0                                     & Pulse ‘1’ to trigger recalculation of the baud divisor via the UartBaudRateGenerator.      \\ \hline
-    0x14                                & TX\_NUM\_OUTPUT\_BITS\_DB                 & $\lceil\log_2(\text{maxOutputBits})\rceil+1$                                 & R/W                              & 0x8 & Configures the number of data bits to be transmitted per frame. \\ \hline
-    0x18                                & TX\_USE\_PARITY\_DB                       & 1 bit                                                                        & R/W                              & 0x0                                     & Set to ‘1’ to enable parity generation on the TX side.                                     \\ \hline
-    0x1C                                & TX\_PARITY\_ODD\_DB                       & 1 bit                                                                        & R/W                              & 0x0                                     & When parity is enabled, ‘1’ selects odd parity; ‘0’ selects even parity.                   \\ \hline
-    0x20                                & TX\_CLOCKS\_PER\_BIT                      & $\lceil\log_2(\tfrac{\text{maxClockFrequency}}{\text{maxBaudRate}})\rceil+1$ & R & Calculated & Computed clock divisor used for TX bit timing. \\ \hline
-
-% Receiver registers
-    0x24                                & RX\_DATA                                  & $\text{maxOutputBits}+1$                                                     & R                                & 0x000                                   & Contains the received data word (includes parity bit if enabled).                          \\ \hline
-    0x28                                & RX\_DATA\_AVAILABLE                       & 1 bit                                                                        & R                                & 0x0                                     & High if a new word is available in the RX FIFO.                                            \\ \hline
-    0x2C                                & RX\_ERROR                                 & $\lceil\log_2(3)\rceil$                                                      & R                                & 0x0                                     & Error flags: 00 = No error, 01 = Parity error, 10 = Framing error, 11 = Overrun error.     \\ \hline
-    0x30                                & TOP\_ERROR                                & 1 bit                                                                        & R                                & 0x0                                     & Indicates configuration or top–level errors.                                               \\ \hline
-    0x34                                & RX\_CLEAR\_ERROR                          & 1 bit                                                                        & W                                & 0x0                                     & Writing ‘1’ clears the RX\_ERROR flags.                                                    \\ \hline
-    0x38                                & RX\_BAUD\_RATE                            & \textit{dataWidth}                                                           & R/W                              & 115200                                  & Desired baud rate for reception.                                                           \\ \hline
-    0x3C                                & RX\_CLOCK\_FREQ                           & \textit{dataWidth}                                                           & R/W                              & 25,000,000                              & System clock frequency for the RX baud generator.                                          \\ \hline
-    0x40                                & RX\_UPDATE\_BAUD                          & 1 bit                                                                        & W                                & 0x0                                     & Pulse ‘1’ to trigger an update of the RX baud divisor.                                     \\ \hline
-    0x44                                & RX\_NUM\_OUTPUT\_BITS\_DB                 & $\lceil\log_2(\text{maxOutputBits})\rceil+1$                                 & R/W                              & 0x8 & Configures the number of data bits expected per RX frame. \\ \hline
-    0x48                                & RX\_USE\_PARITY\_DB                       & 1 bit                                                                        & R/W                              & 0x0                                     & Set to ‘1’ to enable parity checking in RX.                                                \\ \hline
-    0x4C                                & RX\_PARITY\_ODD\_DB                       & 1 bit                                                                        & R/W                              & 0x0                                     & When parity is enabled, ‘1’ indicates odd parity; ‘0’ indicates even parity.               \\ \hline
-    0x50                                & RX\_CLOCKS\_PER\_BIT                      & $\lceil\log_2(\tfrac{\text{maxClockFrequency}}{\text{maxBaudRate}})\rceil+1$ & R & Calculated & Computed clock divisor used for RX bit sampling. \\ \hline
+0x0      & TX\_LOAD\_OFFSET             & W    & 0          & Desc \\ \hline
+0x4      & TX\_DATAIN\_OFFSET           & W    & 0          & Desc \\ \hline
+0x8      & TX\_BAUDRATE\_OFFSET         & W    & 0          & Desc \\ \hline
+0xC      & TX\_CLOCKFREQ\_OFFSET        & W    & 0          & Desc \\ \hline
+0x10     & TX\_UPDATEBAUD\_OFFSET       & W    & 0          & Desc \\ \hline
+0x14     & TX\_NUMOUTPUTBITSDB\_OFFSET  & W    & 0          & Desc \\ \hline
+0x18     & TX\_USEPARITYDB\_OFFSET      & W    & 0          & Desc \\ \hline
+0x1C     & TX\_PARITYODDDB\_OFFSET      & W    & 0          & Desc \\ \hline
+0x20     & TX\_ALMOSTEMPTYLEVEL\_OFFSET & W    & 0          & Desc \\ \hline
+0x24     & TX\_ALMOSTFULLLEVEL\_OFFSET  & W    & 0          & Desc \\ \hline
+0x28     & TX\_FIFOFULL\_OFFSET         & W    & 0          & Desc \\ \hline
+0x2C     & TX\_FIFOEMPTY\_OFFSET        & W    & 0          & Desc \\ \hline
+0x30     & TX\_FIFOALMOSTEMPTY\_OFFSET  & W    & 0          & Desc \\ \hline
+0x34     & TX\_FIFOALMOSTFULL\_OFFSET   & W    & 0          & Desc \\ \hline
+0x38     & RX\_DATA\_OFFSET             & W    & 0          & Desc \\ \hline
+0x3C     & RX\_DATAAVAILABLE\_OFFSET    & W    & 0          & Desc \\ \hline
+0x40     & ERROR\_OFFSET               & W    & 0          & Desc \\ \hline
+0x44     & CLEARERROR\_OFFSET          & W    & 0          & Desc \\ \hline
+0x48     & RX\_BAUDRATE\_OFFSET         & W    & 0          & Desc \\ \hline
+0x4C     & RX\_CLOCKFREQ\_OFFSET        & W    & 0          & Desc \\ \hline
+0x50     & RX\_UPDATEBAUD\_OFFSET       & W    & 0          & Desc \\ \hline
+0x54     & RX\_NUMOUTPUTBITSDB\_OFFSET  & W    & 0          & Desc \\ \hline
+0x58     & RX\_USEPARITYDB\_OFFSET      & W    & 0          & Desc \\ \hline
+0x5C     & RX\_PARITYODDDB\_OFFSET      & W    & 0          & Desc \\ \hline
+0x60     & RX\_ALMOSTEMPTYLEVEL\_OFFSET & W    & 0          & Desc \\ \hline
+0x64     & RX\_ALMOSTFULLLEVEL\_OFFSET  & W    & 0          & Desc \\ \hline
+0x68     & RX\_FIFOFULL\_OFFSET         & W    & 0          & Desc \\ \hline
+0x6C     & RX\_FIFOEMPTY\_OFFSET        & W    & 0          & Desc \\ \hline
+0x70     & RX\_FIFOALMOSTEMPTY\_OFFSET  & W    & 0          & Desc \\ \hline
+0x74     & RX\_FIFOALMOSTFULL\_OFFSET   & W    & 0          & Desc \\ \hline
+0x78     & RX\_CLOCKSPERBIT\_OFFSET     & W    & 0          & Desc \\ \hline
+0x7C     & TX\_CLOCKSPERBIT\_OFFSET     & W    & 0          & Desc \\ \hline
+0x80     & RX\_LSBFIRST\_OFFSET         & W    & 0          & Desc \\ \hline
+0x84     & TX\_LSBFIRST\_OFFSET         & W    & 0          & Desc \\ \hline
 \end{longtable}
 \captionof{table}{UART Register Map}
 \label{table:uart_register_map}
