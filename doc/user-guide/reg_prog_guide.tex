@@ -42,14 +42,14 @@ It should be noted that all registers are \textbf{Double Buffered} and are autom
     0x8 &
     TX\_BAUDRATE\_OFFSET &
     R/W &
-    0 &
+    115,200 &
     Controls the baud rate of the module. Is updated after TX\_UPDATEBAUD is asserted.
     \\ \hline
 
     0xC &
     TX\_CLOCKFREQ\_OFFSET &
     R/W &
-    0 &
+    25,000,000 &
     This does not control the clock frequency, it is used by the divider to configure the TX frequency and must match the module clock frequency. Is updated after TX\_UPDATEBAUD is asserted.
     \\ \hline
 
@@ -63,203 +63,225 @@ It should be noted that all registers are \textbf{Double Buffered} and are autom
     0x14 &
     TX\_NUMOUTPUTBITSDB\_OFFSET &
     R/W &
-    0 &
-    Desc \\ \hline
+    8 &
+    This controls the number of data bits in a TX transaction.
+    \\ \hline
 
-    
-    0x18 & 
-    TX\_USEPARITYDB\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x18 &
+    TX\_USEPARITYDB\_OFFSET &
+    R/W &
+    0 &
+    This controls whether to use a parity bit in a TX transaction.
+    \\ \hline
+
+    0x1C &
+    TX\_PARITYODDDB\_OFFSET &
+    R/W &
+    0 &
+    This controls whether to use odd or even parity in a TX transaction.
+    \\ \hline
+
+    0x20 &
+    TX\_ALMOSTEMPTYLEVEL\_OFFSET &
+    R/W &
+    1 &
+    This is the level of the TX FIFO that triggers the TX\_FIFOALMOSTEMPTY flag.
+    \\ \hline
+
+    0x24 &
+    TX\_ALMOSTFULLLEVEL\_OFFSET &
+    R/W &
+    bufferSize - 1 &
+    This is the level of the TX FIFO that triggers the TX\_FIFOALMOSTFULL flag.
+    \\ \hline
+
+    0x28 &
+    TX\_FIFOFULL\_OFFSET &
+    R &
+    0 &
+    This flag is set when the TX FIFO is full.
+    \\ \hline
+
+    0x2C &
+    TX\_FIFOEMPTY\_OFFSET &
+    R &
+    0 &
+    This flag is set when the TX FIFO is empty.
+    \\ \hline
+
+    0x30 &
+    TX\_FIFOALMOSTEMPTY\_OFFSET &
+    R &
+    0 &
+    This flag is set when the TX FIFO is at or below the TX\_ALMOSTEMPTYLEVEL.
+    \\ \hline
+
+    0x34 &
+    TX\_FIFOALMOSTFULL\_OFFSET &
+    R &
+    0 &
+    This flag is set when the TX FIFO is at or above the TX\_ALMOSTFULLLEVEL.
+    \\ \hline
+
+    0x38 &
+    RX\_DATA\_OFFSET &
+    R &
+    0 &
     Desc
     \\ \hline
-    
-    0x1C & 
-    TX\_PARITYODDDB\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x3C &
+    RX\_DATAPEEK\_OFFSET &
+    R &
+    0 &
     Desc
     \\ \hline
-    
-    0x20 & 
-    TX\_ALMOSTEMPTYLEVEL\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x40 &
+    RX\_DATAAVAILABLE\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x24 & 
-    TX\_ALMOSTFULLLEVEL\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x44 &
+    ERROR\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x28 & 
-    TX\_FIFOFULL\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x48 &
+    CLEARERROR\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x2C & 
-    TX\_FIFOEMPTY\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x4C &
+    RX\_BAUDRATE\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x30 & 
-    TX\_FIFOALMOSTEMPTY\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x50 &
+    RX\_CLOCKFREQ\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x34 & 
-    TX\_FIFOALMOSTFULL\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x54 &
+    RX\_UPDATEBAUD\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x38 & 
-    RX\_DATA\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x58 &
+    RX\_NUMOUTPUTBITSDB\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x3C & 
-    RX\_DATAAVAILABLE\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x5C &
+    RX\_USEPARITYDB\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x40 & 
-    ERROR\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x60 &
+    RX\_PARITYODDDB\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x44 & 
-    CLEARERROR\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x64 &
+    RX\_ALMOSTEMPTYLEVEL\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x48 & 
-    RX\_BAUDRATE\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x68 &
+    RX\_ALMOSTFULLLEVEL\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x4C & 
-    RX\_CLOCKFREQ\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x6C &
+    RX\_FIFOFULL\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x50 & 
-    RX\_UPDATEBAUD\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x70 &
+    RX\_FIFOEMPTY\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x54 & 
-    RX\_NUMOUTPUTBITSDB\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x74 &
+    RX\_FIFOALMOSTEMPTY\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x58 & 
-    RX\_USEPARITYDB\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x78 &
+    RX\_FIFOALMOSTFULL\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x5C & 
-    RX\_PARITYODDDB\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x7C &
+    RX\_CLOCKSPERBIT\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x60 & 
-    RX\_ALMOSTEMPTYLEVEL\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x80 &
+    TX\_CLOCKSPERBIT\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x64 & 
-    RX\_ALMOSTFULLLEVEL\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x84 &
+    RX\_LSBFIRST\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x68 & 
-    RX\_FIFOFULL\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x88 &
+    TX\_LSBFIRST\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x6C & 
-    RX\_FIFOEMPTY\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x8C &
+    RX\_FLUSH\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
-    
-    0x70 & 
-    RX\_FIFOALMOSTEMPTY\_OFFSET & 
-    R/W & 
-    0 & 
-    Desc
-    \\ \hline
-    
-    0x74 & 
-    RX\_FIFOALMOSTFULL\_OFFSET & 
-    R/W & 
-    0 & 
-    Desc
-    \\ \hline
-    
-    0x78 & 
-    RX\_CLOCKSPERBIT\_OFFSET & 
-    R/W & 
-    0 & 
-    Desc
-    \\ \hline
-    
-    0x7C & 
-    TX\_CLOCKSPERBIT\_OFFSET & 
-    R/W & 
-    0 & 
-    Desc
-    \\ \hline
-    
-    0x80 & 
-    RX\_LSBFIRST\_OFFSET & 
-    R/W & 
-    0 & 
-    Desc
-    \\ \hline
-    
-    0x84 & 
-    TX\_LSBFIRST\_OFFSET & 
-    R/W & 
-    0 & 
+
+    0x90 &
+    TX\_FLUSH\_OFFSET &
+    R/W &
+    0 &
     Desc
     \\ \hline
 \end{longtable}
@@ -459,25 +481,28 @@ Below is an example header file and source file to use the Uart module.
 #define TX_FIFOALMOSTEMPTY_OFFSET 0x30
 #define TX_FIFOALMOSTFULL_OFFSET 0x34
 #define RX_DATA_OFFSET 0x38
-#define RX_DATAAVAILABLE_OFFSET 0x3C
-#define ERROR_OFFSET 0x40
-#define CLEARERROR_OFFSET 0x44
-#define RX_BAUDRATE_OFFSET 0x48
-#define RX_CLOCKFREQ_OFFSET 0x4C
-#define RX_UPDATEBAUD_OFFSET 0x50
-#define RX_NUMOUTPUTBITSDB_OFFSET 0x54
-#define RX_USEPARITYDB_OFFSET 0x58
-#define RX_PARITYODDDB_OFFSET 0x5C
-#define RX_ALMOSTEMPTYLEVEL_OFFSET 0x60
-#define RX_ALMOSTFULLLEVEL_OFFSET 0x64
-#define RX_FIFOFULL_OFFSET 0x68
-#define RX_FIFOEMPTY_OFFSET 0x6C
-#define RX_FIFOALMOSTEMPTY_OFFSET 0x70
-#define RX_FIFOALMOSTFULL_OFFSET 0x74
-#define RX_CLOCKSPERBIT_OFFSET 0x78
-#define TX_CLOCKSPERBIT_OFFSET 0x7C
-#define RX_LSBFIRST_OFFSET 0x80
-#define TX_LSBFIRST_OFFSET 0x84
+#define RX_DATAPEEK_OFFSET 0x3C
+#define RX_DATAAVAILABLE_OFFSET 0x40
+#define ERROR_OFFSET 0x44
+#define CLEARERROR_OFFSET 0x48
+#define RX_BAUDRATE_OFFSET 0x4C
+#define RX_CLOCKFREQ_OFFSET 0x50
+#define RX_UPDATEBAUD_OFFSET 0x54
+#define RX_NUMOUTPUTBITSDB_OFFSET 0x58
+#define RX_USEPARITYDB_OFFSET 0x5C
+#define RX_PARITYODDDB_OFFSET 0x60
+#define RX_ALMOSTEMPTYLEVEL_OFFSET 0x64
+#define RX_ALMOSTFULLLEVEL_OFFSET 0x68
+#define RX_FIFOFULL_OFFSET 0x6C
+#define RX_FIFOEMPTY_OFFSET 0x70
+#define RX_FIFOALMOSTEMPTY_OFFSET 0x74
+#define RX_FIFOALMOSTFULL_OFFSET 0x78
+#define RX_CLOCKSPERBIT_OFFSET 0x7C
+#define TX_CLOCKSPERBIT_OFFSET 0x80
+#define RX_LSBFIRST_OFFSET 0x84
+#define TX_LSBFIRST_OFFSET 0x88
+#define RX_FLUSH_OFFSET 0x8C
+#define TX_FLUSH_OFFSET 0x90
 
 #endif REGISTER_MAP_H
 \end{lstlisting}
