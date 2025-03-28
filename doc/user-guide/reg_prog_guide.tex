@@ -5,6 +5,7 @@ The UART module is controlled via an APB interface that maps configuration, stat
 \subsection{Register Map Summary}
 
 The table below summarizes the complete register space. All addresses assume a 32–bit APB data bus. Note that some registers (e.g. TX\_CLOCKS\_PER\_BIT and RX\_CLOCKS\_PER\_BIT) are computed dynamically and are read–only.
+It should be noted that all registers are \textbf{Double Buffered} and are automatically synchronized. This means that settings can be configured without the need for software synchronization.
 
 \renewcommand*{\arraystretch}{1.25}
 \begingroup
@@ -25,40 +26,74 @@ The table below summarizes the complete register space. All addresses assume a 3
     \hline
     \endfoot
 
-0x0      & TX\_LOAD\_OFFSET             & W    & 0          & Desc \\ \hline
-0x4      & TX\_DATAIN\_OFFSET           & W    & 0          & Desc \\ \hline
-0x8      & TX\_BAUDRATE\_OFFSET         & W    & 0          & Desc \\ \hline
-0xC      & TX\_CLOCKFREQ\_OFFSET        & W    & 0          & Desc \\ \hline
-0x10     & TX\_UPDATEBAUD\_OFFSET       & W    & 0          & Desc \\ \hline
-0x14     & TX\_NUMOUTPUTBITSDB\_OFFSET  & W    & 0          & Desc \\ \hline
-0x18     & TX\_USEPARITYDB\_OFFSET      & W    & 0          & Desc \\ \hline
-0x1C     & TX\_PARITYODDDB\_OFFSET      & W    & 0          & Desc \\ \hline
-0x20     & TX\_ALMOSTEMPTYLEVEL\_OFFSET & W    & 0          & Desc \\ \hline
-0x24     & TX\_ALMOSTFULLLEVEL\_OFFSET  & W    & 0          & Desc \\ \hline
-0x28     & TX\_FIFOFULL\_OFFSET         & W    & 0          & Desc \\ \hline
-0x2C     & TX\_FIFOEMPTY\_OFFSET        & W    & 0          & Desc \\ \hline
-0x30     & TX\_FIFOALMOSTEMPTY\_OFFSET  & W    & 0          & Desc \\ \hline
-0x34     & TX\_FIFOALMOSTFULL\_OFFSET   & W    & 0          & Desc \\ \hline
-0x38     & RX\_DATA\_OFFSET             & W    & 0          & Desc \\ \hline
-0x3C     & RX\_DATAAVAILABLE\_OFFSET    & W    & 0          & Desc \\ \hline
-0x40     & ERROR\_OFFSET               & W    & 0          & Desc \\ \hline
-0x44     & CLEARERROR\_OFFSET          & W    & 0          & Desc \\ \hline
-0x48     & RX\_BAUDRATE\_OFFSET         & W    & 0          & Desc \\ \hline
-0x4C     & RX\_CLOCKFREQ\_OFFSET        & W    & 0          & Desc \\ \hline
-0x50     & RX\_UPDATEBAUD\_OFFSET       & W    & 0          & Desc \\ \hline
-0x54     & RX\_NUMOUTPUTBITSDB\_OFFSET  & W    & 0          & Desc \\ \hline
-0x58     & RX\_USEPARITYDB\_OFFSET      & W    & 0          & Desc \\ \hline
-0x5C     & RX\_PARITYODDDB\_OFFSET      & W    & 0          & Desc \\ \hline
-0x60     & RX\_ALMOSTEMPTYLEVEL\_OFFSET & W    & 0          & Desc \\ \hline
-0x64     & RX\_ALMOSTFULLLEVEL\_OFFSET  & W    & 0          & Desc \\ \hline
-0x68     & RX\_FIFOFULL\_OFFSET         & W    & 0          & Desc \\ \hline
-0x6C     & RX\_FIFOEMPTY\_OFFSET        & W    & 0          & Desc \\ \hline
-0x70     & RX\_FIFOALMOSTEMPTY\_OFFSET  & W    & 0          & Desc \\ \hline
-0x74     & RX\_FIFOALMOSTFULL\_OFFSET   & W    & 0          & Desc \\ \hline
-0x78     & RX\_CLOCKSPERBIT\_OFFSET     & W    & 0          & Desc \\ \hline
-0x7C     & TX\_CLOCKSPERBIT\_OFFSET     & W    & 0          & Desc \\ \hline
-0x80     & RX\_LSBFIRST\_OFFSET         & W    & 0          & Desc \\ \hline
-0x84     & TX\_LSBFIRST\_OFFSET         & W    & 0          & Desc \\ \hline
+    0x0 &
+    TX\_LOAD\_OFFSET &
+    R/W &
+    0 &
+    When set to 1, all data in the TX fifo is sent out sequentially. It is automatically reset to 0 and does not have to be reset.
+    \\ \hline
+
+    0x4 &
+    TX\_DATAIN\_OFFSET &
+    R/W & 0 &
+    When set, the data is sent to the back of the TX FIFO. It is automatically reset to 0 and does not have to be reset.
+    \\ \hline
+
+    0x8 &
+    TX\_BAUDRATE\_OFFSET &
+    R/W &
+    0 &
+    Controls the baud rate of the module. Is updated after TX\_UPDATEBAUD is asserted.
+    \\ \hline
+
+    0xC &
+    TX\_CLOCKFREQ\_OFFSET &
+    R/W &
+    0 &
+    This does not control the clock frequency, it is used by the divider to configure the TX frequency and must match the module clock frequency. Is updated after TX\_UPDATEBAUD is asserted.
+    \\ \hline
+
+    0x10 &
+    TX\_UPDATEBAUD\_OFFSET &
+    R/W &
+    0 &
+    This tells the TX module to apply the changes in TX\_BAUDRATE, and TX\_CLOCKFREQ. It can take up to 32 cycles to converge.
+    \\ \hline
+
+    0x14 &
+    TX\_NUMOUTPUTBITSDB\_OFFSET &
+    R/W &
+    0 &
+    Desc \\ \hline
+
+    0x18                                         & TX\_USEPARITYDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x1C                                         & TX\_PARITYODDDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x20                                         & TX\_ALMOSTEMPTYLEVEL\_OFFSET              & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x24                                         & TX\_ALMOSTFULLLEVEL\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x28                                         & TX\_FIFOFULL\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x2C                                         & TX\_FIFOEMPTY\_OFFSET                     & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x30                                         & TX\_FIFOALMOSTEMPTY\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x34                                         & TX\_FIFOALMOSTFULL\_OFFSET                & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x38                                         & RX\_DATA\_OFFSET                          & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x3C                                         & RX\_DATAAVAILABLE\_OFFSET                 & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x40                                         & ERROR\_OFFSET                             & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x44                                         & CLEARERROR\_OFFSET                        & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x48                                         & RX\_BAUDRATE\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x4C                                         & RX\_CLOCKFREQ\_OFFSET                     & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x50                                         & RX\_UPDATEBAUD\_OFFSET                    & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x54                                         & RX\_NUMOUTPUTBITSDB\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x58                                         & RX\_USEPARITYDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x5C                                         & RX\_PARITYODDDB\_OFFSET                   & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x60                                         & RX\_ALMOSTEMPTYLEVEL\_OFFSET              & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x64                                         & RX\_ALMOSTFULLLEVEL\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x68                                         & RX\_FIFOFULL\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x6C                                         & RX\_FIFOEMPTY\_OFFSET                     & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x70                                         & RX\_FIFOALMOSTEMPTY\_OFFSET               & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x74                                         & RX\_FIFOALMOSTFULL\_OFFSET                & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x78                                         & RX\_CLOCKSPERBIT\_OFFSET                  & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x7C                                         & TX\_CLOCKSPERBIT\_OFFSET                  & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x80                                         & RX\_LSBFIRST\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
+    0x84                                         & TX\_LSBFIRST\_OFFSET                      & R/W                              & 0                                       & Desc                                    \\ \hline
 \end{longtable}
 \captionof{table}{UART Register Map}
 \label{table:uart_register_map}
