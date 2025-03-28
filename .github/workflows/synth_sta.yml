@@ -47,10 +47,10 @@ jobs:
         with:
           files: |
             release_artifacts.tar.gz
-            out/doc/*.pdf
+            # out/doc/*.pdf
             # release_artifacts/verilog/*.v
             # release_artifacts/*.json
-            # release_artifacts/*.tex
+          # release_artifacts/*.tex
           tag_name: v${{ github.run_number }}
           name: "Release ${{ github.run_number }}"
           draft: false
