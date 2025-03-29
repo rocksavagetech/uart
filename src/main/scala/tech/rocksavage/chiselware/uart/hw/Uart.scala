@@ -571,6 +571,13 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
         printf("[Uart.scala DEBUG] Clearing error registers\n")
     }
 
+    when(rxFlush) {
+        rxFlush := false.B
+    }
+    when(txFlush) {
+        txFlush := false.B
+    }
+
     // Collect code coverage points
     if (uartParams.coverage) {
         // Cover the entire IO bundle recursively.
