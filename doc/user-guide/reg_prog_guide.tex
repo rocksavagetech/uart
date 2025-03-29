@@ -12,56 +12,56 @@ It should be noted that all registers are \textbf{Double Buffered} and are autom
 \small
 \rowcolors{2}{gray!30}{gray!10}
 \arrayrulecolor{gray!80}
-\begin{longtable}{|c|c|c|c|p{0.35\textwidth}|}
+\begin{longtable}{|c|c|c|c|p{0.25\textwidth}|}
     \hline
     \rowcolor{gray}
-    \textcolor{white}{\textbf{Relative Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
+    \textcolor{white}{\textbf{Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
     \endfirsthead
 
     \hline
     \rowcolor{gray}
-    \textcolor{white}{\textbf{Relative Address}} & \textcolor{white}{\textbf{Register Name}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
+    \textcolor{white}{\textbf{Address}} & \textcolor{white}{\textbf{Name}} & \textcolor{white}{\textbf{Type}} & \textcolor{white}{\textbf{Reset Value}} & \textcolor{white}{\textbf{Description}} \\ \hline
     \endhead
 
     \hline
     \endfoot
 
     0x0 &
-    TX\_LOAD\_OFFSET &
+    TX\_LOAD &
     R/W &
     0 &
     When set to 1, all data in the TX fifo is sent out sequentially. It is automatically reset to 0 and does not have to be reset.
     \\ \hline
 
     0x4 &
-    TX\_DATAIN\_OFFSET &
+    TX\_DATAIN &
     R/W & 0 &
     When set, the data is sent to the back of the TX FIFO. It is automatically reset to 0 and does not have to be reset.
     \\ \hline
 
     0x8 &
-    TX\_BAUDRATE\_OFFSET &
+    TX\_BAUDRATE &
     R/W &
     115,200 &
     Controls the baud rate of the TX module. Is updated after TX\_UPDATEBAUD is asserted.
     \\ \hline
 
     0xC &
-    TX\_CLOCKFREQ\_OFFSET &
+    TX\_CLOCKFREQ &
     R/W &
     25,000,000 &
     This does not control the clock frequency, it is used by the divider to configure the TX frequency and must match the module clock frequency. Is updated after TX\_UPDATEBAUD is asserted.
     \\ \hline
 
     0x10 &
-    TX\_UPDATEBAUD\_OFFSET &
+    TX\_UPDATEBAUD &
     R/W &
     0 &
     This tells the TX module to apply the changes in TX\_BAUDRATE, and TX\_CLOCKFREQ. It can take up to 32 cycles to converge.
     \\ \hline
 
     0x14 &
-    TX\_NUMOUTPUTBITSDB\_OFFSET &
+    TX\_NUMOUTPUTBITSDB &
     R/W &
     8 &
     This controls the number of data bits in a TX transaction.
@@ -69,217 +69,217 @@ It should be noted that all registers are \textbf{Double Buffered} and are autom
 
 
     0x18 &
-    TX\_USEPARITYDB\_OFFSET &
+    TX\_USEPARITYDB &
     R/W &
     0 &
     This controls whether to use a parity bit in a TX transaction.
     \\ \hline
 
     0x1C &
-    TX\_PARITYODDDB\_OFFSET &
+    TX\_PARITYODDDB &
     R/W &
     0 &
     This controls whether to use odd or even parity in a TX transaction.
     \\ \hline
 
     0x20 &
-    TX\_ALMOSTEMPTYLEVEL\_OFFSET &
+    TX\_ALMOSTEMPTYLEVEL &
     R/W &
     1 &
     This is the level of the TX FIFO that triggers the TX\_FIFOALMOSTEMPTY flag.
     \\ \hline
 
     0x24 &
-    TX\_ALMOSTFULLLEVEL\_OFFSET &
+    TX\_ALMOSTFULLLEVEL &
     R/W &
     bufferSize - 1 &
     This is the level of the TX FIFO that triggers the TX\_FIFOALMOSTFULL flag.
     \\ \hline
 
     0x28 &
-    TX\_FIFOFULL\_OFFSET &
+    TX\_FIFOFULL &
     R &
     0 &
     This flag is set when the TX FIFO is full.
     \\ \hline
 
     0x2C &
-    TX\_FIFOEMPTY\_OFFSET &
+    TX\_FIFOEMPTY &
     R &
-    0 &
+    1 &
     This flag is set when the TX FIFO is empty.
     \\ \hline
 
     0x30 &
-    TX\_FIFOALMOSTEMPTY\_OFFSET &
+    TX\_FIFOALMOSTEMPTY &
     R &
     0 &
     This flag is set when the TX FIFO is at or below the TX\_ALMOSTEMPTYLEVEL.
     \\ \hline
 
     0x34 &
-    TX\_FIFOALMOSTFULL\_OFFSET &
+    TX\_FIFOALMOSTFULL &
     R &
     0 &
     This flag is set when the TX FIFO is at or above the TX\_ALMOSTFULLLEVEL.
     \\ \hline
 
     0x38 &
-    RX\_DATA\_OFFSET &
+    RX\_DATA &
     R &
     0 &
     This is the data at the top of the RX FIFO. \textbf{When read, it is removed from the FIFO}, and the next item is then shown.
     \\ \hline
 
     0x3C &
-    RX\_DATAPEEK\_OFFSET &
+    RX\_DATAPEEK &
     R &
     0 &
     This is the data at the top of the RX FIFO. This can be read without removing the data from the FIFO.
     \\ \hline
 
     0x40 &
-    RX\_DATAAVAILABLE\_OFFSET &
+    RX\_DATAAVAILABLE &
     R &
     0 &
     This flag is set when there is data in the RX FIFO. Reading the RX\_DATA and RX\_DATAPEEK registers while this is low will result in undefined behavior.
     \\ \hline
 
     0x44 &
-    ERROR\_OFFSET &
+    ERROR &
     R &
     0 &
     This is the error register. See the following section on the error format for a more detailed description.
     \\ \hline
 
     0x48 &
-    CLEARERROR\_OFFSET &
+    CLEARERROR &
     R/W &
     0 &
     This resets all error flags in the ERROR register when asserted. It is automatically reset to 0 and does not have to be reset.
     \\ \hline
 
     0x4C &
-    RX\_BAUDRATE\_OFFSET &
+    RX\_BAUDRATE &
     R/W &
-    0 &
+    115,200 &
     Controls the baud rate of the RX module. Is updated after RX\_UPDATEBAUD is asserted.
     \\ \hline
 
     0x50 &
-    RX\_CLOCKFREQ\_OFFSET &
+    RX\_CLOCKFREQ &
     R/W &
-    0 &
+    25,000,000 &
     This does not control the clock frequency, it is used by the divider to configure the RX frequency and must match the module clock frequency. Is updated after RX\_UPDATEBAUD is asserted.
     \\ \hline
 
     0x54 &
-    RX\_UPDATEBAUD\_OFFSET &
+    RX\_UPDATEBAUD &
     R/W &
     0 &
     This tells the RX module to apply the changes in RX\_BAUDRATE, and RX\_CLOCKFREQ. It can take up to 32 cycles to converge.
     \\ \hline
 
     0x58 &
-    RX\_NUMOUTPUTBITSDB\_OFFSET &
+    RX\_NUMOUTPUTBITSDB &
     R/W &
-    0 &
+    8 &
     This controls the number of data bits in a RX transaction.
     \\ \hline
 
     0x5C &
-    RX\_USEPARITYDB\_OFFSET &
+    RX\_USEPARITYDB &
     R/W &
     0 &
     This controls whether to use a parity bit in a RX transaction.
     \\ \hline
 
     0x60 &
-    RX\_PARITYODDDB\_OFFSET &
+    RX\_PARITYODDDB &
     R/W &
     0 &
     This controls whether to use odd or even parity in a RX transaction.
     \\ \hline
 
     0x64 &
-    RX\_ALMOSTEMPTYLEVEL\_OFFSET &
+    RX\_ALMOSTEMPTYLEVEL &
     R/W &
-    0 &
+    1 &
     This is the level of the RX FIFO that triggers the RX\_FIFOALMOSTEMPTY flag.
     \\ \hline
 
     0x68 &
-    RX\_ALMOSTFULLLEVEL\_OFFSET &
+    RX\_ALMOSTFULLLEVEL &
     R/W &
-    0 &
+    bufferSize - 1 &
     This is the level of the RX FIFO that triggers the RX\_FIFOALMOSTFULL flag.
     \\ \hline
 
     0x6C &
-    RX\_FIFOFULL\_OFFSET &
+    RX\_FIFOFULL &
     R &
     0 &
     This flag is set when the RX FIFO is full.
     \\ \hline
 
     0x70 &
-    RX\_FIFOEMPTY\_OFFSET &
+    RX\_FIFOEMPTY &
     R &
     0 &
     This flag is set when the RX FIFO is empty.
     \\ \hline
 
     0x74 &
-    RX\_FIFOALMOSTEMPTY\_OFFSET &
+    RX\_FIFOALMOSTEMPTY &
     R &
     0 &
     This flag is set when the RX FIFO is at or below the RX\_ALMOSTEMPTYLEVEL.
     \\ \hline
 
     0x78 &
-    RX\_FIFOALMOSTFULL\_OFFSET &
+    RX\_FIFOALMOSTFULL &
     R &
     0 &
     This flag is set when the RX FIFO is at or above the RX\_ALMOSTFULLLEVEL.
     \\ \hline
 
     0x7C &
-    RX\_CLOCKSPERBIT\_OFFSET &
+    RX\_CLOCKSPERBIT &
     R &
     0 &
     This is the calculated number of clock cycles per bit in the RX module.
     \\ \hline
 
     0x80 &
-    TX\_CLOCKSPERBIT\_OFFSET &
+    TX\_CLOCKSPERBIT &
     R &
     0 &
     This is the calculated number of clock cycles per bit in the TX module.
     \\ \hline
 
     0x84 &
-    RX\_LSBFIRST\_OFFSET &
+    RX\_LSBFIRST &
     R/W &
-    0 &
+    1 &
     This controls whether the RX module expects data LSB first or MSB first.
     \\ \hline
 
     0x88 &
-    TX\_LSBFIRST\_OFFSET &
+    TX\_LSBFIRST &
     R/W &
-    0 &
+    1 &
     This controls whether the TX module sends data LSB first or MSB first.
     \\ \hline
 
     0x8C &
-    RX\_FLUSH\_OFFSET &
+    RX\_FLUSH &
     R/W &
     0 &
     When asserted, this tells the RX module to flush the RX FIFO. It is automatically reset to 0 and does not have to be reset.
     \\ \hline
 
     0x90 &
-    TX\_FLUSH\_OFFSET &
+    TX\_FLUSH &
     R/W &
     0 &
     When asserted, this tells the TX module to flush the TX FIFO. It is automatically reset to 0 and does not have to be reset.
