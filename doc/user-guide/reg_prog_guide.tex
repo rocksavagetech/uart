@@ -128,28 +128,28 @@ It should be noted that all registers are \textbf{Double Buffered} and are autom
     RX\_DATA\_OFFSET &
     R &
     0 &
-    Desc
+    This is the data at the top of the RX FIFO. \textbf{When read, it is removed from the FIFO}, and the next item is then shown.
     \\ \hline
 
     0x3C &
     RX\_DATAPEEK\_OFFSET &
     R &
     0 &
-    Desc
+    This is the data at the top of the RX FIFO. This can be read without removing the data from the FIFO.
     \\ \hline
 
     0x40 &
     RX\_DATAAVAILABLE\_OFFSET &
-    R/W &
+    R &
     0 &
-    Desc
+    This flag is set when there is data in the RX FIFO. Reading the RX\_DATA and RX\_DATAPEEK registers while this is low will result in undefined behavior.
     \\ \hline
 
     0x44 &
     ERROR\_OFFSET &
     R/W &
     0 &
-    Desc
+    This is the error register. See the following section for a more detailed description of the specific error bits.
     \\ \hline
 
     0x48 &
@@ -287,6 +287,149 @@ It should be noted that all registers are \textbf{Double Buffered} and are autom
 \end{longtable}
 \captionof{table}{UART Register Map}
 \label{table:uart_register_map}
+\endgroup
+
+\subsection{Error Register Description}
+
+The error register (ERROR) is a 8-bit register that contains the following error flags:
+\renewcommand*{\arraystretch}{1.25}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\arrayrulecolor{gray!80}
+\begin{longtable}{|c|c|c|c|c|c|c|c|}
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Bit 7} & \textcolor{white}{Bit 6} & \textcolor{white}{Bit 5} & \textcolor{white}{Bit 4} & \textcolor{white}{Bit 3} & \textcolor{white}{Bit 2} & \textcolor{white}{Bit 1} & \textcolor{white}{Bit 0} \\ \hline
+    \endfirsthead
+
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Bit 7} & \textcolor{white}{Bit 6} & \textcolor{white}{Bit 5} & \textcolor{white}{Bit 4} & \textcolor{white}{Bit 3} & \textcolor{white}{Bit 2} & \textcolor{white}{Bit 1} & \textcolor{white}{Bit 0} \\ \hline
+    \endhead
+
+    \hline
+    \endfoot
+
+    TOP1 & RX3 & RX2 & RX1 & TX3 & TX2 & TX1 & ADDR1 \\ \hline
+\end{longtable}
+\captionof{table}{UART Error Description}
+\label{table:uart_error}
+\endgroup
+
+\subsubsection{Top Error Register Bits}
+\renewcommand*{\arraystretch}{1.25}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\arrayrulecolor{gray!80}
+\begin{longtable}{|c|c|}
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endfirsthead
+
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endhead
+
+    \hline
+    \endfoot
+
+    0 & No Error \\ \hline
+    1 & Invalid Register Programming \\ \hline
+\end{longtable}
+\captionof{table}{UART Top Error Description}
+\label{table:uart_top_error}
+\endgroup
+
+\subsubsection{RX Error Register Bits}
+\renewcommand*{\arraystretch}{1.25}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\arrayrulecolor{gray!80}
+\begin{longtable}{|c|c|}
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endfirsthead
+
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endhead
+
+    \hline
+    \endfoot
+
+    0 & No Error \\ \hline
+    1 & Start Bit Error \\ \hline
+    2 & No Stop Bit was Detected \\ \hline
+    3 & A Parity Mismatch was Detected \\ \hline
+    4 & The FIFO was read while empty \\ \hline
+    5 & The FIFO overflowed \\ \hline
+\end{longtable}
+\captionof{table}{UART RX Error Description}
+\label{table:uart_rx_error}
+\endgroup
+
+\subsubsection{TX Error Register Bits}
+\renewcommand*{\arraystretch}{1.25}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\arrayrulecolor{gray!80}
+\begin{longtable}{|c|c|}
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endfirsthead
+
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endhead
+
+    \hline
+    \endfoot
+
+    0 & No Error \\ \hline
+    1 & A Parity Mismatch was Detected \\ \hline
+    2 & No Stop Bit was Detected \\ \hline
+    3 & The FIFO was loaded while empty \\ \hline
+    4 & The FIFO overflowed \\ \hline
+\end{longtable}
+\captionof{table}{UART TX Error Description}
+\label{table:uart_tx_error}
+\endgroup
+
+\subsubsection{Addr Decoder Error Register Bits}
+\renewcommand*{\arraystretch}{1.25}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\arrayrulecolor{gray!80}
+\begin{longtable}{|c|c|}
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endfirsthead
+
+    \hline
+    \rowcolor{gray}
+    \textcolor{white}{Value} & \textcolor{white}{Description}  \\ \hline
+    \endhead
+
+    \hline
+    \endfoot
+
+    0 & No Error \\ \hline
+    1 & An invalid address was detected \\ \hline
+\end{longtable}
+\captionof{table}{UART Addr Decoder Error Description}
+\label{table:uart_addrdecode_error}
 \endgroup
 
 \subsection{Parameter Relationships and Calculations}
