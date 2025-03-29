@@ -6,12 +6,22 @@ Example synthesis results vary based on \texttt{fifoDepth} and other settings. A
 \input{../../out/doc/synth_sta.tex}
 
 \subsection{Timing Constraints}
-An \texttt{.sdc} file can be generated to specify clock period, input/output constraints, etc. For example:
+An \texttt{.sdc} file is automatically generated when \texttt{make sta} is run. The constraints are as follows:
 \begin{verbatim}
-create_clock -name PCLK -period 10.0 [get_ports PCLK]
-set_input_delay 2.0 -clock PCLK [get_ports rx]
-set_output_delay 2.0 -clock PCLK [get_ports tx]
+create_clock -period 5.0 -waveform {0 2.5} clock
+set_input_delay -clock clock 1.0 {io_apb_PADDR}
+set_input_delay -clock clock 1.0 {io_apb_PENABLE}
+set_output_delay -clock clock 1.0 {io_apb_PRDATA}
+set_output_delay -clock clock 1.0 {io_apb_PREADY}
+set_input_delay -clock clock 1.0 {io_apb_PSEL}
+set_output_delay -clock clock 1.0 {io_apb_PSLVERR}
+set_input_delay -clock clock 1.0 {io_apb_PWDATA}
+set_input_delay -clock clock 1.0 {io_apb_PWRITE}
+set_output_delay -clock clock 1.0 {io_interrupts_dataReceived}
+set_input_delay -clock clock 1.0 {io_rx}
+set_output_delay -clock clock 1.0 {io_tx}
+set_input_delay -clock clock 1.0 {reset}
 \end{verbatim}
 
 \subsection{Multicycle and False Paths}
-Typically, no multicycle or false paths are required if the design runs entirely from \texttt{PCLK} with no asynchronous logic. Check your usage and tool warnings for final closure.
+None.

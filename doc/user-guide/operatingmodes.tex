@@ -1,6 +1,10 @@
 \section{Operating Modes}
 
-The UART module is designed for full–duplex asynchronous serial communication. It implements independent transmitter (TX) and receiver (RX) paths that operate concurrently. Both paths include configurable settings for baud rate, data length, and parity. In addition, each side incorporates an internal dynamic FIFO buffer to decouple external data handling from the serial transmission or reception. This section describes the operating modes of the UART module in detail.
+The UART module is designed for full–duplex asynchronous serial communication.
+It implements independent transmitter (TX) and receiver (RX) paths that operate concurrently.
+Both paths include configurable settings for baud rate, data length, and parity.
+In addition, each side incorporates an internal FIFO buffer to decouple external data handling
+from the serial transmission or reception.
 
 \begin{figure}[H]
     \centering
@@ -8,22 +12,19 @@ The UART module is designed for full–duplex asynchronous serial communication.
     \caption{Frame Formats}
     \label{fig:frame_formats}
   \end{figure}
-  
-\subsection{Transmitter Mode}
 
-When operating in transmitter mode, the UART transmitter performs the following functions:
+\subsection{Modes}
 
 \begin{itemize}
     \item \textbf{Data Buffering:} 
     \begin{itemize}
-        \item Software writes data into the \texttt{TX\_DATA\_IN} register.
-        \item A write trigger (e.g., pulsing \texttt{TX\_LOAD} or \texttt{txDataRegWrite}) pushes the word into an internal dynamic FIFO. The FIFO depth is parameterized by \texttt{bufferSize}.
-        \item The transmitter state machine automatically pops data from the FIFO when a transmission is ready.
+        \item Software writes data into the \texttt{TX\_DATA\_IN} register which automatically write into the FIFO.
+        \item A send trigger (e.g., pulsing \texttt{TX\_LOAD}) pops all data from the FIFO in the order it came in one after the other.
     \end{itemize}
     
     \item \textbf{Baud Rate Updating:}
     \begin{itemize}
-        \item The TX path includes a dedicated \texttt{UartBaudRateGenerator} module.
+        \item The Both the TX and RX paths include dedicated \texttt{UartBaudRateGenerator} modules.
         \item Software sets the desired baud rate and clock frequency via registers (\texttt{TX\_BAUD\_RATE} and \texttt{TX\_CLOCK\_FREQ}) and then pulses the update control (e.g., \texttt{TX\_UPDATE\_BAUD}).
         \item The transmitter enters a \texttt{BaudUpdating} state. The baud generator computes the effective \texttt{clocksPerBit} (i.e. the number of system clocks per transmitted bit) and asserts a \texttt{baudValid} signal when complete.
         \item Once valid, the computed divisor is stored in \texttt{clocksPerBitReg} and the state machine transitions back to \texttt{Idle}.

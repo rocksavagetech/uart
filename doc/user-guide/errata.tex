@@ -2,7 +2,9 @@
 
 \subsection{Errata}
 \begin{itemize}
-    \item It should be noted that the baud rate is set by an interative divider. It can take up to 32 clock cycles to converge to a division result.
+    \item The baud rate is set by an interative divider. It can take up to 32 clock cycles to converge to a division result.
+    \item The control signals are double buffered and will apply in the IDLE (or BAUD UPDATING for non-baud related signals) state of the state machines
+    for both RX and TX modules. No software synchronization is required.
 \end{itemize}
 
 \subsection{Known Issues}

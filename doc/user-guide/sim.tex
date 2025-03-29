@@ -2,22 +2,29 @@
 \subsection{Tests}
 The test bench verifies:
 \begin{itemize}
-  \item Basic TX/RX functionality
-  \item Baud rate configuration
-  \item Parity generation and checking
-  \item Error detection (parity, framing)
-  \item APB register interface
+  \item All configuration options for both RX and TX
+    \begin{itemize}
+      \item Parity generation and checking
+      \item Data length
+      \item Baud Rate Generation
+      \item LSB or MSB first
+    \end{itemize}
+
+  \item Error detection
+    \begin{itemize}
+        \item FIFO overflow and Underflow
+        \item Invalid Register Programming
+        \item Invalid Stop Bit
+        \item Invalid Parity Bit
+      \end{itemize}
   \item Full-duplex operation
-  \item Boundary cases (minimum/maximum baud rates)
 \end{itemize}
 
-\subsection{Code Coverage}
+\subsection{Coverage}
 The verification suite achieves:
 \begin{itemize}
-  \item 100\% register toggle coverage
-  \item 100\% FSM state coverage
-  \item 95\% branch coverage
-  \item All error conditions exercised
+  \item 97.83\% toggle coverage
+  \item 99.48\% code coverage
 \end{itemize}
 
 \subsection{Running Simulation}
