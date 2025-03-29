@@ -2,6 +2,17 @@
 
 The parameters for the \textbf{UART} module are listed in Table~\ref{table:uart_params}. These parameters configure the APB interface, baud rate generation, data framing, and the internal FIFO buffering for both TX and RX.
 
+% \begin{itemize}
+%     \item \texttt{dataWidth}: Width of the APB data bus (e.g., 32 bits).
+%     \item \texttt{addressWidth}: Width of the APB address bus (e.g., 32 bits).
+%     \item \texttt{wordWidth}: Width of the data word, usually 8 bits / 1 byte.
+%     \item \texttt{maxOutputBits}: Maximum number of data bits in a frame.
+%     \item \texttt{syncDepth}: Depth of the double-buffered registers.
+%     \item \texttt{maxBaudRate}: Maximum baud rate supported by the UART.
+%     \item \texttt{maxClockFrequency}: Maximum clock frequency of the UART).
+%     \item \texttt{bufferSize}: Depth of the internal FIFOs.
+% \end{itemize}
+
 \renewcommand*{\arraystretch}{1.3}
 \begingroup
 \small
@@ -46,9 +57,15 @@ Data width for APB bus operations. \\ \hline
 
 \texttt{addressWidth} &
 Integer &
-1 &
--- &
+8 &
+32 &
 Address width for APB bus. \\ \hline
+
+\texttt{wordWidth} &
+Integer &
+8 &
+8 &
+Width of the data word (e.g., 8 bits). \\ \hline
 
 \texttt{maxClockFrequency} &
 Integer &
@@ -74,11 +91,11 @@ Integer &
 -- &
 Depth for RX input synchronization flip‐flops. \\ \hline
 
-\texttt{parity} &
-Bool &
-N/A &
-N/A &
-Default parity selection (odd/even) at reset, may be overridden in registers. \\ \hline
+\textbf{\texttt{bufferSize}} &
+Integer &
+1 &
+-- &
+Depth of the \textit{DynamicFifo} used in TX and RX. Must be a power of 2 for certain synthesis flows. \\ \hline
 
 \texttt{verbose} &
 Bool &
@@ -86,11 +103,11 @@ N/A &
 N/A &
 Enables debug \texttt{printf} statements. \\ \hline
 
-\textbf{\texttt{bufferSize}} &
-Integer &
-1 &
--- &
-Depth of the \textit{DynamicFifo} used in TX and RX. Must be a power of 2 for certain synthesis flows. \\ \hline
+\texttt{coverage} &
+Bool &
+N/A &
+N/A &
+Enables collection of port toggle collection information. \\ \hline
 
 \end{longtable}
 \captionof{table}{UART Parameter Descriptions}
@@ -105,16 +122,16 @@ A typical instantiation of the UART module in Scala might be as follows:
 \begin{lstlisting}[language=Scala]
 val myUart = Module(new Uart(
   UartParams(
-    dataWidth         = 32,
-    addressWidth      = 32,
-    maxClockFrequency = 25000000,  // 25 MHz
-    maxBaudRate       = 921600,
-    maxOutputBits     = 8,
-    syncDepth         = 2,
-    parity            = false,
-    verbose           = false,
-    bufferSize        = 16
-  ),
+    dataWidth = 32,
+    addressWidth = 32,
+    wordWidth = 8,
+    maxOutputBits = 8,
+    syncDepth = 2,
+    maxBaudRate = 25_000_000,
+    maxClockFrequency = 25_000_000,
+    coverage = true,
+    verbose = true,
+  )
   formal = false
 ))
 \end{lstlisting}

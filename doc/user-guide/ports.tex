@@ -1,9 +1,10 @@
 \section{Port Descriptions}
 
-The UART module provides two sets of ports:
+The UART module provides three sets of ports:
 \begin{enumerate}
   \item The external UART interface (serial TX and RX signals)
   \item The APB interface for register access
+  \item An interrupt output
 \end{enumerate}
 
 \subsection{UART Interface}
@@ -135,6 +136,49 @@ Indicates that the UART is ready for the next transfer. \\ \hline
 1 &
 Output &
 Indicates a transfer error. \\ \hline
+\end{longtable}
+\captionof{table}{APB Interface Ports}
+\label{table:apb_ports}
+\endgroup
+
+\subsection{Interrupts}
+
+The UART module provides the following interrupt output:
+
+\renewcommand*{\arraystretch}{1.3}
+\begingroup
+\small
+\rowcolors{2}{gray!30}{gray!10}
+\begin{longtable}[H]{
+  | p{0.20\textwidth}
+  | p{0.20\textwidth}
+  | p{0.12\textwidth}
+  | p{0.43\textwidth} |
+}
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Port Name}} &
+\textcolor{white}{\textbf{Width}} &
+\textcolor{white}{\textbf{Direction}} &
+\textcolor{white}{\textbf{Description}} \\ \hline
+\endfirsthead
+
+\hline
+\rowcolor{gray}
+\textcolor{white}{\textbf{Port Name}} &
+\textcolor{white}{\textbf{Width}} &
+\textcolor{white}{\textbf{Direction}} &
+\textcolor{white}{\textbf{Description}}\\ \hline
+\endhead
+
+\hline
+\endfoot
+
+\texttt{dataReceived} &
+1 &
+Output &
+Triggered when the RX module the FIFO empty signal transitions from a 0 to a 1, i.e. the RX module completes a valid transaction  \\ \hline
+
 \end{longtable}
 \captionof{table}{APB Interface Ports}
 \label{table:apb_ports}

@@ -436,14 +436,7 @@ The error register is a 8-bit register that contains the following error flags:
 
 \textbf{Key Parameter Relationships:}
 \begin{itemize}
-    \item \texttt{dataWidth}: Width of the APB data bus (e.g., 32 bits).
-    \item \texttt{addressWidth}: Width of the APB address bus (e.g., 32 bits).
-    \item \texttt{wordWidth}: Width of the data word, usually 8 bits / 1 byte.
-    \item \texttt{maxOutputBits}: Maximum number of data bits in a frame.
-    \item \texttt{syncDepth}: Depth of the double-buffered registers.
-    \item \texttt{maxBaudRate}: Maximum baud rate supported by the UART.
-    \item \texttt{maxClockFrequency}: Maximum clock frequency of the UART).
-    \item \texttt{bufferSize}: Depth of the internal FIFOs.
+    \item \texttt{bufferSize}: This controls the default value of the TX\_ALMOSTFULLLEVEL and RX\_ALMOSTFULLLEVEL registers.
 \end{itemize}
 
 \subsection{Programming Template}
