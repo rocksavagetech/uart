@@ -107,7 +107,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
     val tx_almostEmptyLevel = RegInit(
-      1.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+      1.U((log2Ceil(uartParams.bufferSize) + 1).W)
     )
     registerMap.createAddressableRegister(
       tx_almostEmptyLevel,
@@ -116,7 +116,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
     val tx_almostFullLevel = RegInit(
-      (uartParams.bufferSize - 1).U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+      (uartParams.bufferSize - 1).U((log2Ceil(uartParams.bufferSize) + 1).W)
     )
     registerMap.createAddressableRegister(
       tx_almostFullLevel,
@@ -246,7 +246,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
     val rx_almostEmptyLevel = RegInit(
-      1.U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+      1.U((log2Ceil(uartParams.bufferSize) + 1).W)
     )
     registerMap.createAddressableRegister(
       rx_almostEmptyLevel,
@@ -255,7 +255,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
       verbose = uartParams.verbose
     )
     val rx_almostFullLevel = RegInit(
-      (uartParams.bufferSize - 1).U((log2Ceil(uartParams.maxOutputBits) + 1).W)
+      (uartParams.bufferSize - 1).U((log2Ceil(uartParams.bufferSize) + 1).W)
     )
     registerMap.createAddressableRegister(
       rx_almostFullLevel,

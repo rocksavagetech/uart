@@ -55,6 +55,7 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester with Matchers {
           wordWidth = 8,
           maxOutputBits = 8,
           syncDepth = 2,
+          bufferSize = 1024,
           maxBaudRate = 25_000_000,
           maxClockFrequency = 25_000_000,
           coverage = true,

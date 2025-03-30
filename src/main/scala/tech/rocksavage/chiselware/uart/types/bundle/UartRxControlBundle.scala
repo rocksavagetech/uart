@@ -18,8 +18,8 @@ class UartRxControlBundle(params: UartParams) extends Bundle {
     val parityOddDb      = Input(Bool())
     val clearErrorDb     = Input(Bool())
     val rxDataRegRead    = Input(Bool())
-    val almostEmptyLevel = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
-    val almostFullLevel  = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
+    val almostEmptyLevel = Input(UInt((log2Ceil(params.bufferSize) + 1).W))
+    val almostFullLevel  = Input(UInt((log2Ceil(params.bufferSize) + 1).W))
     val lsbFirst         = Input(Bool())
     val flush            = Input(Bool())
 }
