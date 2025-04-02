@@ -55,3 +55,9 @@ Instantiate the `Uart` module with the defined parameters.
 ```scala
 val uart = Module(new Uart(uartParams))
 ```
+
+## More Info
+
+For more infomation about how specifically the Uart module works, see [the documentation](https://github.com/The-Chiselers/uart/releases/)
+
+For other modules, check out [our organization](https://github.com/The-Chiselers)
