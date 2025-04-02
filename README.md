@@ -58,6 +58,6 @@ val uart = Module(new Uart(uartParams))
 
 ## More Info
 
-For more infomation about how specifically the Uart module works, see [the documentation](https://github.com/The-Chiselers/uart/releases/)
-
-For other modules, check out [our organization](https://github.com/The-Chiselers)
+- For more infomation about how specifically the Uart module works, see [the documentation](https://github.com/The-Chiselers/uart/releases/)
+- For other modules, check out [our organization](https://github.com/The-Chiselers)
+- For more info about Chisel, see their [documentation](https://www.chisel-lang.org/)
