@@ -28,9 +28,8 @@ Run Synthesis: `make synth`
 
 Run STA: `make sta`
 
-## 
 
-### Defining UART Parameters
+## Integrating with Other Modules
 
 To configure the uart, create an instance of `UartParams` with the desired parameters.
 
