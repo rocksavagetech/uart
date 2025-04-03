@@ -12,7 +12,11 @@
 ```bash
 git clone [url]
 cd [folder]
-sh dev_shell.sh
+# This step can take a long time
+# This is due to building system-c and verilator from source with clang
+# It should only take a long time the first time
+sh dev_shell.sh 
+
 ```
 
 ## Usage
