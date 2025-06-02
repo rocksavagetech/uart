@@ -46,4 +46,4 @@ out/*
 generated/
 /test_run_dir/
 generated/*
-
+.sbt
