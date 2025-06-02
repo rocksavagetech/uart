@@ -2,7 +2,7 @@
 package tech.rocksavage.chiselware.uart.hw
 
 import chisel3._
-import chisel3.util._
+import chisel3.util.log2Ceil
 import tech.rocksavage.chiselware.addrdecode.{AddrDecode, AddrDecodeError}
 import tech.rocksavage.chiselware.addressable.RegisterMap
 import tech.rocksavage.chiselware.apb.{ApbBundle, ApbParams}
@@ -352,10 +352,12 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
   // ---------------------------------------------------------------
   val uartInner = Module(new UartInner(uartParams, formal))
 
-  // rxDataRegRead is a one-cycle pulse that indicates when the RX data register has been read. It is passed inwards to the rx fifo.
+  // rxDataRegRead is a one-cycle pulse that indicates when the RX data register has been read.
+  // It is passed inwards to the rx fifo.
   val rxDataRegRead = WireDefault(false.B)
 
-  // txDataRegWrite is a one-cycle pulse that indicates when the TX data register has been written. It is passed inwards to the tx fifo.
+  // txDataRegWrite is a one-cycle pulse that indicates when the TX data register has been written.
+  // It is passed inwards to the tx fifo.
   val txDataRegWrite = WireDefault(false.B)
 
   // Connect the physical UART pins:
@@ -428,7 +430,7 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
   // ---------------------------------------------------------------
   // Connect the interrupt bundle
   // ---------------------------------------------------------------
-  io.interrupts.dataReceived := !uartInner.io.rxFifoStatus.empty & RegNext(
+  io.interrupts.dataReceived := !uartInner.io.rxFifoStatus.empty && RegNext(
     uartInner.io.rxFifoStatus.empty
   )
 
@@ -502,7 +504,8 @@ class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
   // Generate one‐cycle pulses for the load and updateBaud signals.
 
   when(
-    error.rxError =/= UartRxError.None || error.txError =/= UartTxError.None || error.topError =/= UartTopError.None || error.addrDecodeError =/= AddrDecodeError.None
+    error.rxError =/= UartRxError.None || error.txError =/= UartTxError.None
+      || error.topError =/= UartTopError.None || error.addrDecodeError =/= AddrDecodeError.None
   ) {
     // Print debug message
     if (uartParams.verbose) {
