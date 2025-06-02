@@ -5,6 +5,6 @@ package tech.rocksavage.chiselware.uart.types.error
 import chisel3._
 
 object UartRxError extends ChiselEnum {
-    val None, StartBitError, StopBitError, ParityError, FifoUnderflow,
-        FifoOverflow = Value
+  val None, StartBitError, StopBitError, ParityError, FifoUnderflow,
+  FifoOverflow = Value
 }

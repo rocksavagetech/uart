@@ -9,14 +9,14 @@ import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 // from the perspective of the UART which is receiving data
 class UartRxBundle(params: UartParams) extends Bundle {
-    val rx    = Input(Bool())
-    val data  = Output(UInt(params.maxOutputBits.W))
-    val error = Output(UartRxError())
+  val rx = Input(Bool())
+  val data = Output(UInt(params.maxOutputBits.W))
+  val error = Output(UartRxError())
 
-    // configuration inputs
-    val rxConfig     = new UartRxControlBundle(params)
-    val clocksPerBit = Output(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+  // configuration inputs
+  val rxConfig = new UartRxControlBundle(params)
+  val clocksPerBit = Output(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
 
-    val fifoBundle = new FifoStatusBundle(params)
+  val fifoBundle = new FifoStatusBundle(params)
 
 }

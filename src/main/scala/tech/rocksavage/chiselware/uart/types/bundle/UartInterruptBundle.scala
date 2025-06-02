@@ -7,5 +7,5 @@ import tech.rocksavage.chiselware.uart.types.param.UartParams
 
 // from the perspective of the UART which is receiving data
 class UartInterruptBundle(params: UartParams) extends Bundle {
-    val dataReceived = Output(Bool())
+  val dataReceived = Output(Bool())
 }

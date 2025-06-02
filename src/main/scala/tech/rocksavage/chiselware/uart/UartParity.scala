@@ -5,16 +5,16 @@ import chisel3.{Bool, UInt}
 
 object UartParity {
 
-    def parityChisel(data: UInt, parityOdd: Bool): Bool = {
-        data.xorR ^ parityOdd
-    }
+  def parityChisel(data: UInt, parityOdd: Bool): Bool = {
+    data.xorR ^ parityOdd
+  }
 
-    def parity(data: Int, parityOdd: Boolean): Boolean = {
-//        data.xorR ^ parityOdd
-        xorReduce(data) ^ parityOdd
-    }
+  def parity(data: Int, parityOdd: Boolean): Boolean = {
+    //        data.xorR ^ parityOdd
+    xorReduce(data) ^ parityOdd
+  }
 
-    def xorReduce(data: Int): Boolean = {
-        data.toBinaryString.count(_ == '1') % 2 == 1
-    }
+  def xorReduce(data: Int): Boolean = {
+    data.toBinaryString.count(_ == '1') % 2 == 1
+  }
 }

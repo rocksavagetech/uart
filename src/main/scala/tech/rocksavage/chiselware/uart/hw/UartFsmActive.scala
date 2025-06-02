@@ -15,36 +15,36 @@ import tech.rocksavage.chiselware.uart.types.param.UartParams
 // Use Parity Reg - Use Parity Bit
 
 class UartFsmActive(params: UartParams) extends Module {
-    val io = IO(new Bundle {
+  val io = IO(new Bundle {
 
-        // #### Input Signals ####
+    // #### Input Signals ####
 
-        val idleTransactionStarted            = Input(Bool())
-        val transactionCompletedAndNotWaiting = Input(Bool())
-        val stateStoppedAndWaiting            = Input(Bool())
+    val idleTransactionStarted = Input(Bool())
+    val transactionCompletedAndNotWaiting = Input(Bool())
+    val stateStoppedAndWaiting = Input(Bool())
 
-        // ### Output Signals ###
-        val active = Output(Bool())
-    })
+    // ### Output Signals ###
+    val active = Output(Bool())
+  })
 
-    val activeMealy = WireInit(false.B)
-    val activePrev  = RegInit(false.B)
+  val activeMealy = WireInit(false.B)
+  val activePrev = RegInit(false.B)
 
-    when(io.idleTransactionStarted) {
-        // 1. Start Transaction From a Completely Idle State when a new transaction is requested
-        activeMealy := true.B
-    }.elsewhen(io.stateStoppedAndWaiting) {
-        // 2. This should only happen when another transaction starts immediately after the previous one
-        activeMealy := true.B
+  when(io.idleTransactionStarted) {
+    // 1. Start Transaction From a Completely Idle State when a new transaction is requested
+    activeMealy := true.B
+  }.elsewhen(io.stateStoppedAndWaiting) {
+    // 2. This should only happen when another transaction starts immediately after the previous one
+    activeMealy := true.B
 
-    }.elsewhen(activePrev && io.transactionCompletedAndNotWaiting) {
-        // 3. Stop Transaction when the transaction is complete and another transaction is not waiting
-        activeMealy := false.B
-    }.otherwise(
-      activeMealy := activePrev
-    )
-    activePrev := activeMealy
+  }.elsewhen(activePrev && io.transactionCompletedAndNotWaiting) {
+    // 3. Stop Transaction when the transaction is complete and another transaction is not waiting
+    activeMealy := false.B
+  }.otherwise(
+    activeMealy := activePrev
+  )
+  activePrev := activeMealy
 
-    // Output
-    io.active := activeMealy
+  // Output
+  io.active := activeMealy
 }

@@ -5,10 +5,10 @@ import chisel3._
 import tech.rocksavage.chiselware.addrdecode.AddrDecodeError
 
 /** Bundle defining the error type for a UART.
-  */
+ */
 class UartErrorBundle() extends Bundle {
-    val topError        = UartTopError()
-    val rxError         = UartRxError()
-    val txError         = UartTxError()
-    val addrDecodeError = AddrDecodeError()
+  val topError = UartTopError()
+  val rxError = UartRxError()
+  val txError = UartTxError()
+  val addrDecodeError = AddrDecodeError()
 }
