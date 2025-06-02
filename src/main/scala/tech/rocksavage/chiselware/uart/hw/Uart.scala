@@ -11,15 +11,36 @@ import tech.rocksavage.chiselware.uart.types.error.{UartErrorBundle, UartRxError
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 import tech.rocksavage.test.TestUtils.coverAll
 
+/** A memory‐mapped UART peripheral with APB3 interface, TX/RX FIFOs,
+ * configurable data bits, parity, baud rate, clock settings, and
+ * interrupt generation.
+ *
+ * This module instantiates an inner UART datapath (`UartInner`) and
+ * exposes a full suite of control and status registers via APB.
+ *
+ * @param uartParams
+ * Parameter bundle controlling widths, FIFO sizes, maximum baud & clock
+ * frequencies, and verbosity.
+ * @param formal
+ * If true, enables additional constructs for formal verification (coverage,
+ * assertions, etc.).
+ */
 class Uart(val uartParams: UartParams, formal: Boolean) extends Module {
   val dataWidth = uartParams.dataWidth
   val addressWidth = uartParams.addressWidth
   val wordWidth = uartParams.wordWidth
 
   val io = IO(new Bundle {
+    /** APB3 control/status bus. */
     val apb = new ApbBundle(ApbParams(dataWidth, addressWidth))
+    /** Serial data input.  Idle‐high line. */
     val rx = Input(Bool())
+    /** Serial data output.  Driven by the UartTx engine. */
     val tx = Output(Bool())
+    /** Interrupt outputs:
+     *  - dataReceived: pulses true when new RX data arrives
+     *  - (expandable for full interrupt suite via UartInterruptBundle)
+     */
     val interrupts = Output(new UartInterruptBundle(uartParams))
   })
 
