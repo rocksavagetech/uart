@@ -11,23 +11,20 @@ import tech.rocksavage.chiselware.uart.types.enums.UartState
 import tech.rocksavage.chiselware.uart.types.error.UartTxError
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 
-/** A UART transmitter module that handles the transmission of UART data.
+/**
+ * UART transmitter: serializes bytes into start/data/parity/stop bits
+ * at a configured baud rate, manages an internal FIFO for data, and
+ * reports overflow/underflow or parity errors.
  *
- * @param params
- * Configuration parameters for the UART.
- * @param formal
- * A boolean value to enable formal verification.
+ * @param params Configuration parameters (baud limits, data–bit width,
+ *               FIFO depth, sync depth, etc.).
+ * @param formal When true, enables extra assertions/coverage for formal verification.
  */
 class UartTx(params: UartParams, formal: Boolean = true) extends Module {
-
+  /** Transmitter I/O: configuration inputs, data interface, serial output,
+   * error flags, FIFO status, and clocks–per–bit reporting.
+   */
   val io = IO(new UartTxBundle(params))
-
-  when(io.txConfig.load) {
-    printf(
-      "[UartTx DEBUG] Loading data: %d\n",
-      io.txConfig.data.asUInt
-    )
-  }
 
   // ###################
   // Input Control State Registers
@@ -283,6 +280,20 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
   // FSM and Data Handling Functions
   // -------------------------
 
+  /** Compute the next data shift-register contents for transmission.
+   *
+   * When `nextTransaction` is high, parallel `loadData` is loaded
+   * (reversed if `lsbFirst`=false).  When `applyShiftReg` is high,
+   * the register is shifted right by one bit for serial output.
+   *
+   * @param dataShiftReg    Current contents of the shift register.
+   * @param loadData        Parallel word to load at start of transaction.
+   * @param nextTransaction High when a new transmission is started.
+   * @param applyShiftReg   High when shifting out the next bit.
+   * @param lsbFirst        True if LSB-first bit ordering is desired.
+   * @param numOutputBits   Number of valid data bits in `loadData`.
+   * @return The next shift-register contents.
+   */
   def calculateDataShiftNext(
                               dataShiftReg: UInt,
                               loadData: UInt,
@@ -306,8 +317,14 @@ class UartTx(params: UartParams, formal: Boolean = true) extends Module {
     dataShiftNext
   }
 
-  // The TX output is driven based on the current FSM state.
-  // For parity state we compute the parity bit from the full (latched) data.
+  /** Compute the TX serial output bit for the given FSM state.
+   *
+   * @param stateReg      Current UART state from the FSM.
+   * @param dataShiftNext Current contents of the data-shift register.
+   * @param txData        Latched transmit data word for parity calculation.
+   * @param parityOddReg  True for odd-parity mode, false for even.
+   * @return The serial output bit to drive `io.tx`.
+   */
   def calculateTxOut(
                       stateReg: UartState.Type,
                       dataShiftNext: UInt,
