@@ -6,41 +6,57 @@ import chisel3.util._
 import tech.rocksavage.chiselware.uart.types.enums.UartState
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 
-// Inputs:
-// Start Transaction - Moves From Idle (or Stop) to Start
-//     - Also Starts Timers, cycle after start transaction, clock counter is at 1
-// Clocks Per Bit Reg - Number of Clocks per bit
-//     - Used to determine when to sample data
-//     - Also used to determine when to increment the bit counter
-// Num Output Bits Reg - Number of bits to output
-//     - Used to determine when to stop the transaction
-// Use Parity Reg - Use Parity Bit
-
+/** A finite‐state machine that sequences UART bit‐cell transfers
+ * for transmit or receive, with optional parity, runtime baud updates,
+ * and valid/complete strobes.
+ *
+ * This FSM works in tandem with [[UartFsmCounter]] (for clock/bit counting)
+ * and [[UartFsmActive]] (for breaking combinational loops).  It transitions
+ * through Idle, Start, Data, Parity, Stop, and BaudUpdating states,
+ * generating shift, complete, and nextTransaction pulses.
+ *
+ * @param params UART configuration parameters (max clock frequency,
+ *               max data bits, parity, etc.)
+ */
 class UartFsm(params: UartParams) extends Module {
+  /** The UART‐FSM IO bundle. */
   val io = IO(new Bundle {
 
     // ############# input signals
 
     // #### Control Signals ####
+    /** Assert to begin a new character transfer (Idle/Stop → Start). */
     val startTransaction = Input(Bool())
+    /** When true, sample at half‐bit time (RX); otherwise shift at end‐of‐bit (TX). */
     val shiftOffset = Input(Bool())
+    /** Held high while FSM must pause between characters or in RX dead‐time. */
     val waiting = Input(Bool())
 
     // #### Settings Signals ####
+    /** System clocks per UART bit, derived from baud rate. */
     val clocksPerBit =
       Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+    /** Number of data bits in the frame (excludes parity & stop bits). */
     val numOutputBits =
       Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
+    /** When true, include a parity bit after data bits. */
     val useParity = Input(Bool())
 
     // #### Baud Settings ####
+    /** Assert to start a new baud‐rate update cycle. */
     val updateBaud = Input(Bool())
+
+    /** High once the newly programmed baud is valid and stable. */
     val baudValid = Input(Bool())
 
     // ############# output signals
+    /** The current FSM state (Idle, Start, Data, Parity, Stop, BaudUpdating). */
     val state = Output(UartState())
+    /** Pulses true each time a bit‐cell boundary is reached (shift/sample). */
     val shift = Output(Bool())
+    /** Pulses true when the current character transaction completes. */
     val complete = Output(Bool())
+    /** Pulses true to immediately start the next transaction. */
     val nextTransaction = Output(Bool())
   })
 
@@ -51,7 +67,7 @@ class UartFsm(params: UartParams) extends Module {
   counter.io.useParity := io.useParity
 
   // #### State Active Mealy
-  // This is a combinational Equivalent to io.complete to avoid a comb loop
+  /** High exactly when the current frame has finished. */
   val combComplete = WireInit(false.B)
   val combComplete1 = WireInit(false.B)
   combComplete1 := (counter.io.clockCounter === io.clocksPerBit - 1.U)
@@ -61,6 +77,7 @@ class UartFsm(params: UartParams) extends Module {
     )
   combComplete := combComplete1 && combComplete2
 
+  /** True during the active phase of a frame (start→stop). */
   val active = WireInit(false.B)
   val activeFsm = Module(new UartFsmActive(params))
   activeFsm.io.idleTransactionStarted := (RegNext(
@@ -121,7 +138,13 @@ class UartFsm(params: UartParams) extends Module {
     combComplete
   ) && io.waiting)
 
-  // Helper Functions
+  /** Compute next state when in a baud‐update cycle.
+   *
+   * @param updateBaud True to begin a baud‐rate update
+   * @param baudValid  True once the new baud rate is stable
+   * @param prevState  FSM state in the previous cycle
+   * @return Next UartState for baud‐update sequencing
+   */
   def stateCaseBaud(
                      updateBaud: Bool,
                      baudValid: Bool,
@@ -139,6 +162,17 @@ class UartFsm(params: UartParams) extends Module {
     state
   }
 
+  /** Compute next state during normal data transfer (start→stop).
+   *
+   * @param numBits         Number of data bits configured
+   * @param bitCount        Current bit‐counter value (0=start bit)
+   * @param parity          True if parity bit is enabled
+   * @param active          High while in an active frame
+   * @param activePrev      Active flag from the prior cycle
+   * @param waiting         True if FSM must pause after frame
+   * @param nextTransaction True if a new start was requested
+   * @return Next UartState for data/parity/stop transitions
+   */
   def stateCase(
                  numBits: UInt,
                  bitCount: UInt,

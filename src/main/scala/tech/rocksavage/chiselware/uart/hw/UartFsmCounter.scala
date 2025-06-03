@@ -5,31 +5,34 @@ import chisel3._
 import chisel3.util.log2Ceil
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 
-// Inputs:
-// Start Transaction - Moves From Idle (or Stop) to Start
-//     - Also Starts Timers, cycle after start transaction, clock counter is at 1
-// Clocks Per Bit Reg - Number of Clocks per bit
-//     - Used to determine when to sample data
-//     - Also used to determine when to increment the bit counter
-// Num Output Bits Reg - Number of bits to output
-//     - Used to determine when to stop the transaction
-// Use Parity Reg - Use Parity Bit
-
+/** Clock and bit-cell counter for the UART FSM.
+ *
+ * This module increments `clockCounter` on each cycle where
+ * `clockCounterIncrement` is true.  When `clockCounter` reaches
+ * `clockCounterMax`, it rolls over and pulses an overflow to
+ * advance the `bitCounter`.  The `bitCounter` tracks the start bit,
+ * data bits, optional parity bit, and stop bit(s), then resets at
+ * the end of the frame.
+ *
+ * @param params UART configuration parameters (maxClockFrequency, maxOutputBits)
+ */
 class UartFsmCounter(params: UartParams) extends Module {
   val io = IO(new Bundle {
 
-    // #### Input Signals ####
+    /** Maximum clock count per UART bit (derived from baud rate). */
     val clockCounterMax =
       Input(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+    /** Enable incrementing the clock counter this cycle. */
     val clockCounterIncrement = Input(Bool())
-
-    // #### Settings Signals ####
+    /** Number of data bits in the frame (excludes parity & stop bits). */
     val numOutputBits = Input(UInt((log2Ceil(params.maxOutputBits) + 1).W))
+    /** When true, a parity bit is present after the data bits. */
     val useParity = Input(Bool())
 
-    // ### Output Signals ###
+    /** Current clock-cycle counter within a bit cell. */
     val clockCounter =
       Output(UInt((log2Ceil(params.maxClockFrequency) + 1).W))
+    /** Current bit-cell index (0 = start bit, 1..N = data bits, etc.). */
     val bitCounter = Output(UInt((log2Ceil(params.maxOutputBits) + 1).W))
   })
 
@@ -78,6 +81,14 @@ class UartFsmCounter(params: UartParams) extends Module {
   io.clockCounter := clockCounterReg
   io.bitCounter := bitCounterReg
 
+  /** Increment a counter value with rollover.
+   *
+   * @param value     Current counter value.
+   * @param max       Rollover threshold (when ≥ max).
+   * @param condition When true, attempt to increment.
+   * @return A tuple (nextValue, didOverflow) where `didOverflow`
+   *         is asserted when the increment wraps to zero.
+   */
   def increment(value: UInt, max: UInt, condition: Bool): (UInt, Bool) = {
     val incrementedInner = WireDefault(value)
     val incremented = WireDefault(value)

@@ -4,27 +4,30 @@ import chisel3._
 import tech.rocksavage.chiselware.uart.types.error.UartErrorBundle
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 
-/** Combined I/O bundle for both UART receiver and transmitter.
+/** Basic UART I/O bundle shared by RX and TX.
  *
- * @param params
- * Configuration parameters for the UART.
+ * Contains serial line, data, error flags, FIFOs and control bundles.
+ *
+ * @param params UART parameters (bit-widths, bufferSize, etc.)
  */
 class UartBundle(params: UartParams) extends Bundle {
-  // UART receiver signals
-  // 'rx' is the asynchronous serial input.
+  /** Asynchronous serial input. */
   val rx = Input(Bool())
-  // Data received from RX.
+  /** Parallel data received. */
   val dataOut = Output(UInt(params.maxOutputBits.W))
-  // Error signal from the receiver.
+  /** Aggregated error signals. */
   val error = Output(new UartErrorBundle())
 
-  // Config Signals
+  /** Transmit-side control (load, data, parity, baud, etc.). */
   val txControlBundle = new UartTxControlBundle(params)
+  /** Receive-side control (read, parity, baud, etc.). */
   val rxControlBundle = new UartRxControlBundle(params)
 
+  /** Status of the RX FIFO (full/empty/almost levels). */
   val rxFifoStatus = new FifoStatusBundle(params)
+  /** Status of the TX FIFO (full/empty/almost levels). */
   val txFifoStatus = new FifoStatusBundle(params)
 
-  // UART serial output
+  /** Asynchronous serial output. */
   val tx = Output(Bool())
 }

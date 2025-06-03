@@ -14,7 +14,7 @@ import tech.rocksavage.chiselware.uart.types.param.UartParams
  * A boolean to enable formal verification.
  */
 class UartInner(params: UartParams, formal: Boolean = true) extends Module {
-  // Use the combined bundle for I/O
+  /** Combined receiver/transmitter I/O. */
   val io = IO(new UartInnerBundle(params))
 
   // Instantiate the receiver module
