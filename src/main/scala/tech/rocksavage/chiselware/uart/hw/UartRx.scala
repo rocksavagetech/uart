@@ -10,12 +10,15 @@ import tech.rocksavage.chiselware.uart.types.error.UartRxError
 import tech.rocksavage.chiselware.uart.types.param.UartParams
 import tech.rocksavage.chiselware.uart.{UartParity, UartUtils}
 
-/** A UART receiver module that handles the reception of UART data.
+/**
+ * UART receiver: synchronizes the serial line, samples bits in the middle
+ * of each bit-cell, checks parity and stop bits, and pushes assembled
+ * bytes into a FIFO, reporting any framing or parity errors.
  *
- * @param params
- * Configuration parameters for the UART.
- * @param formal
- * A boolean value to enable formal verification.
+ * @param params Configuration parameters (baud limits, data-bit width,
+ *               buffer size, sync-depth, etc.).
+ * @param formal When true, enables additional assertions/coverage
+ *               for formal verification.
  */
 class UartRx(params: UartParams, formal: Boolean = true) extends Module {
 
@@ -413,10 +416,12 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     sampleParityWire = shiftParity
   )
 
-  /** Computes the next rxSync value.
+  /**
+   * Compute the next rx-sync shift-register value for input synchronization.
    *
-   * @return
-   * The next rxSync value.
+   * @param rxSyncRegs Current contents of the sync shift register (UInt of width `syncDepth`).
+   * @param rx         The raw serial input bit to be synchronized.
+   * @return A UInt containing the updated shift-register contents.
    */
   def calculateRxSyncNext(
                            rxSyncRegs: UInt,
@@ -427,10 +432,15 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     rxSyncNext
   }
 
-  /** Computes the next dataShift value.
+  /**
+   * Compute the next data-shift-register value, shifting in one bit
+   * when `sampleWire` is true and clearing on frame completion.
    *
-   * @return
-   * The next dataShift value.
+   * @param rxSync       Current synchronized serial bit.
+   * @param dataShiftReg Current contents of the data shift register.
+   * @param sampleWire   High when a new data-bit boundary is reached.
+   * @param completeWire High when the frame completes (to clear the register).
+   * @return The updated data shift register contents.
    */
   def calculateDataShiftNext(
                               rxSync: Bool,
@@ -452,10 +462,16 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     dataShiftNext
   }
 
-  /** Computes the next data value.
+  /**
+   * Compute the next parallel data word at the end of a frame.
+   * Depending on LSB-first versus MSB-first mode, optionally reverse bit order.
    *
-   * @return
-   * The next data value.
+   * @param dataShiftReg  Fully shifted-in data bits.
+   * @param dataReg       Previously latched output data.
+   * @param completeWire  High when frame completes (to latch new data).
+   * @param lstFirst      True if LSB-first mode is enabled.
+   * @param outputBitSize The number of valid data bits to reverse if needed.
+   * @return The newly latched parallel data word.
    */
   def calculateDataNext(
                          dataShiftReg: UInt,
@@ -467,30 +483,26 @@ class UartRx(params: UartParams, formal: Boolean = true) extends Module {
     val dataNext = WireDefault(dataReg)
     when(completeWire) {
       when(!lstFirst) {
-        //                printf(
-        //                  "[UartRx DEBUG] Data shift reg: %d\n",
-        //                  dataShiftReg
-        //                )
         dataNext := dataShiftReg
       }.otherwise {
-        //                printf(
-        //                  "[UartRx DEBUG] Data shift reg reversed: %d\n",
-        //                  dataShiftReg
-        //                )
         dataNext := UartUtils.reverse(dataShiftReg, outputBitSize)
       }
     }
-    //        printf(
-    //          "[UartRx DEBUG] Data next: %d\n",
-    //          dataNext
-    //        )
     dataNext
   }
 
-  /** Computes the next error value.
+  /**
+   * Compute the next error code based on framing, parity, and clear signals.
    *
-   * @return
-   * The next error value.
+   * @param stateReg           Current UART FSM state.
+   * @param rxSync             Synchronized serial input at sample time.
+   * @param useParityReg       True if parity checking is enabled.
+   * @param expectedParity     The parity bit expected (computed externally).
+   * @param errorReg           Previously latched error code.
+   * @param clearError         True to clear all error flags.
+   * @param completeSampleWire High when the stop-bit sample occurs.
+   * @param sampleParityWire   High when the parity-bit sample occurs.
+   * @return The next UartRxError.Type to be latched.
    */
   def calculateErrorNext(
                           stateReg: UartState.Type,
